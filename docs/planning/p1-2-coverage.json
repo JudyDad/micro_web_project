@@ -1,0 +1,14 @@
+{
+  "method": "static metadata coverage only; no restore/import executed",
+  "distinct_source_tables": 127,
+  "source_table_instances": 616,
+  "mapped_source_columns": 3947,
+  "declared_relationships": 743,
+  "keyless_instances": 11,
+  "composite_pk_instances": 5,
+  "cycle_components": 0,
+  "input_sha256": {
+    "source-schemas.json": "b3a40175f21ccdd8ddcc80026b67a950cae902573f3e372f02dfd32afc39100c",
+    "p0-2-data-inventory.json": "b28f5668937693d0940da14f280d727613f6eea81fbe1de6ca7c688501b0ba7b"
+  }
+}
