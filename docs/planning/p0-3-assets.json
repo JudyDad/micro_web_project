@@ -1,0 +1,180 @@
+{
+  "inspected_date": "2026-10-16",
+  "method": "Read-only Get-ChildItem/Get-Item/Get-FileHash; no template document text or HR records exported",
+  "assets": [
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\DocPrint\\cl.docx",
+      "bytes": 64846,
+      "sha256": "134290deedd6157aa9712b0fa2d16022ad623413c7579f399be335aa861aa572",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\DocPrint\\cl.xls",
+      "bytes": 15004,
+      "sha256": "066737ff19aab0a3fc754285ffb3d3155aca2f5ef5d43d9523b4e9ba35a5d04a",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\DocPrint\\old\\cl.docx",
+      "bytes": 59758,
+      "sha256": "a64eb64b987d6c7e2ec08f9bb7824d64c1e09f49ace5919039e825d34ecee875",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\DocPrint\\old\\cl.xls",
+      "bytes": 11327,
+      "sha256": "be9fddd2c0bd95b3d7c51e090599899ccd42cf55cc04142711c343f65eed67d8",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\DocPrint\\old 09-09-2025\\cl.docx",
+      "bytes": 58693,
+      "sha256": "b93cba258e2fcecc912d22ddaa88671db97754f3becd9e7e62ce29427fb825a5",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\DocPrint\\old 09-09-2025\\cl.xls",
+      "bytes": 11327,
+      "sha256": "be9fddd2c0bd95b3d7c51e090599899ccd42cf55cc04142711c343f65eed67d8",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\hc-logo.png",
+      "bytes": 18007,
+      "sha256": "15ddbf84d3456c9267a026bf6084d42b55a3b582b41436a2160e43dea91de6d4",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\Resources\\MP Training 2021.pdf",
+      "bytes": 44128551,
+      "sha256": "db1a0b18edf2ccdfd9cfbf818f82408977744b44777afc1f549c7ef7bcdad119",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\Resources\\MP Training 2021-compressed.pdf",
+      "bytes": 3779767,
+      "sha256": "144092be7f74391e742d5a1df25528bf64a8fca7c49a84efdd456135cc290265",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\Resources\\NewDesignIcons\\Logo_Large_L.png",
+      "bytes": 115460,
+      "sha256": "7d2744b5876deb2a3b65c9f86d633e16ab38a0133cce9421b7effc2497b384f5",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\MicroProject newTest\\MyWorkApplication\\Resources\\NewDesignIcons\\Dark\\Logo_Large_D.png",
+      "bytes": 10520,
+      "sha256": "0736794207ce62df5e28d3b0f0918719f0bb4e1d600e2917f47cffa0e32f616e",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-BLACK.OTF",
+      "bytes": 62940,
+      "sha256": "0e0deddd5eb3ca5106f5b0321c8affd4b3f8a971c0e7bb5bf0c4c15e6c317bf5",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-BLACK.ttf",
+      "bytes": 79044,
+      "sha256": "bb73c4334c89606253f82d06035e759700fabd50ce42228af712d5719db9207c",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-BOLD.OTF",
+      "bytes": 67448,
+      "sha256": "7a35ead2497f13a31c6320f3815ac225c1219988111938f10f524678362b2be6",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-BOLD.ttf",
+      "bytes": 78760,
+      "sha256": "1f7cf2ccb5c840bb61134e28ae6ffde2d5c97e1f3f04f5b32dbbb329ccbe8aeb",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-EXTRABOLD.OTF",
+      "bytes": 68224,
+      "sha256": "9f0c914a1d6789ff07285249b929de9fffa5a0631c6fd4684aa6b367f1293f0f",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-EXTRABOLD.ttf",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-LIGHT.OTF",
+      "bytes": 64336,
+      "sha256": "e81b60fc13dd379e086e96d18a96072918c2413fe5bb347af574ded0a8a1f5e2",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-LIGHT.ttf",
+      "bytes": 78976,
+      "sha256": "c42f18e498c5c50d0f690304c280cdffe8ef40282824b6ffff843ce03d87ec74",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-MEDIUM.OTF",
+      "bytes": 65012,
+      "sha256": "5a189f9f0bfa7ad9cd30b208b2471b6f59606b29d1428e42f7bdbd2f72d98717",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SOMARSANS-MEDIUM.ttf",
+      "bytes": 79688,
+      "sha256": "a9d6098351a196215210324dbe7883d93c08681fac2b58b145ef750cd4fcb571",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SomarSans-Regular.otf",
+      "bytes": 65196,
+      "sha256": "ac355205b9cce0c34fea32bd30871647a5bd7f1241ace774458628f95521142e",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SomarSans-Regular.ttf",
+      "bytes": 79100,
+      "sha256": "2c45f51fd76c27a026f20e96e4334ab50e3faf766ef55af962168e0aac7d1e21",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SomarSans-SemiBold.otf",
+      "bytes": 67720,
+      "sha256": "99825ba44306034fc80c5039cbcab11f6f4916e1eb75731e7ce653df21a4108d",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SomarSans-SemiBold.ttf",
+      "bytes": 78708,
+      "sha256": "cd89ea379a58a6b93b3b9ea695950bf2a4f07bebbb8e04d6de1d4c5bd1eda005",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SomarSans-Thin.otf",
+      "bytes": 53844,
+      "sha256": "d47fda38b49961844469dbaac2e9f3dbad0f3d9979aff6b0cf4cf5c88d3d0321",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\fonts\\SomarSans\\SomarSans-Thin.ttf",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\assets\\img\\001_HC.png",
+      "bytes": 4482,
+      "sha256": "218a050be57e64dba1bcaf7bd240c43c281712b0d7f1f4a401b342aa21582dfd",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    },
+    {
+      "path": "D:\\MyProjects\\hc-hr\\public\\assets\\img\\hope-center-icon.svg",
+      "bytes": 5001,
+      "sha256": "336ea540421666c1706e61c8cabd5f91b4173def531903367522195c3c2fde97",
+      "verification": "local file bytes only; no redistribution approval inferred"
+    }
+  ]
+}

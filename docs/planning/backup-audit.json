@@ -1,0 +1,335 @@
+{
+  "method": "Static SQL dump inspection; not a restore or complete integrity certification.",
+  "databases": [
+    {
+      "city": "Aleppo",
+      "archive": "hcsyria_micro202610161513.zip",
+      "archive_sha256": "e18c71e5d7f96bd0cab234ed8e7efbfcbdb1e7ac5e3d055f49d7624e27c45d0c",
+      "sql_sha256": "93df400f05395078b4942e34caf87fa1456b7852bd440caff02b61e149d71b7d",
+      "zip_crc_ok": true,
+      "table_count": 122,
+      "project_count": 3932,
+      "min_project_id": 1,
+      "max_project_id": 3939,
+      "project_fk_tables": [
+        "exefile",
+        "file",
+        "image",
+        "loan",
+        "material",
+        "microproject_ag_answer",
+        "microproject_powersource",
+        "microproject_rehab",
+        "microproject_risk",
+        "microproject_score",
+        "microproject_state",
+        "person_aidsource",
+        "person_microproject",
+        "person_workexp",
+        "profession_meeting_attendee",
+        "profession_meeting_participant",
+        "purchasing",
+        "specialcase",
+        "task_microproject",
+        "user_notification",
+        "visit"
+      ],
+      "procedure_count": 12
+    },
+    {
+      "city": "Damascus",
+      "archive": "hcsyria_micro_d202610161515.zip",
+      "archive_sha256": "dd69edef26e806db204d002bbeab36708a7f118e0ca0df6c117f3715dc49c2ee",
+      "sql_sha256": "03c000802f29047872a3c0f597137929c5778eb9e4c52aaa9aed4fce06d42af0",
+      "zip_crc_ok": true,
+      "table_count": 125,
+      "project_count": 2363,
+      "min_project_id": 1,
+      "max_project_id": 2363,
+      "project_fk_tables": [
+        "exefile",
+        "file",
+        "image",
+        "loan",
+        "material",
+        "microproject_ag_answer",
+        "microproject_powersource",
+        "microproject_rehab",
+        "microproject_risk",
+        "microproject_score",
+        "microproject_state",
+        "person_aidsource",
+        "person_microproject",
+        "person_workexp",
+        "profession_meeting_attendee",
+        "profession_meeting_participant",
+        "purchasing",
+        "specialcase",
+        "task_microproject",
+        "user_notification",
+        "visit"
+      ],
+      "procedure_count": 12
+    },
+    {
+      "city": "Homs",
+      "archive": "hcsyria_micro_h202610161517.zip",
+      "archive_sha256": "4fb0edbc864ff02f679bc314665c16a4a3c663eb988d2dfd343225e8f23267f5",
+      "sql_sha256": "557d0f5b3169cdaab53fb1cd4258436d09422fd9eabf32807c4ec65980d1d6f1",
+      "zip_crc_ok": true,
+      "table_count": 124,
+      "project_count": 2974,
+      "min_project_id": 1,
+      "max_project_id": 2978,
+      "project_fk_tables": [
+        "exefile",
+        "file",
+        "image",
+        "loan",
+        "material",
+        "microproject_ag_answer",
+        "microproject_powersource",
+        "microproject_rehab",
+        "microproject_risk",
+        "microproject_score",
+        "microproject_state",
+        "person_aidsource",
+        "person_microproject",
+        "person_workexp",
+        "profession_meeting_attendee",
+        "profession_meeting_participant",
+        "purchasing",
+        "specialcase",
+        "task_microproject",
+        "user_notification",
+        "visit"
+      ],
+      "procedure_count": 12
+    },
+    {
+      "city": "Latakia",
+      "archive": "hcsyria_micro_l202610161520.zip",
+      "archive_sha256": "36b35963af03859ea8b6e86c0360ac70d4094d1d1a1ecd9d1befd474f41d4fcd",
+      "sql_sha256": "0e963b486eac1d658b51b940e0138bc342971b7bbcf37f1f9fc9a889f391c9ff",
+      "zip_crc_ok": true,
+      "table_count": 122,
+      "project_count": 593,
+      "min_project_id": 1,
+      "max_project_id": 593,
+      "project_fk_tables": [
+        "exefile",
+        "file",
+        "image",
+        "loan",
+        "material",
+        "microproject_ag_answer",
+        "microproject_powersource",
+        "microproject_rehab",
+        "microproject_risk",
+        "microproject_score",
+        "microproject_state",
+        "person_aidsource",
+        "person_microproject",
+        "person_workexp",
+        "profession_meeting_attendee",
+        "profession_meeting_participant",
+        "purchasing",
+        "specialcase",
+        "task_microproject",
+        "user_notification",
+        "visit"
+      ],
+      "procedure_count": 12
+    },
+    {
+      "city": "AlWadi",
+      "archive": "hcsyria_micro_w202610161522.zip",
+      "archive_sha256": "3d16350305423d76333b1da0abb3b34624732445f9994559d9d5292ecb1b22da",
+      "sql_sha256": "16e21462e95e24bc047723b4c0ad358893391572c96ecce1c6047e95deb08648",
+      "zip_crc_ok": true,
+      "table_count": 123,
+      "project_count": 650,
+      "min_project_id": 1,
+      "max_project_id": 656,
+      "project_fk_tables": [
+        "exefile",
+        "file",
+        "image",
+        "loan",
+        "material",
+        "microproject_ag_answer",
+        "microproject_powersource",
+        "microproject_rehab",
+        "microproject_risk",
+        "microproject_score",
+        "microproject_state",
+        "person_aidsource",
+        "person_microproject",
+        "person_workexp",
+        "profession_meeting_attendee",
+        "profession_meeting_participant",
+        "purchasing",
+        "specialcase",
+        "task_microproject",
+        "user_notification",
+        "visit"
+      ],
+      "procedure_count": 12
+    }
+  ],
+  "overlaps": [
+    {
+      "city_a": "Aleppo",
+      "city_b": "Damascus",
+      "shared_project_numbers": 2363,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Aleppo",
+      "city_b": "Homs",
+      "shared_project_numbers": 2974,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Aleppo",
+      "city_b": "Latakia",
+      "shared_project_numbers": 593,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Aleppo",
+      "city_b": "AlWadi",
+      "shared_project_numbers": 650,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Damascus",
+      "city_b": "Homs",
+      "shared_project_numbers": 2361,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Damascus",
+      "city_b": "Latakia",
+      "shared_project_numbers": 593,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Damascus",
+      "city_b": "AlWadi",
+      "shared_project_numbers": 650,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Homs",
+      "city_b": "Latakia",
+      "shared_project_numbers": 593,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Homs",
+      "city_b": "AlWadi",
+      "shared_project_numbers": 650,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "city_a": "Latakia",
+      "city_b": "AlWadi",
+      "shared_project_numbers": 587,
+      "examples": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    }
+  ],
+  "distinct_table_names": 127,
+  "total_projects": 10512,
+  "tables_absent_by_city": {
+    "Aleppo": [
+      "dept",
+      "resultstable",
+      "temp_gender",
+      "visit_schedule_temp",
+      "work_exp"
+    ],
+    "Damascus": [
+      "resultstable",
+      "visit_schedule_temp"
+    ],
+    "Homs": [
+      "dept",
+      "temp_gender",
+      "work_exp"
+    ],
+    "Latakia": [
+      "dept",
+      "resultstable",
+      "temp_gender",
+      "visit_schedule_temp",
+      "work_exp"
+    ],
+    "AlWadi": [
+      "dept",
+      "temp_gender",
+      "visit_schedule_temp",
+      "work_exp"
+    ]
+  }
+}

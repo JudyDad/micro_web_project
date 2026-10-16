@@ -1,0 +1,101 @@
+# P0.1 Desktop workflow discovery
+
+Scope update: the user's subsequent decisions in `p0-4-scope-contract.md` supersede pending hosting/offline/account questions below: local development first, hosting revisited at project completion, online operation with draft recovery, compatible desktop credentials retained. Historical observations below remain evidence rather than web requirements.
+
+Prepared 16 October 2026. Later user decisions on local development, online draft recovery and compatible desktop credentials are authoritative in p0-4-scope-contract.md; discovery questions below describe the initial evidence boundary. Status: static inventory delivered for independent review; runtime/staff parity is unverified. Source is read-only at `D:\MyProjects\MicroProject newTest`; all evidence references below are relative to that root. Read alongside `p0-1-screen-menu-matrix.md` and `p0-1-workflow-index.json`. These describe observed legacy behavior, not an approved web authorization policy.
+
+## Coverage and evidence boundary
+
+The reproducible extractor reads the 179 explicit C# Compile entries in MyWorkApplication.csproj. It enumerates 53 compiled Form subclasses, 3 additional noncompiled Form subclasses, 89 MainForm menu item instances, 68 click-bound menu instances (38 attached; 48 menu items attached and 41 detached overall), 144 active form construction sites, 1,621 event bindings, 303 save/delete/update/validation/report candidate methods and 98 Program.role reference sites. Comments and literals are masked before extraction; output contains code identifiers, locations and source hashes, not source literals, records or credentials. Duplicate legacy and active menu instances are deliberately retained. Every compiled form has a disposition and all menu instances have binding/attachment status.
+
+This is lexical coverage, not proof that all paths execute. The matrix deliberately over-approximates form reachability: a constructor in an unbound method is still a potential edge. The visible menu hierarchy is separately traced through Items/DropDownItems.AddRange to menuStrip1. Runtime visibility, event conditions, reflection and helper-mediated dispatch need scenario verification. The 3 noncompiled forms and the 6 compiled forms without a static root path are explicitly flagged below. No desktop launch, build, database restore, live connection, file upload or notification was performed. The source contains connection secrets and login material; no values are reproduced here.
+
+Read the creation plan, backup-audit aggregate structure and source-schemas city structure. The 10,512-project baseline remains parsed, not restored; the workflow inventory does not certify data completeness or reconcile stored routine semantics. No applicable AGENTS.md was found in the source subtree or D:\MyProjects.
+
+## Screen-to-workflow contract candidates
+
+| Workflow | Screens and entry evidence | Required parity scenario / acceptance owner |
+|---|---|---|
+| Login and city access | Program.cs:243; Login_Form.cs:157; MainForm.cs:540; MainForm.cs:1422 | Invalid credentials; same username with different source passwords/roles; unavailable source; city switch; remembered login. Identity owner + security reviewer. |
+| Preliminary/full intake | MainForm.cs:1455 and :1468 → Application_New_Form | Create preliminary application, reopen, convert to full, add partner, save partial edit and unchanged record; preserve original number plus city. Intake owner. |
+| People/family/detail grids | Application_New_Form.cs:2411, :3249, :3928, :4019; Application_MessageBox | Existing national/family number offers existing record; household members, education, work, experience, courses, health, loss, assets, aid and home/project power/material rows. Test null/sentinel and historical invalid fields without forced cleanup. Intake owner. |
+| Assessment/checklist | MainForm.cs:613; CheckList_Form.cs:106, :1355, :1567, :1682 | Project/beneficiary selection; home/shop visitors; optional vocational/admin training and rejection-sender requirements; save/delete role rules; Word checklist. Assessment owner. |
+| Project state and administration | MainForm.cs:600 → AdminPanel_From; Search_Form.cs:3212; Loans_Form.cs:930 | Search current state and dated history; administrative state changes; reject/withdraw/finance paths require actual state lookup/routine reconciliation. Do not invent a closed transition graph from menu names. Program manager. |
+| Loans and receipts | MainForm.cs:741 → Loans_Form; Loans_Form.cs:905, :1176, :1268 | Accepted project gating, add/update/delete loan, receipt/schedule edits, donor/group changes, returned/paid/remain calculations, currency/exchange rate, visit task/notification effects. Finance owner. |
+| Payments schedule | MainForm.cs:754 → Payments_Form; Payments_Form.cs:225, :405 | Filter schedule, export, drill into selected loan and denied export role. Finance owner. |
+| Attachments | MainForm.cs:767; Application_New_Form.cs:7913, :7945, :8102 | Add/download/delete existing-path attachment; unavailable online/offline storage, missing file, source-qualified same-number project. Finance/intake owner. |
+| Visit choice and recording | MainForm.cs:676 → ChooseVisitKind_Form; Visit Forms/ChooseVisitKind_Form.cs:236, :266, :314 | Taxi/other opening; numbered monitoring; normal/rehab closing; partners dialog; existing visit edit; rehabilitation-grant restrictions. Field operations owner. |
+| Visits calendar/results/statistics | MainForm.cs:689, :702, :927 → Visit_Results_Form, Visits_Schedule_Form, Visits_Statistics | Schedule assignment and changes, date/filter boundaries, evaluator/result rollups and export sets. Field operations owner. |
+| Special cases and profession meetings | MainForm.cs:715, :728 → SpecialCase_Form, ProfessionMeetings_Form | Create/edit/delete case or meeting, project drill-through and notes; filters and exports. Field operations owner. |
+| Staff tasks and notifications | MainForm.cs:966, :1337 → TaskBoard_Form, Notification_Box; TaskBoard_Form.cs:164 | Task responsibility/completion and notification navigation; role/city access, repeats, stale edits, no real delivery in test. Operations owner. |
+| Search and details | MainForm.cs:979 → Search_Form; Search_Form.cs:3322; ShowDetails_Form.cs:215 | 22 report modes below; row identity includes source/city; mixed-city drill-through and selected exports; denied/failed cities visible. Reporting owner. |
+| Statistics/charts | MainForm.cs:953 → Statistics_Form; Statistics_Form.cs:106, :558 | 15 dimensions below, filters/empty groups, numeric totals and authorized multi-city coverage. Reporting owner. |
+| Lookup administration | MainForm.cs:627, :639, :652, :878, :891, :903, :915, :1481, :1494, :1507; Loans_Form.cs:1160; AddNewChecklistMember.cs:264 | Streets, education, work experience, donor, aid/source, priest, visitor/key-person/committee, groups and positions; duplicates remain source-specific; CRUD and available exports. Administrator. |
+| Users, audit, messaging, help | MainForm.cs:1005, :1068, :1081, :1200, :1213, :1055 | User maintenance, log filtering/export, messages, feedback/notes, manual and about screen; distinguish internal persistence from outbound delivery. Administrator. |
+| Local utilities | MainForm.cs:1014, :1026, :1090, :1150 | Theme changes, database backup and restore; web replacement must be controlled operations, never a client-accessible unrestricted restore. Operations owner. |
+
+The generated matrix lists individual screens and all constructor evidence, including context-menu/drill-through entry sites, rather than collapsing those paths into the table above. Its JSON actions/events provide the review checklist for detailed acceptance cases.
+
+## Identity, permissions and offline behavior
+
+Login_Form.cs:157 loops configured city connections and verifies the supplied username/password in each source; successful matches populate User_In_Database. Login_Form.cs:247 uses a parameterized username lookup, excludes UserRoleID 6, and calls PasswordHelper.VerifyPassword. Role 6 menu behavior is reachable only through an alternate or changed session state, not a normal successful login. PasswordHelper.cs:19 and :51 use PBKDF2 SHA-256 with 100,000 iterations; inspect salt/hash encoding before designing compatibility or reset. Login_Form.cs:273 populates the current source role and actor identity. Remembered credentials are handled in Login_Form.cs:105 and :287; do not reproduce desktop plaintext persistence in the web app. Startup also checks an embedded expiry date and per-source application version (Login_Form.cs:50 and :178); the connection phase can update the version table. This is why launching the app would not be a read-only verification.
+
+Program.cs:96 switches connection selection based on the Online setting and maps city-specific DB and FTP roots. Login_Form.cs:164 persists that setting. MainForm.cs:37 disables its toggle after construction; :566 contains the change handler. Offline means a local/office database and FTP root, not an offline browser cache. No automatic conflict-resolution contract is established by this source review. Confirm whether staff require disconnected writes and which offline source is authoritative before P0.4 acceptance.
+
+| Legacy role IDs (source comments) | Main menu behavior observed | Important action differences / uncertainty |
+|---|---|---|
+| 1 Admin, 8 L0_Admin | Intake, finance, field, search/statistics/tasks, logs, users, backup/restore, lookups | Application edit/delete and checklist save/delete/print; loan delete visible. |
+| 2 Data | Intake/checklist; payments and attachments; field operations except visitor statistics; search/statistics/tasks/messages | Admin panel/tools, loans, logs, backups/users hidden. Application edit/delete and checklist save/delete/print allowed. |
+| 3 Financial, 7 Lawful | Intake and field headers hidden; finance header shown; search/statistics/tasks/messages | Application contextual attachments/payments remain visible; checklist write/print denied; loan delete hidden. Payment export rejects 7. |
+| 4 Guest, 6 Out Of Service, 9 Media | Intake/finance/field headers hidden; search/statistics/tasks/messages available | Application denies mutation for 4/9; 6 is omitted from several local switches, so no consistent deny guarantee. |
+| Other IDs, including 5 | No explicit MainForm switch default policy | Must deny by default in web policy after owner confirmation; source cannot be treated as reliable authorization contract. |
+
+Menu evidence: MainForm.cs:332–521. Action evidence: Application_New_Form.cs:698–766; CheckList_Form.cs:106–146; Loans_Form.cs:1268–1291; Payments_Form.cs:225–237. JSON contains all 98 role-reference sites for independent review. Menu hiding is not sufficient server authorization. Legacy exceptions requiring explicit disposition: hard-coded admin credential bypass at MainForm.cs:339; always-true financial/legal OR comparison at MainForm.cs:1285 (notification count always uses a four-day horizon instead of the intended today-only financial/legal branch; this is not an action authorization grant); role 6 omissions; role state carried while switching menus; financial header enable does not explicitly re-enable every previously hidden child. Preserve historical actor identities without carrying these defects into new authorization.
+
+## Source rules requiring parity tests
+
+- Application_New_Form.cs:4019 rejects an unchanged non-preliminary save; new records validate full sections, while existing records validate dirty sections. Row checks at :3991 and :4008 distinguish existing/touched rows. The routine builds a transaction beginning at :4051. Preserve this partial-save behavior; do not require every legacy field to satisfy new-entry rules before a minor edit.
+- CheckList_Form.cs:1355 requires a chosen project/beneficiary and home/shop visitor selection; selected vocational/admin training blocks must be complete, and rejection requires a sender. Child-grid delete guards at :834, :940 and :1034 are separate from the top-level role visibility.
+- Loans_Form.cs:346 and :487 gate loan entry on accepted state. AddLoan at :905 changes project state to financed, marks the disbursement/installment task complete, updates donor/group, and optionally generates missing visit notifications (:967). Agricultural/solar/general schedules differ; exact schedule offsets must be copied from the generation methods, not generalized.
+- Loans_Form.cs:1176 computes opposite currency by division for SP with nonzero exchange rate, multiplication otherwise. Expected installments = return amount / installment amount; return percentage = return amount × 100 / principal; remaining amount = return amount − paid amount; remaining installments = remainder / installment amount. Display formats use N2, N1 or integer-like grouping; mixed double/decimal arithmetic is source behavior, not permission to round stored data. Zero principal/exchange/partial-payment cases need explicit oracle fixtures.
+- ChooseVisitKind_Form.cs:236/:266 blocks opening/monitoring for rehabilitation grants; subcategory 1 or 2 uses taxi forms. Monitoring numbering is max existing Number + 1. Closing selects the rehab form for rehabilitation grants and type-specific arguments otherwise (:314). Parallel number allocation in web must avoid races.
+- TaskBoard_Form.cs:164 maps named tasks to display columns, including story, contracts, purchasing, photos, maps, opening and monitoring. A purchasing task is not proof that Purchasing_Form is an active screen.
+
+## Reports, exports and printing
+
+Search_Form.cs:139–164 defines 22 search modes: Applications; Family Members; Loans and Payments; Attachments; M&E Visits; Monitoring Visits (1 to 5); Check Lists; Special Cases; Project Required Materials; Project Power Sources; Home Power Sources; Relief Aids; Aid Sources; Assets; Illness and Medical Needs; Losses; Current Works; Work Experiences; Courses; Goals; Educations; Profession Meetings. Materials Purchased is commented out. Preserve filter sets, selection identity and displayed/hidden column behavior per mode.
+
+Statistics_Form.cs:106–122 defines 15 chart dimensions: Project Status, Funding Type, Project Type, New versus Developing, Categories, Sub Categories, Partnership, Parishes, Gender, Marital Status, Age, Donors, Fund Year, Fund Amount ($), Sustainability. A dollar-labeled chart does not authorize combining unlike currencies without reconciliation.
+
+Search_Form.Reporting.cs:115 and Statistics_Form.Reporting.cs:41 snapshot authorized report cities; Search_Form.Reporting.cs:232 disables mutations for cross-city reports. CityReportingService.cs:170 tracks successes/failures and selected city scope. Selected application exports group by city and batch 500 IDs (CityReportingService.cs:117–135); Search_Form.Reporting.cs:283 adds coverage to workbooks. Verify >500 selections, partial city failure, empty selection, cancellation and same-number projects. Cross-city drill-through uses CityRecordWindow.cs:114 and must revalidate identity/permissions. No report oracle was run.
+
+`p0-1-screen-menu-matrix.md` lists all detected print/export method entry points, including lookup tables, administration, payments, logs, notifications, task board, details, statistics and visits. Print/export controls may use nonmatching method names; all event bindings remain in JSON for review. Active checklist print starts at CheckList_Form.cs:1682, invokes Print_Checklist_Procedure and Word template handling at :1712. P0.3 owns exact template/asset provenance. No template content or staff records are copied here.
+
+## Unused, detached and uncertain screens
+
+- MainForm.Designer.cs:822 attaches the current menuStrip1; many earlier instantiated legacy menu items are detached. The generated matrix labels every item attached/detached/hidden. ExecutiveFiles_Form is instantiated from a detached-menu handler (:780); treat as uncertain legacy workflow, not confirmed reachable menu functionality.
+- Purchasing_Form has no active constructor call; MainForm.cs:789 contains a commented body and designer :1017 hides its menu. Purchasing tasks/data still exist: do not drop their data because this screen is unused.
+- Application_Form is the old intake form with no external active constructor route; its self-reference does not establish reachability. ApplicationRehab_Form is referenced only by that old form. Agriculture_Form has an old-form route and an unbound MainForm rehab handler (:936); its apparent graph reachability is an over-approximation. Confirm extension parity using staff/source documents.
+- AddNewStateReasons, Encrypt and QR_Form have no active constructor route in the compiled source inventory. Keep their data or intended workflows pending disposition.
+- Timeline_Form and Chat_Form have MainForm handler constructors (:992 and :1042), but no corresponding current menu binding. Treat as uncertain/unbound until runtime or staff evidence establishes access.
+- MicroApp.Net10 contains only bin/obj artifacts in this snapshot (including generated .cs/resources); no .csproj or independent authored application source was found there. It is not a second verified application workflow baseline. CheckBoxComboBox is a supporting control project; its popup/selection surfaces are reusable controls, not additional business workflows. The inventory covers application event registrations but not a full interprocedural/helper/reflection call graph.
+- Encrypt_Decrypt_Form, ProjectLifeCycle and WebSection exist on disk but are not compiled by MyWorkApplication.csproj. They are reference-only, not current executable scope.
+- Role names, lookup values, all state transitions, report routines, calculated financial edge cases and notification schedules still require reconciliation against isolated restored sources. This inventory must not be presented as a completed field-by-field functional specification.
+
+## Reproducible checks and handoff
+
+Run from this folder:
+
+```powershell
+& 'C:\Users\HC-DUO\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' p0-1-inventory.py
+```
+
+Observed: all 179 Compile paths exist; 53 compiled forms enumerated; all have source and reachability disposition; 89 menu instances enumerated; no source writes. Generated JSON includes SHA-256 for every compiled file so changed evidence can be detected. This verifies enumeration, not runtime execution or exhaustive business-rule semantics. Repeated final generation produced identical JSON and matrix hashes and completed all assertions. Reviewer must inspect uncertain forms and the menu attachment classification. Runtime parity and restored-data report comparisons remain not run.
+
+Delivered behavior: screen/menu/action/report evidence and workflow/role/offline contract candidates. Files changed: this document, p0-1-inventory.py, p0-1-screen-menu-matrix.md, p0-1-workflow-index.json. Interfaces added: JSON inventory arrays with source locations and hashes; no application interface. Migration/data effects: none. Risks/blockers: account identity across cities, offline writes, legacy permission contradictions, unbound extension/finance screens, unverified routines/report calculations and named staff acceptance owners. Next dependent task: P0.4 resolves high-impact choices and records scope; P1/P4/P5/P6 use the evidence as an audit checklist, not automatic permission to remove legacy functionality.
+
+
+
+
+
+
