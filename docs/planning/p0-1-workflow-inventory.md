@@ -93,9 +93,3 @@ Run from this folder:
 Observed: all 179 Compile paths exist; 53 compiled forms enumerated; all have source and reachability disposition; 89 menu instances enumerated; no source writes. Generated JSON includes SHA-256 for every compiled file so changed evidence can be detected. This verifies enumeration, not runtime execution or exhaustive business-rule semantics. Repeated final generation produced identical JSON and matrix hashes and completed all assertions. Reviewer must inspect uncertain forms and the menu attachment classification. Runtime parity and restored-data report comparisons remain not run.
 
 Delivered behavior: screen/menu/action/report evidence and workflow/role/offline contract candidates. Files changed: this document, p0-1-inventory.py, p0-1-screen-menu-matrix.md, p0-1-workflow-index.json. Interfaces added: JSON inventory arrays with source locations and hashes; no application interface. Migration/data effects: none. Risks/blockers: account identity across cities, offline writes, legacy permission contradictions, unbound extension/finance screens, unverified routines/report calculations and named staff acceptance owners. Next dependent task: P0.4 resolves high-impact choices and records scope; P1/P4/P5/P6 use the evidence as an audit checklist, not automatic permission to remove legacy functionality.
-
-
-
-
-
-

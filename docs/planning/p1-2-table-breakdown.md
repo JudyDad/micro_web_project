@@ -12574,4 +12574,3 @@ Source PK components: `ID`.
 Source indexes: `PRIMARY KEY (`ID`)`.
 Table charset/engine evidence: `InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;`.
 Relationship mappings: none declared.
-
