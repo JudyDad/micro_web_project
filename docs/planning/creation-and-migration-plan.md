@@ -2,7 +2,7 @@
 
 Prepared 16 October 2026. Status: evidence-based draft, with business decisions below still open. No production database was connected to or changed. No application implementation or migration has been executed.
 
-Historical discovery draft: subsequent implementation is recorded in `../delivery/task-board.md`. The current confirmed login/city and consolidation decisions are in [unified-account-city-filter-revision.md](unified-account-city-filter-revision.md), which supersedes conflicting city-selection/account recommendations below. Its additive account schema awaits physical review; shared operational domain tables must be designed before their importer migrations.
+Historical discovery draft: subsequent implementation is recorded in `../delivery/task-board.md`. The current confirmed login/city and consolidation decisions are in [unified-account-city-filter-revision.md](unified-account-city-filter-revision.md), which supersedes conflicting city-selection/account recommendations below. Its additive account schema is approved and implemented. Phase 3 has started with the shared operational domain design; that new physical schema must be reviewed before its migrations and importer.
 
 ## 1. Findings and intended outcome
 

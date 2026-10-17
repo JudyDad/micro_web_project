@@ -1,0 +1,29 @@
+{
+  "source_tables": 616,
+  "distinct_names": 127,
+  "source_columns": 3947,
+  "shared_business_tables": 118,
+  "support_tables": 4,
+  "shared_source_instances": 590,
+  "preservation_only_source_instances": 26,
+  "operational_column_mappings": 3644,
+  "preservation_only_column_mappings": 303,
+  "declared_relationship_occurrences": 743,
+  "grouped_relationship_contracts": 152,
+  "shared_relationship_contracts": 151,
+  "represented_declared_relationship_occurrences": 743,
+  "physical_payload_columns": 734,
+  "variant_fields": 2,
+  "unresolved_cycle_nodes": 0,
+  "assertions": [
+    "616/616 table and 3947/3947 column mappings",
+    "no identifier collision",
+    "all local FKs reference exact unique keys",
+    "all child FK indexes present",
+    "MySQL 1017-column/64-index limits respected",
+    "all original declared relationship instances retained"
+  ],
+  "max_table_columns": 68,
+  "max_table_indexes": 17,
+  "max_planned_index_bytes_upper_bound": 96
+}

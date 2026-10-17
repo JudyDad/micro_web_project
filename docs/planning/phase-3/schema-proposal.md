@@ -1,0 +1,75 @@
+# P3.0 shared operational schema proposal
+
+Prepared 17 October 2026. **Review proposal; physical schema confirmation pending. No Phase 3 migrations, importer or data rehearsal has been implemented.** This is the concrete shared business-table proposal required by P3.0, separate from the already approved immutable preservation layer and account schema.
+
+The full column/type/default/nullability breakdown, every foreign key, check and index is in [schema-physical.md](schema-physical.md). The authoritative machine-readable physical schema and complete source projections are in [operational-schema.json](operational-schema.json). [schema-coverage.json](schema-coverage.json) records metadata checks. These are schema descriptions, not executable DDL.
+
+## Scope and exact coverage
+
+The supplied snapshot has 127 distinct table names, 616 source/city table instances and 3,947 column instances. All remain imported and independently reconciled in their original typed preservation tables. Nothing is deleted or silently excluded from reconciliation.
+
+The proposal adds 118 shared business tables, named `op_<original_table>`, covering 590 source instances and 3,644 source column instances. It adds four support tables: `operational_entities`, `operational_origins`, `migration_run_contracts` and `migration_checkpoints`. The remaining 26 instances / 303 column instances have explicit preservation-only mappings. Those nine names are:
+
+| Names | Proposed disposition and reason |
+|---|---|
+| `dept`, `resultstable`, `t1`, `temp_gender`, `visit_schedule_temp`, `work_exp` | Preserve every occurrence, including identical keyless rows, in the approved typed tables. Their continuing operational entity meaning remains uncertain. Stored-routine/report dependencies still require preserved projections; this disposition does not declare the tables unused or authorize removal of workflows. |
+| `databases`, `version` | Preserve exact configuration/history. Source FTP configuration must not silently become active production configuration. Operational storage settings remain server-side and explicitly configured. |
+| `user` | Preserve all historical user/credential/role values once in the typed layer. Historical references resolve to source-user occurrences. Existing `account_legacy_links` supplies reviewed global-account links; no duplicate credential table or automatic account activation/merger is proposed. |
+
+`role` remains a shared historical lookup. Historical roles never create web capabilities. Equal lookup IDs/names in different sources remain separate entities.
+
+There are 152 grouped relationship contracts: 151 shared-domain contracts and one preservation-only contract (`user.UserRoleID` → `role.Role_ID`). Together they represent all **743 declared source-FK occurrences**, plus 25 application-only occurrences. The preservation-only contract covers all five source cities through `record_relationships`; it is not lost because no `op_user` is created.
+
+## Entity identity, provenance and snapshot boundaries
+
+`operational_entities.id` is the single continuing BIGINT UNSIGNED business identity. Each typed shared business row reuses that ID; it never independently allocates an identity. The entity stores its city, source and frozen source-table discriminator. A composite FK from each shared row verifies all four values, with a table-specific CHECK discriminator. The entity registry itself accepts only the 118 shared kinds.
+
+Every entity belongs to a source and city. The `(source_id,city_id)` FK references the approved `sources(id,city_id)` unique key. Every resolved business relationship carries city and source in its composite FK, preventing cross-city and cross-source resolution. User references instead carry the source and fixed user-table discriminator into `source_records`; no web-account ID replaces a historical user.
+
+`operational_origins` maps each immutable preserved occurrence to one entity. Its source/table/snapshot/record composite FK proves the exact origin occurrence, and its entity FK proves matching source/table kind. Its run/snapshot FK proves that the cited import run belongs to that origin's snapshot. UNIQUE(entity_id,snapshot_id) prevents collapsing two occurrences from the same snapshot into one entity. The existing `source_records` and `migration_runs` need the two additional referenced unique indexes enumerated in the physical proposal; these additive changes also await confirmation.
+
+An initial primary-key entity retains the exact versioned canonical key bytes and SHA-256, qualified by source/table. Hash lookup always compares full bytes and fails closed on a collision. The approved encoding must preserve ordered composite fields, exact values and original SQL comparison metadata. Agriculture answer rows retain their full three-component key and individual association identity. `person_microproject` keeps its own identity and attributes; there is no new unique person/project pair constraint.
+
+Keyless identity remains the preserved snapshot/table/ordered INSERT occurrence, never row-content uniqueness or unordered SELECT order. Identical keyless payloads stay separate occurrences. The present preservation-only auxiliary disposition changes none of those rules.
+
+The first key digest supports retries of the initial frozen import; **it does not authorize binding a later snapshot by matching a number or bytes alone**. Key reuse, deletion/recreation and historical corrections require an explicitly reviewed continuity policy and a non-NULL decision locator before any later-snapshot origin is linked. Keyless ordinals never establish cross-snapshot identity. A changed snapshot cannot reuse a checkpoint lane or claim the earlier rehearsal's comparisons.
+
+New web entities may have `identity_kind=web`, NULL legacy key fields and zero origins. No fake preserved record or legacy key is invented. Original project numbers remain an explicit exception: `op_microproject.c_MP_ID` is required and unique per source. The already accepted source project-number sequence supplies future numbers, with original auto-increment/max-value initialization and transaction/overflow checks. Other imported raw key fields can be NULL on genuinely new web rows; canonical relationships use the resolved entity IDs. Business-write validation and workflow enablement belong to later phases.
+
+## Exact typed values and source differences
+
+Payload names use `c_` to avoid MySQL's case-insensitive `id`/`ID` collision. No legacy field becomes a technical identity. All mapped original definitions remain byte-for-byte in the mapping register, including original defaults, nullability and auto-increment evidence. Shared payload columns use the same storage type, precision, charset and collation. Charset inference uses explicit column metadata or the original table default, never an assumed common charset.
+
+Source defaults and AUTO_INCREMENT are not applied during projection. Imported values are supplied explicitly; source NOT NULL/presence requirements are verified against their own source definitions. Shared payload columns are nullable because a column may be absent in one source, a type variant in another, or a legacy key absent on a new web entity. Original source NOT NULL metadata remains an import/reconciliation invariant. Imported NULL, empty text, zero, sentinel and absent source column stay distinct through the source-presence metadata and preserved projection. New web-write requirements must be applied explicitly per workflow; permissive historical storage does not itself certify a valid application submission.
+
+There are 734 shared typed payload columns. Only two fields require incompatible storage variants: `loan.Loan_PaymentsAmount` and `loan.Loan_ReturnedAmount`, each FLOAT versus DOUBLE. They use separate deterministic type-suffixed columns; the mapping selects exactly one per source. Inapplicable variants stay NULL. Do not sum or cast these variants through an assumed DECIMAL or common FLOAT. Reconciliation compares the original numeric representation under the preservation specification. `FLOAT(24,0)` payment values retain that exact type. DECIMAL scale, enum vocabulary, text collation, original paths, BLOB bytes and temporal sentinels receive no normalization.
+
+Physical payload uniqueness is deliberately limited to source-qualified visible project numbers. Other original PK/secondary unique definitions remain enforced/evidenced in the immutable typed preservation layer and recorded in each mapping. The shared continuing identity registry controls initial source-primary-key duplication; imported historical anomalies are not repaired to satisfy invented constraints. Later business-write schemas must review the needed workflow-specific uniqueness contracts before enabling those writes. The current proposal is an import/read foundation, not authorization to skip those decisions in Phases 4–5.
+
+## Relationships and anomalies
+
+Each distinct declared/application relationship receives a supplemental nullable `ref_<contract>_id` and explicit state on the shared child. States are pending, resolved, null, orphan, ambiguous, sentinel and not_applicable; CHECK constraints require a non-NULL resolved ID exactly when resolved. Raw child fields always survive unchanged. Every relationship resolves from the child's exact original tuple against the same source and immutable snapshot under the original comparison semantics. This same-snapshot check is performed against the preservation ledger/origin map before publishing a shared reference; an operational live entity itself deliberately has no single immutable snapshot column. A same-city FK alone does not certify snapshot correctness.
+
+All non-null unresolved relationships create linked migration exceptions. Null, sentinel and orphan are separate meanings. Shared supplemental FKs always RESTRICT update/delete. The raw payload and unresolved ledger remain available even when a source FK is inconsistent with historical values. No dummy parent, changed raw field, source CASCADE action or silent drop is allowed. All raw rows load before the relationship pass. The shared resolved graph has 118 nodes and no cycles after adding the identified application contracts; `parent_first_order` enumerates every node. This is a static graph result, not import evidence. Reserve staged second-pass resolution for later discovered cycles.
+
+Application-only links include agriculture question/answer, education type and the independent family member/provider person roles. Check agriculture answer/question compatibility separately without limiting multiple answers per project/question. `mevisit` retains its actual beneficiary `Person_ID`; project reports join through the original person/project associations. No invented direct project relationship is added.
+
+Historical actor fields in log, visits, M&E and rehabilitation remain exact text. A matched account is optional additional evidence; matching names do not establish identity, even within one source. `user_notification.Pay_ID` stays raw with explicit unresolved typed-target contract: -1199, -21, dynamic -998±i and positive collisions cannot be forced into a uniform payment FK. Its existing other declared links are mapped normally. Free-message project -1 is retained and explicitly profiled; no project is invented. The absent `notification` table remains a code/schema discrepancy.
+
+## Durable importer contract and indexing
+
+`migration_run_contracts` freezes the snapshot plus manifest/mapping/schema/extractor hashes and extractor/key-encoding versions. `migration_checkpoints` records one exact snapshot/mapping/table/stage lane, an opaque contiguous immutable cursor with digest, committed count, last batch ordinal/count/digest, lease owner, fencing token and lease expiry. A different mapping cannot silently reuse a lane. Takeover/resume uses the existing lane/run only after checking its entire frozen contract. Lane acquisition and fenced compare-and-set updates must be atomic; the cursor and row/map/relationship writes commit together. A checkpoint never substitutes for independently checked cardinality or values. The implementation must test interruption before/after commit, rerun, stale lease rejection and first-gap detection.
+
+All keys/indexes and reasons are enumerated in the physical breakdown. Planned indexes use fixed-width technical BIGINT/binary/ASCII columns; the largest is below the conservative 96-byte upper bound, far below MySQL's 3,072-byte InnoDB key limit. No long text/BLOB or arbitrary name index is invented. The largest proposed table has 68 columns and 17 indexes, within MySQL limits. Workload-specific search indexes require later measured query evidence.
+
+## Remaining gates and scope
+
+This proposal is reviewable but does not claim complete Phase 3 implementation. The FTP/BLOB reference/object-observation catalog, independent reconciliation-run/evidence tables and optional historical actor/polymorphic resolution ledgers require concrete physical addenda before their own migrations. Their requirements are in [the Phase 3 interface contract](../phase-3-import-file-reconciliation-contract.md). They are explicitly not covered by a blanket schema approval for the 118 domain tables and four support tables.
+
+Before migration code, confirm this physical proposal, the nine preservation-only dispositions, nullable shared historical payload strategy, two FLOAT/DOUBLE variant fields, four support tables and the two existing-table index additions. The database architect skill explicitly requires confirmation before migration output. After confirmation, implement and independently review migrations, deterministic importer and reconciler, then the file-access addendum and isolated five-city rehearsal. No source database, desktop source or FTP data has been changed, and no report total/row/BLOB/file parity has been certified by these metadata checks.
+
+## Reproduction and handoff
+
+Run `build-operational-schema.py` with Python 3 from any directory. It reads committed schema metadata only and regenerates JSON, physical Markdown and coverage evidence deterministically. Run `../validate-phase-3-schema.py` independently; it parses source DDL itself and verifies all source definitions/keys, complete declared relationship coverage, mappings, physical references and identifiers. Both checks pass on the delivered proposal. SQL was not executed and source data was not read. Independent coverage checking and review exposed a missing preservation-only user-role relationship grouping in the first draft; that was corrected, all five occurrences are now explicit, and independent coverage verifies all 743.
+
+Files owned by this task: this proposal, `build-operational-schema.py`, `operational-schema.json`, `schema-physical.md` and `schema-coverage.json`. Interfaces are documentation/metadata only. No migrations, application models, runtime configuration or data rows changed. The next dependent task is physical-schema confirmation, followed by P3.1 migration/import implementation under the confirmed scope.

@@ -6,6 +6,8 @@ This is the execution backlog and prompt pack, not a record of completed impleme
 
 Updated 17 October 2026: [unified-account-city-filter-revision.md](unified-account-city-filter-revision.md) is the current product contract. The user explicitly approved the additive account schema, now implemented with global login and city filters. Automated and live restricted-runtime HTTP checks pass; visual browser QA is pending because local browser use is disabled in Work settings. See `../delivery/unified-account-revision.md`. P3.0 shared operational domain design precedes importer implementation.
 
+Phase 3 was started on 17 October 2026 at the user's request. The [P3.0 physical proposal](phase-3/schema-proposal.md) now enumerates 118 shared business tables, four import-support tables and two additive existing-table indexes. Independent metadata coverage and application review pass; explicit confirmation of this new schema remains pending before migrations. [Import/file/reconciliation contracts](phase-3-import-file-reconciliation-contract.md) prepare dependent work; no importer or full rehearsal is implemented. Current status is recorded in `../delivery/phase-3-start.md` and the task board.
+
 - Existing desktop source: `D:\MyProjects\MicroProject newTest` (reference only; do not modify).
 - Planning/evidence folder: `D:\MyProjects\MicroProjects-Web-Plan`.
 - Proposed new application folder: `D:\MyProjects\MicroProjects-Web`. Inspect before creating it; never overwrite an existing project.

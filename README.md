@@ -1,6 +1,6 @@
 # Micro Projects web
 
-Phase 2 foundation with unified username/password login, reviewed historical account links, explicit per-city access and audited project search/details in Arabic and English. Laravel, Livewire, Blade, Tailwind and Alpine. Canonical repository: https://github.com/JudyDad/micro_web_project.
+Phase 2 foundation with unified username/password login, reviewed historical account links, explicit per-city access and audited project search/details in Arabic and English. Phase 3 has started with the shared operational schema and import contracts; its migrations and importer await the new physical-schema review. Laravel, Livewire, Blade, Tailwind and Alpine. Canonical repository: https://github.com/JudyDad/micro_web_project.
 
 ## Local setup
 
