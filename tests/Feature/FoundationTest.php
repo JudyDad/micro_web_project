@@ -6,9 +6,9 @@ use Tests\TestCase;
 
 class FoundationTest extends TestCase
 {
-    public function test_root_opens_arabic_foundation(): void
+    public function test_root_opens_arabic_login(): void
     {
-        $this->get('/')->assertRedirect('/ar/foundation');
+        $this->get('/')->assertRedirect('/ar/login');
     }
 
     public function test_both_languages_render_with_correct_direction(): void
@@ -29,12 +29,12 @@ class FoundationTest extends TestCase
         $this->get('/fr/foundation')->assertNotFound();
     }
 
-    public function test_preview_and_root_are_unavailable_in_production(): void
+    public function test_preview_is_hidden_in_production_while_root_opens_login(): void
     {
         $this->app->instance('env', 'production');
         $this->get('/en/foundation')->assertNotFound();
         $this->get('/ar/foundation')->assertNotFound();
-        $this->get('/')->assertNotFound();
+        $this->get('/')->assertRedirect('/ar/login');
     }
 
     public function test_business_and_authentication_routes_are_not_exposed(): void

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SyntheticFoundationFixture;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
@@ -22,3 +23,12 @@ Artisan::command('foundation:check-database', function () {
 
     return 0;
 })->purpose('Check the isolated MySQL test connection without running migrations');
+
+Artisan::command('phase2:demo', function () {
+    $fixture = app(SyntheticFoundationFixture::class)->create();
+    $this->info('Created two invented projects and source-qualified demo principals.');
+    $this->line('Select Aleppo or Damascus; username demo.user; password Synthetic-Desktop-2026!');
+    $this->line('This fixture is local/testing only and cannot activate real source accounts.');
+
+    return 0;
+})->purpose('Create the isolated Phase 2 synthetic read-only demonstration');

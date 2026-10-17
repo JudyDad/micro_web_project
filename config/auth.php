@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\Models\WebPrincipal;
 
 return [
 
@@ -64,7 +64,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', User::class),
+            'model' => WebPrincipal::class,
         ],
 
         // 'users' => [

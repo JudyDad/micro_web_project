@@ -1,0 +1,4 @@
+<x-layouts.app :title="__('projects.cities')" :operational="true" :synthetic="$synthetic ?? false">
+    <div class="page-heading"><div><p class="eyebrow">{{ __('projects.workspace') }}</p><h1>{{ __('projects.cities') }}</h1><p class="page-description">{{ __('projects.cities_intro') }}</p></div></div>
+    <div class="city-grid">@forelse($cities as $city)<a class="city-card card" href="{{ route('projects.index', ['locale' => app()->getLocale(), 'source' => $city->id]) }}"><span class="city-symbol" aria-hidden="true">◫</span><h2>{{ app()->isLocale('ar') ? $city->name_ar : $city->name_en }}</h2><p>{{ __('projects.browse') }} <span aria-hidden="true">{{ app()->isLocale('ar') ? '←' : '→' }}</span></p></a>@empty<div class="empty-example"><h2>{{ __('projects.no_cities') }}</h2><p>{{ __('projects.no_cities_note') }}</p></div>@endforelse</div>
+</x-layouts.app>

@@ -1,8 +1,8 @@
-# Operational foundation: physical schema proposal
+# Operational foundation: accepted Phase 2 physical schema
 
-Prepared 17 October 2026. **Proposed; requires explicit schema approval before migrations.** This document adds four tables for the P2.3 identity/authorization foundation and P2.5 read-only project slice. It does not authorize real account activation or business writes.
+Prepared 17 October 2026. **Accepted for local Phase 2 implementation.** After this concrete proposal was presented, the user instructed: “Start Phase 2 from P2.3 till end of phase 2.” That instruction authorizes these four tables for P2.3 identity/authorization and the P2.5 synthetic read-only slice. It does not authorize real account activation or business writes.
 
-The approved preservation design explicitly leaves “login principals/grants, audit events and unified operational tables” open in `schema-support.md`. Its typed rows represent immutable snapshot occurrences, not continuing operational identities. The preservation approval recorded in `schema-approval.md` therefore does not approve these additional tables. This is the concrete physical breakdown required by the database architect workflow; implementation waits for approval of this addendum.
+The approved preservation design explicitly leaves “login principals/grants, audit events and unified operational tables” open in `schema-support.md`. Its typed rows represent immutable snapshot occurrences, not continuing operational identities. This separate addendum supplies the physical breakdown for the subsequently authorized Phase 2 implementation; it does not reinterpret the earlier preservation approval.
 
 ## Shared physical rules
 
@@ -128,4 +128,4 @@ The read service must also verify the principal's typed user row remains valid f
 
 Approval requested is limited to these four physical tables, their listed constraints/indexes, and the single-source principal behavior. It does not resolve D07, approve real grants, replace importer consistency checks, or authorize production activation. After approval, implementation acceptance requires source-mismatch FK tests, role-6/disabled denial, deny-by-default grants, same-number project isolation, direct URL/action checks, legacy-to-modern hash behavior, publication denial and audit privilege/immutability checks. Database CHECK and FK behavior must run on isolated MySQL 8.4 with synthetic data.
 
-Attachments remain Phase 3 design work. Financial writes, unified business identities, cross-source account linking, production permission matrices and replacement-snapshot identity continuity need separate reviewed designs. No migrations or runtime implementation accompany this proposal.
+Attachments remain Phase 3 design work. Financial writes, unified business identities, cross-source account linking, production permission matrices and replacement-snapshot identity continuity need separate reviewed designs. Migration `2026_10_17_000004_create_operational_foundation_tables.php` implements this contract. Acceptance evidence is recorded in `../../delivery/phase-2-completion.md`.

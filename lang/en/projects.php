@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'back_sign_in' => 'Return to sign in',
+    'error_403_title' => 'Unable to open this page', 'error_403_message' => 'This page is not available to your account. Contact your administrator if you need help.',
+    'error_404_title' => 'Page not found', 'error_404_message' => 'We could not find the page you requested. Check the address or return to sign in.',
+    'error_419_title' => 'Your session has expired', 'error_419_message' => 'Please sign in again and retry your request.',
+    'error_429_title' => 'Please try again later', 'error_429_message' => 'There have been too many requests. Wait a little before trying again.',
+    'pagination' => 'Project pages', 'page_of' => 'Page :page of :last',
+    'organization' => 'Hope Center', 'workspace' => 'Micro Projects workspace', 'cities' => 'Your cities',
+    'logout' => 'Sign out', 'read_only' => 'Browse project records by city.', 'read_only_short' => 'Read only',
+    'synthetic' => 'Demonstration workspace — all displayed project records are synthetic examples.',
+    'sign_in' => 'Sign in', 'welcome' => 'WELCOME BACK', 'login_intro' => 'Choose your city and sign in with your existing account.',
+    'login_error' => 'Unable to sign in. Check your city and account details, or try again later.',
+    'city' => 'City', 'choose_city' => 'Choose a city', 'username' => 'Username', 'password' => 'Password',
+    'cities_intro' => 'Choose a city to view its projects.', 'browse' => 'Browse projects',
+    'no_cities' => 'No cities available', 'no_cities_note' => 'Contact your administrator to review your access.',
+    'projects' => 'Projects', 'project' => 'Project', 'back_cities' => 'Back to your cities',
+    'projects_intro' => 'Find a project by its original number or name.', 'search_label' => 'Search projects',
+    'search_placeholder' => 'Project number or name', 'search' => 'Search', 'clear' => 'Clear',
+    'search_error' => 'Enter a search of 200 characters or fewer.', 'number' => 'Project number', 'name' => 'Project name',
+    'date' => 'Request date', 'state' => 'Application status', 'no_results' => 'No projects found',
+    'no_results_search' => 'Try another project number or name, or clear the search.',
+    'no_results_city' => 'There are no project records to display for this city yet.', 'back_projects' => 'Back to projects',
+    'details' => 'Project details', 'amount' => 'Requested amount', 'amount_note' => 'As recorded. Currency is not specified in this view.',
+    'address' => 'Project address', 'notes' => 'Notes',
+];

@@ -1,10 +1,15 @@
+@props(['title' => null, 'operational' => false, 'synthetic' => false])
+@php
+    $otherLocale = app()->isLocale('ar') ? 'en' : 'ar';
+    $languageUrl = route(request()->route()->getName(), array_merge(request()->only('search'), request()->route()->parameters(), ['locale' => $otherLocale]));
+@endphp
 <!DOCTYPE html>
 <html lang="{{ app()->getLocale() }}" dir="{{ app()->isLocale('ar') ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>{{ __('ui.foundation') }} · {{ __('ui.brand') }}</title>
+    <title>{{ $title ?? __('ui.foundation') }} · {{ __('ui.brand') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
@@ -31,20 +36,26 @@
 >
     <a class="skip-link" href="#main">{{ __('ui.skip') }}</a>
     <header class="app-header">
-        <div class="header-brand"><button x-ref="mobileToggle" class="icon-button mobile-toggle" type="button" @click="toggleNavigation()" :aria-expanded="navigationOpen" aria-controls="navigation" aria-label="{{ __('ui.menu') }}">☰</button><button class="icon-button desktop-toggle" type="button" @click="toggleSidebar()" :aria-expanded="!sidebarCollapsed" aria-controls="navigation" aria-label="{{ __('ui.toggle_sidebar') }}">☰</button><span class="brand-mark" aria-hidden="true">MP</span><strong>{{ __('ui.brand') }}</strong></div>
-        <div class="header-actions"><span class="environment-badge">{{ __('ui.preview') }}</span><a class="language-link" href="{{ route('foundation', ['locale' => app()->isLocale('ar') ? 'en' : 'ar']) }}" lang="{{ app()->isLocale('ar') ? 'en' : 'ar' }}">{{ app()->isLocale('ar') ? 'English' : 'العربية' }}</a></div>
+        <div class="header-brand"><button x-ref="mobileToggle" class="icon-button mobile-toggle" type="button" @click="toggleNavigation()" :aria-expanded="navigationOpen" aria-controls="navigation" aria-label="{{ __('ui.menu') }}">☰</button><button class="icon-button desktop-toggle" type="button" @click="toggleSidebar()" :aria-expanded="!sidebarCollapsed" aria-controls="navigation" aria-label="{{ __('ui.toggle_sidebar') }}">☰</button><img class="brand-logo" src="{{ asset('assets/brand/hope-center.png') }}" alt="{{ __('projects.organization') }}" width="38" height="38"><strong>{{ __('ui.brand') }}</strong></div>
+        <div class="header-actions">@unless($operational)<span class="environment-badge">{{ __('ui.preview') }}</span>@endunless<a class="language-link" href="{{ $languageUrl }}" lang="{{ $otherLocale }}">{{ app()->isLocale('ar') ? 'English' : 'العربية' }}</a></div>
     </header>
     <button x-cloak x-show="navigationOpen" class="sidebar-backdrop" tabindex="-1" @click="closeNavigation()" aria-label="{{ __('ui.close_menu') }}"></button>
     <aside x-ref="navigation" id="navigation" class="app-sidebar" :class="{ 'is-open': navigationOpen }">
         <p class="nav-label">{{ __('ui.workspace') }}</p>
         <nav aria-label="{{ __('ui.navigation') }}">
+            @if($operational)
+                <a @class(['nav-link', 'is-current' => request()->routeIs('cities.index')]) href="{{ route('cities.index', ['locale' => app()->getLocale()]) }}" @if(request()->routeIs('cities.index')) aria-current="page" @endif aria-label="{{ __('projects.cities') }}" title="{{ __('projects.cities') }}"><span aria-hidden="true">◫</span><span class="nav-text">{{ __('projects.cities') }}</span></a>
+                @if(request()->route('source'))<a class="nav-link is-current" href="{{ route('projects.index', ['locale' => app()->getLocale(), 'source' => request()->route('source')]) }}" @if(request()->routeIs('projects.index')) aria-current="page" @endif aria-label="{{ __('projects.projects') }}" title="{{ __('projects.projects') }}"><span aria-hidden="true">▤</span><span class="nav-text">{{ __('projects.projects') }}</span></a>@endif
+                <form method="POST" action="{{ route('auth.logout', ['locale' => app()->getLocale()]) }}">@csrf<button class="nav-link nav-button" type="submit" aria-label="{{ __('projects.logout') }}" title="{{ __('projects.logout') }}"><span aria-hidden="true">↪</span><span class="nav-text">{{ __('projects.logout') }}</span></button></form>
+            @else
             <a class="nav-link is-current" href="#main" @click="closeNavigation(false)" aria-current="page" aria-label="{{ __('ui.foundation') }}" title="{{ __('ui.foundation') }}"><span aria-hidden="true">◫</span><span class="nav-text">{{ __('ui.foundation') }}</span></a>
             <a class="nav-link" href="#projects" @click="closeNavigation(false)" aria-label="{{ __('ui.project_preview') }}" title="{{ __('ui.project_preview') }}"><span aria-hidden="true">▤</span><span class="nav-text">{{ __('ui.project_preview') }}</span></a>
             <a class="nav-link" href="#components" @click="closeNavigation(false)" aria-label="{{ __('ui.components') }}" title="{{ __('ui.components') }}"><span aria-hidden="true">◇</span><span class="nav-text">{{ __('ui.components') }}</span></a>
+            @endif
         </nav>
-        <div class="sidebar-note"><span class="status-dot"></span><strong>{{ __('ui.local_foundation') }}</strong><p>{{ __('ui.sidebar_note') }}</p></div>
+        <div class="sidebar-note"><span class="status-dot"></span><strong>{{ $operational ? __('projects.workspace') : __('ui.local_foundation') }}</strong><p>{{ $operational ? __('projects.read_only') : __('ui.sidebar_note') }}</p></div>
     </aside>
-    <main id="main" class="app-main" tabindex="-1" :inert="navigationOpen">{{ $slot }}<footer>{{ __('ui.asset_notice') }}</footer></main>
+    <main id="main" class="app-main" tabindex="-1" :inert="navigationOpen">@if($synthetic)<div class="synthetic-notice" role="note">{{ __('projects.synthetic') }}</div>@endif{{ $slot }}<footer>{{ $operational ? __('projects.organization') : __('ui.asset_notice') }}</footer></main>
     @livewireScripts
 </body>
 </html>

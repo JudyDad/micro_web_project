@@ -1,6 +1,6 @@
 # Phase 2 foundation handoff — 17 October 2026
 
-Status: partial foundation delivered; Phase 2 acceptance gate remains open.
+Historical handoff, superseded by [Phase 2 completion](phase-2-completion.md). The notes below describe the initial foundation delivery before schema approval and P2.3–P2.5 implementation.
 
 ## Gate evidence
 
