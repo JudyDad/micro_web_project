@@ -14,13 +14,15 @@ Prepared 16 October 2026. Owner: coordinator. Status: Phase 0 scope reviewed; se
 
 Authority: `team-execution-plan.md`, Working agreement; `creation-and-migration-plan.md`, confirmed decisions. The newer team plan takes precedence over draft recommendations.
 
+Revision authority (17 October 2026): [unified accounts and city filters](unified-account-city-filter-revision.md) records the user's four confirmed answers and supersedes the earlier city-qualified web login. One username/password account, administrator-assigned cities, explicit duplicate review and per-city capabilities are the accepted product behavior. Its new physical schema is pending review; the deployed local Phase 2 slice still implements the previous behavior.
+
 ## Release workflow contract
 
 The detailed screen and action inventory is maintained by P0.1. The release families to reconcile with that inventory are:
 
 | ID | Workflow family | Required acceptance behavior | Accountable acceptance role |
 |---|---|---|---|
-| W01 | Authentication, city selection and account administration | Source-qualified actors; explicit permitted cities; disabled-account denial; authorized actions and downloads | Staff administrator, name pending |
+| W01 | Unified authentication and account administration | Username/password login directly into workspace; reviewed legacy links; admin-assigned cities with independent capabilities; city filters on relevant pages; disabled-account denial | Staff administrator, name pending |
 | W02 | Preliminary/full applications, people and families | Complete intake including historical values and duplicate-number searches | Intake lead, name pending |
 | W03 | Agriculture, rehabilitation and supporting application details | Preserve form fields, linked entities and validation distinctions | Intake lead |
 | W04 | Checklists, scoring, review and lifecycle | Trace calculations and allowed transitions, including rejection and incomplete records | Programme lead, name pending |
@@ -51,6 +53,8 @@ The condition at `MainForm.cs:1285`, `role != 3 || role != 7`, is always true. I
 
 User decision: reuse desktop credentials where technically compatible. Implement a tested compatibility verifier and rehash on successful login when needed; determine handling of incompatible/invalid credentials after isolated profiling, without silently granting access or discarding historical authors. Preserve historical authors and explicitly map web principals to source identities and city capabilities. Never consolidate accounts automatically by username. SSO is not selected.
 
+Confirmed revision: the same person uses the same password across legacy databases. Review duplicate usernames before linking them to one global web account; historical actors remain separate evidence. City membership is assigned by administrators. Capabilities may differ between the account's cities even when legacy roles match. Relevant pages initially show all permitted cities and expose a city filter beside their other filters. Login and navigation have no city-selection step. One operational database will ultimately contain shared business tables with city IDs and preserved source mappings; current per-source preservation tables are an intermediate layer.
+
 ## Deployment and offline assumptions
 
 User decision: build locally now; ask for hosting details at the end of the project. Hosting target, access boundary and production runtimes remain unverified deployment prerequisites, explicitly deferred rather than blockers to local development. P0.3 owns the capability checklist. Verify the local runtime and select compatible supported versions with lockfiles for local implementation; recheck production compatibility before deployment. Local desktop dependencies and dump metadata are not hosting capabilities.
@@ -74,6 +78,7 @@ Internet-wide versus office/VPN access will be asked with hosting at project com
 | D09 | Pending records owner | Active-template availability and approved logo/font packaging | Print/theme acceptance |
 | D10 | Pending staff | Named workflow acceptance owners and explicit disposition of uncertain screens | Staff acceptance; no omission authorized |
 | D11 | Later release planning | Write-pause window, backup/rollback owners and retention policy | P7/P8; not static discovery |
+| D12 | Product decisions confirmed; physical schema proposed | Global username/password account; reviewed legacy links; administrator-assigned cities and independent city capabilities; page-local city filters; shared operational tables | P2.R1 physical schema review, then P2.R2–R4 implementation and P3.0 operational domain design |
 
 ## Gate and next prerequisites
 

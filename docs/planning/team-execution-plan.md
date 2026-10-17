@@ -4,12 +4,15 @@
 
 This is the execution backlog and prompt pack, not a record of completed implementation. Prepared 16 October 2026. Read `creation-and-migration-plan.md`, `backup-audit.json` and `source-schemas.json` in this folder first. The approved decisions below override earlier draft recommendations.
 
+Updated 17 October 2026: [unified-account-city-filter-revision.md](unified-account-city-filter-revision.md) is the current product contract. Complete P2.R1–P2.R4 before the next importer work. P2's original synthetic gate passed, but the requested revised login/filter behavior has not yet been implemented. The revision's physical schema is ready for review.
+
 - Existing desktop source: `D:\MyProjects\MicroProject newTest` (reference only; do not modify).
 - Planning/evidence folder: `D:\MyProjects\MicroProjects-Web-Plan`.
 - Proposed new application folder: `D:\MyProjects\MicroProjects-Web`. Inspect before creating it; never overwrite an existing project.
 - Five cities only: Aleppo, Damascus, Homs, Latakia and AlWadi.
 - Preserve original project number plus city; add unique internal IDs. Never merge records on an unqualified legacy ID.
 - One operational MySQL database. Preserve source provenance for every imported record and relationship. Never silently deduplicate, round, trim, normalize, discard or repair legacy data.
+- One username/password web login, with explicit reviewed links to historical accounts. Administrators assign cities and capabilities independently per city. No city-choice login or navigation screen; relevant pages default to all permitted cities and include city filters beside their other filters. Shared operational tables with city IDs are the final target; existing per-source typed tables remain the preservation layer.
 - Reuse existing FTP storage and original file paths. Keep secrets server-side. Legacy files remain in place; uploads use collision-resistant source-qualified paths. An independent verified file backup is required before cutover.
 - Laravel + Livewire + Blade + Tailwind + Alpine. Select compatible supported versions after checking hosting; record exact versions and lockfiles. Do not introduce Filament or a separate JavaScript SPA without a concrete agreed need.
 - Match HopeHR: Somar Sans, sampled primary #C2151C, grays #58595B / #6D6E71 / #939598, white cards, pale gray workspace, rounded controls and collapsible sidebar. Arabic RTL and English LTR are the default.
@@ -69,11 +72,13 @@ Begin after P0.4. Theme scaffolding can proceed while Phase 1 is reviewed; datab
 |---|---|---|
 | P2.1 Repository and runtime | Coordinator | New project, locked versions, environment example with no secrets, CI, local/test setup and MySQL test connection |
 | P2.2 Theme and layout | UI engineer | Reusable layout, forms, tables, alerts, dialogs, loading/errors, EN/AR switch, RTL and mobile navigation; visual comparison against reference |
-| P2.3 Identity and authorization | Application engineer | Login policy based on discovery; city/role permissions enforced on every action, download, query and export; audit events; tests for denied cross-city access |
+| P2.3 Identity and authorization | Application engineer | Revised by P2.R1–R4: global username/password login, reviewed legacy links, admin-assigned city capabilities, current-account checks and audit; permissions enforced on every action, download, query and export |
 | P2.4 Schema foundation | Data engineer | Accepted migrations, constraints and synthetic fixtures; isolated MySQL migration tests; project-number allocation under concurrency |
-| P2.5 First integrated slice | Coordinator + reviewers | Login → permitted city → project search → read-only project detail; two cities with the same legacy project number resolve correctly |
+| P2.5 First integrated slice | Coordinator + reviewers | Revised by P2.R3: login → projects across permitted cities → city/search filters → read-only detail; two cities with the same legacy project number remain distinct |
 
 Gate: one complete read-only vertical slice works with synthetic data in Arabic and English. No production accounts or data are seeded into public demos.
+
+Revision gate: run P2.R1 schema review/migration, P2.R2 global accounts and grants, P2.R3 city filters and P2.R4 independent review/tests. The original gate evidence does not certify these new requirements. See the revision document for exact schema, route changes, upgrade invariants and tests.
 
 ## Phase 3 — importer, file access and independent reconciliation
 
@@ -81,7 +86,8 @@ Depends on accepted schema and Phase 2 foundations. Three parallel workstreams w
 
 | Task | Owner | Deliverable / acceptance |
 |---|---|---|
-| P3.1 Database importer | Data engineer | Deterministic batches, persistent source-key map, checkpoint/resume, cycles and duplicate rows; rerun and interruption tests without duplicates |
+| P3.0 Shared operational domain design | Data engineer + application reviewer | Review unified business tables, city IDs, historical authors and complete preservation-to-operational mappings before domain migrations; do not treat per-source typed tables as the final operational schema |
+| P3.1 Database importer | Data engineer | Consolidate isolated source databases into the approved shared operational tables in one database; deterministic batches, persistent source-key map, checkpoint/resume, cycles and duplicate rows; rerun and interruption tests without duplicates |
 | P3.2 Attachment access | Application engineer | Read-only existing FTP adapter and BLOB handling, authorized streaming, path validation, source-qualified metadata, safe missing-file errors; test storage for upload code |
 | P3.3 Independent reconciler | QA | Reads source and target independently of importer transformations; verifies counts, values, relationships, BLOB/file hashes and report totals |
 | P3.4 First full rehearsal | Coordinator | Isolated five-city import with exception report and timing; all source rows accounted for; unresolved anomalies retained and visible |
@@ -111,7 +117,7 @@ Depends on Phase 4's stable project interfaces. Run three domain lanes; rotate U
 |---|---|---|
 | P5.1 Finance | Application engineer | Loans, payment schedules, receipts, purchases and executive files; exact currency-specific reconciliation, transactions, duplicate-submit protection and audit trail |
 | P5.2 Field operations | Second application specialist | Visits/schedules, monitoring and evaluation, rehabilitation follow-up, profession meetings and special cases; desktop rule parity |
-| P5.3 Staff operations | Third specialist | Task board, internal notifications and relevant administration/lookups; city scoping and permission parity; real delivery disabled in test environments |
+| P5.3 Staff operations | Third specialist | Task board, internal notifications, account administration with city assignment and independent per-city capability management, reviewed legacy account links and relevant lookups; real delivery disabled in test environments |
 | P5.4 Integration review | QA after a lane frees | End-to-end project → finance → visits → state history; stale edits and retries do not create duplicate business events |
 
 Gate: all enumerated operational workflows are implemented or explicitly deferred by the user. No invented calculation or financial rounding rule may substitute for source behavior.

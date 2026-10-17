@@ -2,6 +2,8 @@
 
 Prepared 16 October 2026. Status: evidence-based draft, with business decisions below still open. No production database was connected to or changed. No application implementation or migration has been executed.
 
+Historical discovery draft: subsequent implementation is recorded in `../delivery/task-board.md`. The current confirmed login/city and consolidation decisions are in [unified-account-city-filter-revision.md](unified-account-city-filter-revision.md), which supersedes conflicting city-selection/account recommendations below. Its additive account schema awaits physical review; shared operational domain tables must be designed before their importer migrations.
+
 ## 1. Findings and intended outcome
 
 Build a Laravel + Livewire website with one operational database, the existing Micro Projects workflows, and the organization's HopeHR visual theme. Preserve all source data and original project numbers, with a verifiable mapping for every changed technical key.

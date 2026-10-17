@@ -1,5 +1,7 @@
 # Phase 2 completion — 17 October 2026
 
+Subsequent change request: the user confirmed unified login and city filters after this acceptance. This document certifies the original behavior only. [P2.R1–P2.R4](../planning/unified-account-city-filter-revision.md) track the revised requirements; the new physical schema is proposed and the runtime revision is not yet implemented.
+
 The local synthetic gate in team-execution-plan.md passes: actual login → permitted city → project search → persisted read-only detail in English and Arabic. P2.3–P2.5 are implemented; P2.2 now packages the supplied brand assets. This is a local foundation acceptance record, not production activation or source-value reconciliation.
 
 ## Implementation and review

@@ -22,6 +22,8 @@ Delivery policy: commit coherent changes for every task/phase and push them to t
 
 ## Phase 2 — local foundation
 
+The table below records the original completed slice. The user's subsequent unified-login and city-filter revision supersedes its single-source account/navigation behavior; see P2.R1–R4 below. Original passing tests do not certify the requested revision.
+
 | Task | Owner / reviewer | Dependencies | State | Changed files / evidence | Remaining decisions/checks |
 |---|---|---|---|---|---|
 | P2.1 Repository and runtime | Coordinator / application specialist | P0.4 | done | Bootstrap, Composer/npm locks, `.env.example`, CI and MySQL connection check; local build/tests pass | MySQL 8.4.8 verified locally; hosted CI passed for foundation and approved-schema commits |
@@ -29,7 +31,7 @@ Delivery policy: commit coherent changes for every task/phase and push them to t
 | P2.3 Identity and authorization | Application specialist / UI specialist + coordinator | Operational schema addendum | done for synthetic gate | Source-qualified login, Argon2id upgrade, current-user/publication checks, explicit projects.view, rate limit/CSRF, audit and restricted runtime tests | D07 real staff grants remain unresolved; no real principals activated |
 | P2.4 Preservation schema foundation | Data engineer / independent QA + coordinator | Approved preservation schema | done | 616 typed + 10 support tables; 3,947 columns; MySQL 8.4.8 create/rollback/rerun, source constraints and 2-process numbering pass | Operational schema is a separate addendum; source-value/import parity is not claimed |
 | P2.5 Integrated read-only slice | Coordinator / specialists | P2.3, P2.4 | done | Actual login → permitted city → persisted search/detail in EN/AR; same number 1042 in two synthetic cities stays isolated; direct denial, pagination/escaping tests | Production data publication requires importer/reconciler evidence and authorized activation |
-| Phase 3 | Data/file specialists / QA | Accepted schema and Phase 2 foundations | ready, not started | Next P3.1 deterministic importer; P3.2 attachment access and P3.3 independent reconciler follow agreed interfaces | Fresh-source manifests, anomaly dispositions and snapshot identity continuity must remain explicit |
+| Phase 3 | Data/file specialists / QA | Revised Phase 2 foundations and accepted shared operational design | not started; follows P2.R1–R4 | P3.0 shared operational domain design, then P3.1 importer; P3.2 attachments and P3.3 independent reconciler follow agreed interfaces | Fresh-source manifests, anomaly dispositions and historical identity mappings must remain explicit |
 
 Phase 2 local synthetic gate is complete. The user authorized P2.3 through the end of Phase 2 after the concrete addendum was presented. The four-table operational migration and integrated read-only slice are implemented and tested. No private records, production credentials or FTP access are part of this foundation. See [completion evidence](phase-2-completion.md). The historical review below records the earlier state and is superseded by this completion record.
 
@@ -46,4 +48,18 @@ User requested a review of security, design, responsiveness and user scenarios. 
 
 Verification: production preview denial, unsupported locales/routes, EN/AR navigation, city filtering, dialog focus/Escape and disabled saving; 28 unit/feature tests (5,282 assertions), isolated MySQL lifecycle/constraints/concurrency (52,444 assertions), build and formatting pass. Assertion count for the concurrent worker barrier varies with polling. Composer and npm advisory checks reported zero advisories. Browser checks showed no application console warnings/errors. Temporary MySQL test server shut down after verifying it contains no synthetic business data. Screenshots saved outside the repository.
 
-Updated after implementation: **next task is Phase 3 / P3.1 Database importer**. Phase 2's local synthetic gate passes. D07 real grants still require staff disposition; production activation, attachment access and replacement-snapshot identity continuity are not implied by this gate.
+Updated after the unified-login request: **next task is P2.R1 physical-schema review**, followed by P2.R2–R4 implementation. Then P3.0 shared operational domain design precedes P3.1 importer work. The original Phase 2 gate remains recorded; it does not satisfy the newly requested behavior.
+
+## Unified login and city filters — confirmed revision
+
+User confirmed administrator-assigned cities, explicit duplicate-account review, the same password for one person across legacy databases, and independent permissions per city. [Revision and full physical schema](../planning/unified-account-city-filter-revision.md) are ready for review. The runtime remains unchanged while the additive schema is proposed; no source data, credentials or production grants were changed.
+
+| Task | State | Deliverable / dependency |
+|---|---|---|
+| P2.R1 Account schema | review | Four additive tables fully specified; physical-schema confirmation required before migration code |
+| P2.R2 Global identity and permissions | todo | One web account, reviewed historical links, admin-assigned city capabilities, global audit; depends on P2.R1 |
+| P2.R3 Direct workspace and filters | todo | Remove city-choice flow; combine authorized projects and add city filters; depends on P2.R2 |
+| P2.R4 Upgrade and verification | todo | Synthetic transition, permission/auth tests, EN/AR responsive browser QA, restricted-runtime privileges, CI and push |
+| P3.0 Shared operational model | todo | Complete reviewed shared business schema/mappings before domain migration code |
+
+Plan verification: cross-checked confirmed user answers against the scope contract, execution plan, original physical addendum and delivered authentication services. No runtime code changed in this planning revision, so runtime tests were not rerun.
