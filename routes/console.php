@@ -9,8 +9,11 @@ Artisan::command('foundation:check-database', function () {
 
         return 1;
     }
-    if (config('database.connections.mysql.url') || config('database.connections.mysql.database') !== 'micro_projects_test') {
-        $this->error('This check only accepts the micro_projects_test database.');
+    if (config('database.connections.mysql.url')
+        || config('database.connections.mysql.database') !== 'micro_projects_test'
+        || ! in_array(config('database.connections.mysql.host'), ['127.0.0.1', 'localhost', '::1'], true)
+        || config('database.connections.mysql.unix_socket')) {
+        $this->error('Use loopback MySQL with micro_projects_test and no URL or socket override.');
 
         return 1;
     }

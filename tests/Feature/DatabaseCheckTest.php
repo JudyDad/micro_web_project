@@ -24,4 +24,16 @@ class DatabaseCheckTest extends TestCase
         DB::shouldReceive('select')->never();
         $this->artisan('foundation:check-database')->assertExitCode(1);
     }
+
+    public function test_remote_host_is_rejected_even_when_database_name_matches(): void
+    {
+        config([
+            'database.default' => 'mysql',
+            'database.connections.mysql.database' => 'micro_projects_test',
+            'database.connections.mysql.url' => null,
+            'database.connections.mysql.host' => 'unapproved.example',
+        ]);
+        DB::shouldReceive('select')->never();
+        $this->artisan('foundation:check-database')->assertExitCode(1);
+    }
 }

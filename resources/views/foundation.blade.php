@@ -6,7 +6,7 @@
         <div class="stat-card"><span>{{ __('ui.language_support') }}</span><strong>AR / EN</strong><small>{{ __('ui.language_note') }}</small></div>
         <div class="stat-card"><span>{{ __('ui.foundation_status') }}</span><strong class="stat-text">{{ __('ui.local_only') }}</strong><small>{{ __('ui.status_note') }}</small></div>
     </div>
-    <x-ui.card id="projects" :title="__('ui.project_preview')" :eyebrow="__('ui.identity_preview')" x-data="{ city: 'all' }">
+    <x-ui.card id="projects" tabindex="-1" :title="__('ui.project_preview')" :eyebrow="__('ui.identity_preview')" x-data="{ city: 'all' }">
         <div class="table-toolbar"><p>{{ __('ui.identity_note') }}</p><div class="filter-field"><label for="city-filter">{{ __('ui.city_filter') }}</label><select id="city-filter" class="input" x-model="city"><option value="all">{{ __('ui.all_examples') }}</option><option value="aleppo">{{ __('ui.aleppo') }}</option><option value="damascus">{{ __('ui.damascus') }}</option></select></div></div>
         <x-ui.table :caption="__('ui.synthetic_projects')">
             <thead><tr><th scope="col">{{ __('ui.project_number') }}</th><th scope="col">{{ __('ui.city') }}</th><th scope="col">{{ __('ui.project') }}</th><th scope="col">{{ __('ui.source_identity') }}</th><th scope="col">{{ __('ui.status') }}</th></tr></thead>
@@ -18,7 +18,7 @@
         </x-ui.table>
         <p class="card-footnote">{{ __('ui.filter_notice') }}</p>
     </x-ui.card>
-    <div class="component-grid" id="components">
+    <div class="component-grid" id="components" tabindex="-1">
         <x-ui.card :title="__('ui.components')" :eyebrow="__('ui.form_patterns')">
             <div class="component-body">
                 <x-ui.input id="example-title" :label="__('ui.sample_label')" :placeholder="__('ui.sample_placeholder')" :hint="__('ui.input_hint')" autocomplete="off" />

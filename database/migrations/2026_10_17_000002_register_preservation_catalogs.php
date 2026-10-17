@@ -1,10 +1,12 @@
 <?php
 
 use Database\Schema\PreservationManifest;
+use Database\Schema\PreservationRollbackGuard;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 require_once __DIR__.'/../schema/PreservationManifest.php';
+require_once __DIR__.'/../schema/PreservationRollbackGuard.php';
 
 return new class extends Migration
 {
@@ -24,6 +26,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        PreservationRollbackGuard::assertEmptyEvidence();
         // RESTRICT references stop rollback if imported data still uses a catalog.
         // The following support-table rollback removes these static catalogs.
         DB::transaction(function () {

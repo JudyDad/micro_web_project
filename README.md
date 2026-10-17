@@ -35,7 +35,7 @@ Delivered: locked runtime, CI definition, bilingual reusable UI preview, persist
 
 SomarSans/logo packaging and exact visual comparison remain pending D09; this preview uses system fonts and a temporary text mark.
 
-For a separate, explicitly configured MySQL test instance named `micro_projects_test`, set the DB_* variables locally and run `php artisan foundation:check-database`. The connection-check command only executes SELECT 1, refuses DB_URL overrides and production mode, and never migrates. CI provisions a disposable MySQL 8.4 service. A passed connection check is not schema or value-preservation acceptance.
+For a separate, explicitly configured loopback MySQL test instance named `micro_projects_test`, set the DB_* variables locally and run `php artisan foundation:check-database`. The connection-check command only executes SELECT 1, refuses remote hosts, socket/DB_URL overrides and production mode, and never migrates. CI provisions a disposable MySQL 8.4 service. A passed connection check is not schema or value-preservation acceptance.
 
 See [delivery board](docs/delivery/task-board.md) and [Phase 2 handoff](docs/delivery/phase-2-foundation.md). Keep all dumps, private attachments and credentials outside Git. Hosting/provider/runtime and public versus office/VPN access must be confirmed at project completion before deployment.
 

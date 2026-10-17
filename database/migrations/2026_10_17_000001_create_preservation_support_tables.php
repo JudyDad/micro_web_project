@@ -1,7 +1,10 @@
 <?php
 
+use Database\Schema\PreservationRollbackGuard;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+
+require_once __DIR__.'/../schema/PreservationRollbackGuard.php';
 
 return new class extends Migration
 {
@@ -178,6 +181,7 @@ return new class extends Migration
     public function down(): void
     {
         $this->requireMysql();
+        PreservationRollbackGuard::assertEmptyEvidence();
 
         foreach ([
             'project_number_sequences', 'migration_exceptions', 'record_relationships',

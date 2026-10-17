@@ -1,10 +1,12 @@
 <?php
 
 use Database\Schema\PreservationManifest;
+use Database\Schema\PreservationRollbackGuard;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 require_once __DIR__.'/../schema/PreservationManifest.php';
+require_once __DIR__.'/../schema/PreservationRollbackGuard.php';
 
 return new class extends Migration
 {
@@ -35,6 +37,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        PreservationRollbackGuard::assertEmptyEvidence();
         $tables = PreservationManifest::load()['tables'];
         $existing = array_column(DB::select('SELECT TABLE_NAME AS name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()'), 'name');
         // Check all evidence before the first non-transactional DROP, including

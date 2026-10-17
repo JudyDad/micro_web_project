@@ -63,6 +63,7 @@ final class PreservationSchemaTest extends TestCase
         $this->assertCatalogAndPhysicalSchema();
         DB::beginTransaction();
         try {
+            $this->assertRollbackRefusesMetadataWithoutRecords();
             $this->assertSyntheticRecordBoundaries();
             $this->assertRelationshipBoundaries();
             $this->assertRollbackRefusesRetainedEvidence();
@@ -224,6 +225,29 @@ final class PreservationSchemaTest extends TestCase
         self::assertCount(616, array_filter($tables, fn ($table) => str_starts_with($table->name, 'legacy_')));
         self::assertSame(1, DB::table('legacy_a_microproject')->where('MP_ID', 1042)->count());
         self::assertSame(1, DB::table('legacy_d_microproject')->where('MP_ID', 1042)->count());
+    }
+
+    private function assertRollbackRefusesMetadataWithoutRecords(): void
+    {
+        $id = 999;
+        DB::table('snapshots')->insert([
+            'id' => $id, 'source_id' => 1, 'archive_sha256' => str_repeat('m', 32),
+            'sql_sha256' => str_repeat('n', 32), 'manifest_locator' => 'synthetic-metadata-only',
+        ]);
+        self::assertSame(0, DB::table('source_records')->count());
+        foreach (['000001_create_preservation_support_tables', '000002_register_preservation_catalogs', '000003_create_typed_preservation_tables'] as $suffix) {
+            $migration = require database_path('migrations/2026_10_17_'.$suffix.'.php');
+            try {
+                $migration->down();
+                self::fail('Snapshot evidence alone must block rollback before any DROP or catalog deletion.');
+            } catch (RuntimeException $exception) {
+                self::assertStringContainsString('snapshots', $exception->getMessage());
+            }
+            self::assertSame(1, DB::table('snapshots')->where('id', $id)->count());
+            self::assertSame(127, DB::table('source_tables')->count());
+            self::assertSame(616, (int) DB::selectOne("SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'legacy_%'")->n);
+        }
+        DB::table('snapshots')->where('id', $id)->delete();
     }
 
     private function assertConcurrentSequenceAllocation(): void
