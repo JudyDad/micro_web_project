@@ -19,3 +19,11 @@ __pycache__/
 *.pyc
 /.idea/
 /.vs/
+/.phpunit.cache/
+/.phpunit.result.cache
+/public/build/
+/public/hot
+/bootstrap/cache/*.php
+!/storage/**/.gitignore
+/auth.json
+/npm-debug.log

@@ -1,6 +1,6 @@
-# Phase 0 delivery task board
+# Delivery task board
 
-Prepared 16 October 2026. This is now the canonical delivery board in the Git checkout at `D:\MyProjects\MicroProjects-Web`. Repository creation and publication were explicitly requested after Phase 0; no business application has been scaffolded. Historical planning-folder references remain as discovery provenance. Planning artifacts live under `docs/planning` in this repository.
+Prepared 16 October 2026. This is now the canonical delivery board in the Git checkout at `D:\MyProjects\MicroProjects-Web`. Repository creation and publication were explicitly requested after Phase 0; a database-free Phase 2 application foundation has now been scaffolded. Historical planning-folder references remain as discovery provenance. Planning artifacts live under `docs/planning` in this repository.
 
 | Task | Owner | Reviewer | Dependencies | State | Changed files | Evidence | Unresolved decisions |
 |---|---|---|---|---|---|---|---|
@@ -15,6 +15,20 @@ Done requires independent review and acceptance checks; produced artifacts alone
 
 Before deployment, ask the user for the hosting target/provider, production PHP/MySQL capabilities and internet-wide versus office/VPN access. User explicitly requested deferral until the end of the project; do not repeatedly block local work on this question. Carry this item into the application's delivery board and release checklist when created. No scheduled automation created.
 
-Next: Phase 1 isolated restores and complete schema/mapping specification. See `../planning/p0-coordinator-review.md` for exact safety/acceptance prerequisites and outstanding domain checks. No Phase 1 SQL or application scaffold has run. Existing `p1-2-*` metadata drafts are preserved separately; their referenced physical-schema narrative is missing and they are not approved.
+Updated 17 October 2026: Phase 1 provisional MariaDB restores completed in the separate planning folder (616 tables, 1,721,699 rows, 10,512 projects; matching table counts). Final operational schema, MySQL value-level verification and P1.5 acceptance remain open. See `phase-2-foundation.md` for checked chat/file provenance. Existing `p1-2-*` drafts are not approved schema contracts.
 
 Delivery policy: commit coherent changes for every task/phase and push them to the requested GitHub repository after verification. Keep incomplete work explicitly labeled; never commit business rows, dumps, credentials or private attachments.
+
+
+## Phase 2 — local foundation
+
+| Task | Owner / reviewer | Dependencies | State | Changed files / evidence | Remaining decisions/checks |
+|---|---|---|---|---|---|
+| P2.1 Repository and runtime | Coordinator / application specialist | P0.4 | review | Bootstrap, Composer/npm locks, `.env.example`, CI and MySQL connection check; local build/tests pass | Hosted CI and real isolated MySQL connectivity need verification |
+| P2.2 Theme and layout | UI specialist / coordinator | P0.4 | in-progress | `resources`, `lang`; EN/AR desktop/mobile browser checks; components, collapse, filters, dialog | D09 font/logo approval and exact reference comparison remain open |
+| P2.3 Identity and authorization | Application specialist / UI specialist + coordinator | P1.5, D07 | in-progress | `LegacyPasswordVerifier`, independent .NET vectors and unit tests pass | Real login, rehash, source identity mapping, capability enforcement and audit await schema/capability contract |
+| P2.4 Schema foundation | Data engineer / coordinator | P1.5 | blocked | No migrations written | Final accepted physical schema; MySQL migration/constraint/concurrency tests |
+| P2.5 Integrated read-only slice | Coordinator / specialists | P2.3, P2.4 | blocked | Only clearly labeled synthetic presentation exists | Real login → authorized city → search → persisted detail and denied cross-city access tests |
+| Phase 3 | Data/file specialists / QA | Accepted schema and Phase 2 foundations | blocked | Not started | Phase 2 gate is not passed; user authorized Phase 3 only after Phase 2 is done |
+
+Phase 2 is not complete. No private records, production credentials, migrations or FTP access are part of this foundation. Next: finalize and independently review the Phase 1 physical schema for confirmation, then implement the dependent Phase 2 work. Do not substitute preview interactions for authorization or migration acceptance.
