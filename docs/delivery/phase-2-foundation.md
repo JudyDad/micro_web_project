@@ -28,3 +28,7 @@ The installed PHP 8.2.4 runtime is old and is not a deployment recommendation. L
 ## Next dependencies
 
 Finish Phase 1 final operational schema and independent review, then obtain the required physical-schema confirmation before migration code. Resolve D07 capabilities, then implement authentication/rehashing/audit and server authorization on queries, URLs, actions, exports and downloads. Add accepted migrations and synthetic fixtures; verify project-number concurrency on isolated MySQL. Integrate the real read-only slice and test denied cross-city access. Confirm D09 assets and visually compare against HopeHR. Ask hosting questions only at project completion before deployment.
+
+## Update — approved preservation schema implemented
+
+The user explicitly approved the existing Phase 1 preservation schema on 17 October 2026. See `../planning/phase-1/schema-approval.md` and `phase-2-preservation-schema.md`; those records supersede the earlier waiting-for-schema statements above for that approved scope. The approved schema now has migrations, source/table constraints, static catalogs and concurrent number allocation, verified on MySQL 8.4.8. Operational login/grant/audit tables were absent from the original proposal and have their own concrete addendum; they are not an unapproved part of the preservation schema. Source-value/import verification and D07/D09 decisions still remain open.

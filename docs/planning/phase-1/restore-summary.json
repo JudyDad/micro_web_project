@@ -1,0 +1,14 @@
+{
+  "tables": 616,
+  "rows": 1721699,
+  "projects": 10512,
+  "all_counts_match": true,
+  "declared_fk_orphan_links": 0,
+  "cities": [
+    "Aleppo",
+    "Damascus",
+    "Homs",
+    "Latakia",
+    "AlWadi"
+  ]
+}

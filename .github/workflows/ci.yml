@@ -43,3 +43,11 @@ jobs:
         env:
           DB_PASSWORD: ci-only
         run: php artisan foundation:check-database
+      - name: Verify approved schema lifecycle and constraints
+        env:
+          RUN_MYSQL_SCHEMA_TESTS: '1'
+          MYSQL_TEST_HOST: '127.0.0.1'
+          MYSQL_TEST_PORT: '3306'
+          MYSQL_TEST_USERNAME: micro_projects_test
+          MYSQL_TEST_PASSWORD: ci-only
+        run: php vendor/phpunit/phpunit/phpunit tests/Integration/PreservationSchemaTest.php

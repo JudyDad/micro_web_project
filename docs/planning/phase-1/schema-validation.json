@@ -1,0 +1,11 @@
+{
+  "distinct_names": 127,
+  "city_table_instances": 616,
+  "columns": 3947,
+  "declared_relationships": 743,
+  "coverage": "all original table/column definitions mapped",
+  "declared_cycles": 0,
+  "identifier_limit_check": "passed",
+  "runtime_schema_test": "not run",
+  "independent_final_schema_review": "pending"
+}
