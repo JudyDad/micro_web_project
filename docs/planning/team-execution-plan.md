@@ -4,7 +4,7 @@
 
 This is the execution backlog and prompt pack, not a record of completed implementation. Prepared 16 October 2026. Read `creation-and-migration-plan.md`, `backup-audit.json` and `source-schemas.json` in this folder first. The approved decisions below override earlier draft recommendations.
 
-Updated 17 October 2026: [unified-account-city-filter-revision.md](unified-account-city-filter-revision.md) is the current product contract. Complete P2.R1–P2.R4 before the next importer work. P2's original synthetic gate passed, but the requested revised login/filter behavior has not yet been implemented. The revision's physical schema is ready for review.
+Updated 17 October 2026: [unified-account-city-filter-revision.md](unified-account-city-filter-revision.md) is the current product contract. The user explicitly approved the additive account schema, now implemented with global login and city filters. Automated and live restricted-runtime HTTP checks pass; visual browser QA is pending because local browser use is disabled in Work settings. See `../delivery/unified-account-revision.md`. P3.0 shared operational domain design precedes importer implementation.
 
 - Existing desktop source: `D:\MyProjects\MicroProject newTest` (reference only; do not modify).
 - Planning/evidence folder: `D:\MyProjects\MicroProjects-Web-Plan`.

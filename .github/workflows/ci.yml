@@ -61,7 +61,7 @@ jobs:
         run: |
           php artisan migrate --force
           php artisan phase2:demo
-          docker exec ${{ job.services.mysql.id }} mysql -uroot -pci-root-only -e "CREATE USER 'phase2_runtime'@'%' IDENTIFIED BY 'ci-runtime-only'; GRANT SELECT ON micro_projects_test.* TO 'phase2_runtime'@'%'; GRANT INSERT ON micro_projects_test.audit_events TO 'phase2_runtime'@'%'; GRANT UPDATE (password_hash, updated_at) ON micro_projects_test.web_principals TO 'phase2_runtime'@'%';"
+          docker exec ${{ job.services.mysql.id }} mysql -uroot -pci-root-only -e "CREATE USER 'phase2_runtime'@'%' IDENTIFIED BY 'ci-runtime-only'; GRANT SELECT ON micro_projects_test.* TO 'phase2_runtime'@'%'; GRANT INSERT ON micro_projects_test.account_audit_events TO 'phase2_runtime'@'%'; GRANT UPDATE (password_hash, updated_at) ON micro_projects_test.web_accounts TO 'phase2_runtime'@'%';"
       - name: Verify runtime audit and business-data permissions
         env:
           RUN_RUNTIME_AUDIT_TESTS: '1'

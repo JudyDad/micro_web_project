@@ -18,7 +18,7 @@ class AuthenticationBoundaryTest extends TestCase
     public function test_login_and_logout_reject_missing_csrf_before_accessing_data(): void
     {
         $this->app->bind(ValidateCsrfToken::class, EnforcedCsrf::class);
-        $this->post('/en/login', ['source_id' => 1, 'username' => 'demo.user', 'password' => 'synthetic'])->assertStatus(419);
+        $this->post('/en/login', ['username' => 'demo.user', 'password' => 'synthetic'])->assertStatus(419);
         $this->post('/ar/logout')->assertStatus(419);
     }
 
@@ -27,7 +27,7 @@ class AuthenticationBoundaryTest extends TestCase
         $this->app->bind(ValidateCsrfToken::class, EnforcedCsrf::class);
         $this->withSession(['_token' => 'synthetic-csrf-test-token'])
             ->from('/en/login')->post('/en/login', ['_token' => 'synthetic-csrf-test-token', 'password' => 'Synthetic-secret'])
-            ->assertRedirect('/en/login')->assertSessionHasErrors(['source_id', 'username']);
+            ->assertRedirect('/en/login')->assertSessionHasErrors(['username']);
         $this->assertNull(session()->getOldInput('password'));
     }
 
@@ -35,8 +35,8 @@ class AuthenticationBoundaryTest extends TestCase
     {
         app('cache')->flush();
         for ($attempt = 0; $attempt < 6; $attempt++) {
-            $this->from('/en/login')->post('/en/login', ['source_id' => 1, 'username' => 'limited.example'])->assertRedirect('/en/login');
+            $this->from('/en/login')->post('/en/login', ['username' => 'limited.example'])->assertRedirect('/en/login');
         }
-        $this->post('/en/login', ['source_id' => 1, 'username' => 'limited.example'])->assertStatus(429)->assertHeader('Retry-After');
+        $this->post('/en/login', ['username' => 'limited.example'])->assertStatus(429)->assertHeader('Retry-After');
     }
 }

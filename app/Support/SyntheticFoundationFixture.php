@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\AccountProvisioner;
 use App\Services\AuditTrail;
 use Database\Schema\PreservationManifest;
 use Illuminate\Support\Facades\DB;
@@ -70,6 +71,9 @@ final class SyntheticFoundationFixture
                 app(AuditTrail::class)->record($source, null, 'publication.changed', 'succeeded', 'publication', $source, 'synthetic:phase2:'.$name);
                 app(AuditTrail::class)->record($source, null, 'fixture.created', 'succeeded', decision: 'synthetic:phase2:v1');
             }
+
+            $account = app(AccountProvisioner::class)->provision('demo.user', $result['principals']['aleppo'], array_values($result['principals']), [1 => ['projects.view'], 2 => ['projects.view']], 'synthetic:phase2:reviewed-unified-account');
+            $result['account'] = $account->id;
 
             return $result;
         });

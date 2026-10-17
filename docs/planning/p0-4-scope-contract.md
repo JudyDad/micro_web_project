@@ -14,7 +14,7 @@ Prepared 16 October 2026. Owner: coordinator. Status: Phase 0 scope reviewed; se
 
 Authority: `team-execution-plan.md`, Working agreement; `creation-and-migration-plan.md`, confirmed decisions. The newer team plan takes precedence over draft recommendations.
 
-Revision authority (17 October 2026): [unified accounts and city filters](unified-account-city-filter-revision.md) records the user's four confirmed answers and supersedes the earlier city-qualified web login. One username/password account, administrator-assigned cities, explicit duplicate review and per-city capabilities are the accepted product behavior. Its new physical schema is pending review; the deployed local Phase 2 slice still implements the previous behavior.
+Revision authority (17 October 2026): [unified accounts and city filters](unified-account-city-filter-revision.md) records the user's four confirmed answers and supersedes the earlier city-qualified web login. One username/password account, administrator-assigned cities, explicit duplicate review and per-city capabilities are the accepted product behavior. Its four-table physical schema was explicitly approved with “yes approved” and the local synthetic slice now implements it. See the delivery board for verification and the outstanding visual-QA check.
 
 ## Release workflow contract
 
@@ -78,7 +78,7 @@ Internet-wide versus office/VPN access will be asked with hosting at project com
 | D09 | Pending records owner | Active-template availability and approved logo/font packaging | Print/theme acceptance |
 | D10 | Pending staff | Named workflow acceptance owners and explicit disposition of uncertain screens | Staff acceptance; no omission authorized |
 | D11 | Later release planning | Write-pause window, backup/rollback owners and retention policy | P7/P8; not static discovery |
-| D12 | Product decisions confirmed; physical schema proposed | Global username/password account; reviewed legacy links; administrator-assigned cities and independent city capabilities; page-local city filters; shared operational tables | P2.R1 physical schema review, then P2.R2–R4 implementation and P3.0 operational domain design |
+| D12 | Product and account physical schema approved; local implementation delivered | Global username/password account; reviewed legacy links; administrator-assigned cities and independent city capabilities; page-local city filters; shared operational tables later | Visual QA pending local browser availability; P3.0 shared operational domain design before business migrations |
 
 ## Gate and next prerequisites
 

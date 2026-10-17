@@ -1,6 +1,6 @@
-@php($cityName = app()->isLocale('ar') ? $city->name_ar : $city->name_en)
+@php($cityName = app()->isLocale('ar') ? $project->city_name_ar : $project->city_name_en)
 <x-layouts.app :title="__('projects.project').' '.$project->MP_ID.' · '.$cityName" :operational="true" :synthetic="$synthetic ?? false">
-    <a class="back-link" href="{{ route('projects.index', ['locale' => app()->getLocale(), 'source' => $city->id]) }}">{{ __('projects.back_projects') }}</a>
+    <a class="back-link" href="{{ route('projects.index', ['locale' => app()->getLocale()]) }}">{{ __('projects.back_projects') }}</a>
     <div class="page-heading"><div><p class="eyebrow">{{ $cityName }} · {{ __('projects.number') }} <bdi>{{ $project->MP_ID }}</bdi></p><h1 class="project-title">{{ $project->MP_Name }}</h1></div><span class="version-tag">{{ __('projects.read_only_short') }}</span></div>
     <x-ui.card :title="__('projects.details')"><dl class="project-details"><div><dt>{{ __('projects.number') }}</dt><dd><bdi>{{ $project->MP_ID }}</bdi></dd></div><div><dt>{{ __('projects.city') }}</dt><dd>{{ $cityName }}</dd></div><div><dt>{{ __('projects.date') }}</dt><dd><bdi>{{ $project->MP_DateOfRequest ?? '—' }}</bdi></dd></div><div><dt>{{ __('projects.state') }}</dt><dd>{{ $project->ApplicationState ?? '—' }}</dd></div><div><dt>{{ __('projects.amount') }}</dt><dd><bdi>{{ $project->MP_RequestedAmount ?? '—' }}</bdi><p class="field-hint">{{ __('projects.amount_note') }}</p></dd></div><div class="detail-wide"><dt>{{ __('projects.address') }}</dt><dd class="preserve-text">{{ $project->MP_PlaceAddress ?? '—' }}</dd></div><div class="detail-wide"><dt>{{ __('projects.notes') }}</dt><dd class="preserve-text">{{ $project->MP_Note ?? '—' }}</dd></div></dl></x-ui.card>
 </x-layouts.app>

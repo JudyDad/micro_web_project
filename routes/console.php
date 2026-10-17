@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SyntheticAccountUpgrade;
 use App\Support\SyntheticFoundationFixture;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +27,14 @@ Artisan::command('foundation:check-database', function () {
 
 Artisan::command('phase2:demo', function () {
     $fixture = app(SyntheticFoundationFixture::class)->create();
-    $this->info('Created two invented projects and source-qualified demo principals.');
-    $this->line('Select Aleppo or Damascus; username demo.user; password Synthetic-Desktop-2026!');
+    $this->info('Created two invented projects and one reviewed demo account with access to both cities.');
+    $this->line('Username demo.user; password Synthetic-Desktop-2026!; city filters are available on the projects page.');
     $this->line('This fixture is local/testing only and cannot activate real source accounts.');
 
     return 0;
 })->purpose('Create the isolated Phase 2 synthetic read-only demonstration');
+
+Artisan::command('phase2:upgrade-demo', function () {
+    $account = app(SyntheticAccountUpgrade::class)->upgrade();
+    $this->info('Reviewed synthetic account ready: '.$account->id.'. Existing history and permissions are retained on repeat runs.');
+})->purpose('Explicitly link only the known two-city synthetic demo fixture');

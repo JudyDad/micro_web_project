@@ -1,7 +1,11 @@
-@props(['title' => null, 'operational' => false, 'synthetic' => false])
+@props(['title' => null, 'operational' => false, 'synthetic' => false, 'search' => '', 'selectedCities' => []])
 @php
     $otherLocale = app()->isLocale('ar') ? 'en' : 'ar';
-    $languageUrl = route(request()->route()->getName(), array_merge(request()->only('search'), request()->route()->parameters(), ['locale' => $otherLocale]));
+    $languageFilters = [];
+    if (request()->routeIs('projects.index')) {
+        $languageFilters = ['search' => $search ?? '', 'cities' => array_values($selectedCities ?? [])];
+    }
+    $languageUrl = route(request()->route()->getName(), array_merge($languageFilters, request()->route()->parameters(), ['locale' => $otherLocale]));
 @endphp
 <!DOCTYPE html>
 <html lang="{{ app()->getLocale() }}" dir="{{ app()->isLocale('ar') ? 'rtl' : 'ltr' }}">
@@ -44,8 +48,7 @@
         <p class="nav-label">{{ __('ui.workspace') }}</p>
         <nav aria-label="{{ __('ui.navigation') }}">
             @if($operational)
-                <a @class(['nav-link', 'is-current' => request()->routeIs('cities.index')]) href="{{ route('cities.index', ['locale' => app()->getLocale()]) }}" @if(request()->routeIs('cities.index')) aria-current="page" @endif aria-label="{{ __('projects.cities') }}" title="{{ __('projects.cities') }}"><span aria-hidden="true">◫</span><span class="nav-text">{{ __('projects.cities') }}</span></a>
-                @if(request()->route('source'))<a class="nav-link is-current" href="{{ route('projects.index', ['locale' => app()->getLocale(), 'source' => request()->route('source')]) }}" @if(request()->routeIs('projects.index')) aria-current="page" @endif aria-label="{{ __('projects.projects') }}" title="{{ __('projects.projects') }}"><span aria-hidden="true">▤</span><span class="nav-text">{{ __('projects.projects') }}</span></a>@endif
+                <a @class(['nav-link', 'is-current' => request()->routeIs('projects.*')]) href="{{ route('projects.index', ['locale' => app()->getLocale()]) }}" @if(request()->routeIs('projects.index')) aria-current="page" @endif aria-label="{{ __('projects.projects') }}" title="{{ __('projects.projects') }}"><span aria-hidden="true">▤</span><span class="nav-text">{{ __('projects.projects') }}</span></a>
                 <form method="POST" action="{{ route('auth.logout', ['locale' => app()->getLocale()]) }}">@csrf<button class="nav-link nav-button" type="submit" aria-label="{{ __('projects.logout') }}" title="{{ __('projects.logout') }}"><span aria-hidden="true">↪</span><span class="nav-text">{{ __('projects.logout') }}</span></button></form>
             @else
             <a class="nav-link is-current" href="#main" @click="closeNavigation(false)" aria-current="page" aria-label="{{ __('ui.foundation') }}" title="{{ __('ui.foundation') }}"><span aria-hidden="true">◫</span><span class="nav-text">{{ __('ui.foundation') }}</span></a>

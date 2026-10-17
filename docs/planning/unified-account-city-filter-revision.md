@@ -1,6 +1,6 @@
 # Unified accounts and city filters — 17 October 2026
 
-Status: business decisions confirmed by the user; physical schema below ready for review, migrations and runtime changes not yet implemented. This revision supersedes the single-source login and city landing-page requirements in the original Phase 2 addendum. The earlier Phase 2 completion remains evidence for the previous behavior only.
+Status: the user explicitly approved this physical schema with “yes approved.” Migration 000005 and the unified account/login/filter implementation now implement it. Verification and remaining visual-QA limitations are recorded in `../delivery/unified-account-revision.md`. This revision supersedes the single-source login and city landing-page requirements in the original Phase 2 addendum. The earlier Phase 2 completion remains evidence for the previous behavior only.
 
 ## Confirmed product rules
 
@@ -113,4 +113,4 @@ The runtime receives SELECT, INSERT on account_audit_events, and UPDATE(password
 
 One physical database was already chosen; this revision explicitly requires shared operational business tables as well. Preserve the 616 typed tables as evidence until a later authorized retention decision. Do not report UI aggregation over these tables as the finished importer or final operational schema.
 
-The four user answers settle product behavior. The remaining approval is this exact physical schema, required before migration code by the database architecture workflow. No further password-policy, city-access or role-model question is pending for this revision. D07 still tracks actual staff assignments and domain capability definitions; hosting remains deferred until project completion.
+The four user answers settle product behavior and the subsequent explicit schema approval authorizes implementation. No further password-policy, city-access or role-model approval is pending for this revision. D07 still tracks actual staff assignments and domain capability definitions; hosting remains deferred until project completion. The staff administrator web interface remains part of P5.3; this slice supplies controlled administrative provisioning/grant services without opening runtime write routes.

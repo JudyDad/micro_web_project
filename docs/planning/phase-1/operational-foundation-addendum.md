@@ -1,6 +1,6 @@
 # Operational foundation: accepted Phase 2 physical schema
 
-Revision notice: this remains the accepted schema for the original Phase 2 implementation. Its single-source login and separate city landing-page behavior are superseded by the confirmed product decisions in [unified-account-city-filter-revision.md](../unified-account-city-filter-revision.md). The proposed additive global-account tables there await physical-schema review; retain the original tables and evidence during upgrade.
+Revision notice: this remains the accepted schema for the original Phase 2 implementation. Its single-source login and separate city landing-page behavior are superseded by the approved [unified-account-city-filter-revision.md](../unified-account-city-filter-revision.md). Migration 000005 adds the approved global-account tables; original tables and evidence are retained during upgrade.
 
 Prepared 17 October 2026. **Accepted for local Phase 2 implementation.** After this concrete proposal was presented, the user instructed: “Start Phase 2 from P2.3 till end of phase 2.” That instruction authorizes these four tables for P2.3 identity/authorization and the P2.5 synthetic read-only slice. It does not authorize real account activation or business writes.
 

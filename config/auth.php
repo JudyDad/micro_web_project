@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\WebAccount;
 use App\Models\WebPrincipal;
 
 return [
@@ -16,7 +17,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard' => 'account',
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
@@ -38,6 +39,10 @@ return [
     */
 
     'guards' => [
+        'account' => [
+            'driver' => 'session',
+            'provider' => 'accounts',
+        ],
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
@@ -62,6 +67,10 @@ return [
     */
 
     'providers' => [
+        'accounts' => [
+            'driver' => 'eloquent',
+            'model' => WebAccount::class,
+        ],
         'users' => [
             'driver' => 'eloquent',
             'model' => WebPrincipal::class,

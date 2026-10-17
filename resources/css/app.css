@@ -134,6 +134,15 @@ footer { padding-block: 25px 0; font-size: 11px; color: #6d6e71; }
 .search-form { padding: 24px; display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #eee; }
 .search-form .field { flex: 1 1 240px; margin: 0; min-width: 0; }
 .search-form .button { flex-shrink: 0; }
+.project-filters { align-items: flex-start; }
+.project-filters .field { flex-basis: 220px; }
+.city-filter { flex: 1 1 260px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.city-filter legend { padding: 0; margin-bottom: 7px; font-size: 13px; font-weight: 600; }
+.city-filter-options, .filter-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.city-filter-option { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid #d4d4d8; border-radius: 7px; cursor: pointer; }
+.city-filter-option:has(input:checked) { border-color: #c2151c; background: #fff5f5; color: #a61218; }
+.city-filter-option input { width: 18px; height: 18px; accent-color: #c2151c; flex-shrink: 0; }
+.filter-actions { align-self: flex-end; }
 .record-link { color: #c2151c; display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
 .project-name-cell { min-width: 180px; max-width: 380px; white-space: normal; overflow-wrap: anywhere; }
 .pagination { padding: 20px 24px; border-top: 1px solid #eee; }

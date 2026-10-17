@@ -37,9 +37,9 @@ class FoundationTest extends TestCase
         $this->get('/')->assertRedirect('/ar/login');
     }
 
-    public function test_business_and_authentication_routes_are_not_exposed(): void
+    public function test_business_routes_require_authentication_and_unlocalized_login_is_not_exposed(): void
     {
-        $this->get('/en/projects/1')->assertNotFound();
+        $this->get('/en/projects/1')->assertRedirect('/en/login');
         $this->get('/login')->assertNotFound();
     }
 

@@ -48,18 +48,18 @@ User requested a review of security, design, responsiveness and user scenarios. 
 
 Verification: production preview denial, unsupported locales/routes, EN/AR navigation, city filtering, dialog focus/Escape and disabled saving; 28 unit/feature tests (5,282 assertions), isolated MySQL lifecycle/constraints/concurrency (52,444 assertions), build and formatting pass. Assertion count for the concurrent worker barrier varies with polling. Composer and npm advisory checks reported zero advisories. Browser checks showed no application console warnings/errors. Temporary MySQL test server shut down after verifying it contains no synthetic business data. Screenshots saved outside the repository.
 
-Updated after the unified-login request: **next task is P2.R1 physical-schema review**, followed by P2.R2–R4 implementation. Then P3.0 shared operational domain design precedes P3.1 importer work. The original Phase 2 gate remains recorded; it does not satisfy the newly requested behavior.
+Updated after implementation: **P2.R1–R3 are implemented**, and automated/live HTTP verification for P2.R4 passes. Rendered browser QA remains pending because local browser use is disabled in Work settings. Next development task is P3.0 shared operational domain design, before P3.1 importer work. The original Phase 2 gate remains historical evidence for the previous behavior.
 
 ## Unified login and city filters — confirmed revision
 
-User confirmed administrator-assigned cities, explicit duplicate-account review, the same password for one person across legacy databases, and independent permissions per city. [Revision and full physical schema](../planning/unified-account-city-filter-revision.md) are ready for review. The runtime remains unchanged while the additive schema is proposed; no source data, credentials or production grants were changed.
+User confirmed administrator-assigned cities, explicit duplicate-account review, the same password for one person across legacy databases, and independent permissions per city, then explicitly approved the [physical schema](../planning/unified-account-city-filter-revision.md). The local runtime now implements the revision using one reviewed synthetic account. No source business data, production credentials or staff grants were changed.
 
 | Task | State | Deliverable / dependency |
 |---|---|---|
-| P2.R1 Account schema | review | Four additive tables fully specified; physical-schema confirmation required before migration code |
-| P2.R2 Global identity and permissions | todo | One web account, reviewed historical links, admin-assigned city capabilities, global audit; depends on P2.R1 |
-| P2.R3 Direct workspace and filters | todo | Remove city-choice flow; combine authorized projects and add city filters; depends on P2.R2 |
-| P2.R4 Upgrade and verification | todo | Synthetic transition, permission/auth tests, EN/AR responsive browser QA, restricted-runtime privileges, CI and push |
+| P2.R1 Account schema | done | Explicit user approval; migration 000005; FK/CHECK/unique and protected rollback checks; full schema lifecycle passes |
+| P2.R2 Global identity and permissions | done for synthetic scope | New account guard, exact username, compatible bridge/Argon2id upgrade, reviewed-link provisioner, independent city grants, global audit; restricted runtime passes |
+| P2.R3 Direct workspace and filters | implemented; visual QA pending | Projects entry, combined permitted results, city/search filters, same-number separation, direct URL authorization; EN/AR automated and live HTTP pass |
+| P2.R4 Upgrade and verification | review | Synthetic upgrade retains evidence and changed grants; 40 tests / 58,070 assertions pass, build/Blade/Pint/Composer checks pass; browser unavailable in Work settings; see revision verification for CI |
 | P3.0 Shared operational model | todo | Complete reviewed shared business schema/mappings before domain migration code |
 
-Plan verification: cross-checked confirmed user answers against the scope contract, execution plan, original physical addendum and delivered authentication services. No runtime code changed in this planning revision, so runtime tests were not rerun.
+Verification: [unified-account-revision.md](unified-account-revision.md) records interfaces, safe upgrade, test results, live HTTP evidence, privilege fix and browser limitation. The staff administration web interface stays in P5.3; controlled assignment services exist now. Historical source tables remain in the one database pending the later approved shared operational-domain schema/importer.

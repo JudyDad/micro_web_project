@@ -8,11 +8,11 @@ class ProjectSearchRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Source/capability middleware runs before controller access.
+        return true; // The service checks every requested city against current grants.
     }
 
     public function rules(): array
     {
-        return ['search' => ['nullable', 'string', 'max:200'], 'page' => ['sometimes', 'integer', 'min:1', 'max:1000000']];
+        return ['search' => ['nullable', 'string', 'max:200'], 'cities' => ['sometimes', 'array', 'max:5'], 'cities.*' => ['required', 'integer', 'distinct', 'min:1', 'max:5'], 'page' => ['sometimes', 'integer', 'min:1', 'max:1000000']];
     }
 }

@@ -1,6 +1,6 @@
 # Micro Projects web
 
-Phase 2 local foundation complete: source-qualified sign-in, explicit city access, audited project search and read-only details in Arabic and English. Laravel, Livewire, Blade, Tailwind and Alpine. Canonical repository: https://github.com/JudyDad/micro_web_project.
+Phase 2 foundation with unified username/password login, reviewed historical account links, explicit per-city access and audited project search/details in Arabic and English. Laravel, Livewire, Blade, Tailwind and Alpine. Canonical repository: https://github.com/JudyDad/micro_web_project.
 
 ## Local setup
 
@@ -21,7 +21,9 @@ php artisan migrate
 php artisan phase2:demo
 ```
 
-These commands create 616 typed preservation tables, ten support tables and four operational tables, then seed two entirely invented projects and source-qualified principals. The fixture refuses production, remote databases, URL/socket overrides and databases containing snapshots or principals. Rollback refuses retained evidence. Never run these commands against source or business databases.
+These commands create 616 typed preservation tables, ten support tables, four historical foundation tables and four unified-account tables. They seed two entirely invented projects, their historical principals and one explicitly reviewed global demo account. The fixture refuses production, remote databases, URL/socket overrides and databases containing snapshots or principals. Rollback refuses retained evidence. Never run these commands against source or business databases.
+
+To upgrade the existing two-city synthetic Phase 2 demo, use the migration account to run `php artisan migrate` and `php artisan phase2:upgrade-demo`. The latter accepts only the known synthetic snapshot identities and preserves history, password and grant changes on repeat runs. Configure the revised runtime grants below afterward. Authentication now uses the distinct `account` session guard, so old principal sessions cannot become global account sessions merely by matching numeric IDs.
 
 Switch DB_* to a separate restricted runtime account using [runtime permissions](docs/operations/runtime-permissions.md), then start:
 
@@ -29,7 +31,7 @@ Switch DB_* to a separate restricted runtime account using [runtime permissions]
 php artisan serve --host=127.0.0.1 --port=8023
 ```
 
-Open http://127.0.0.1:8023/ar/login or /en/login. Select Aleppo or Damascus; username `demo.user`, password `Synthetic-Desktop-2026!`. These credentials are public synthetic test values. Each account sees only its own city; both example projects have original number 1042. Local component demonstrations remain at /ar/foundation and /en/foundation.
+Open http://127.0.0.1:8023/ar/login or /en/login. Username `demo.user`, password `Synthetic-Desktop-2026!`. These are public synthetic test values. Login opens projects from both assigned cities; use the city checkboxes alongside search to filter results. Leaving all cities unchecked shows all permitted cities. Both example projects have original number 1042 and retain their city identities. Local component demonstrations remain at /ar/foundation and /en/foundation.
 
 File sessions/cache and log-only mail need no external services. No private records, production credentials, dumps or attachments are seeded. Provided Somar Sans and Hope Center assets have [documented provenance](docs/delivery/theme-assets.md).
 
@@ -60,6 +62,6 @@ Windows restricted execution can falsely report PHP files unreadable or block np
 
 ## Delivery boundary
 
-The user has since confirmed a revision to global username/password login, administrator-assigned cities, independent per-city permissions and page-level city filters. See [the revised plan and proposed physical schema](docs/planning/unified-account-city-filter-revision.md). The running demo below still reflects the original Phase 2 behavior until P2.R1–R4 are implemented. The immediate next step is review of that additive schema, followed by implementation; P3.0 shared operational domain design precedes P3.1 importer work.
+The user approved the [unified-account schema and plan](docs/planning/unified-account-city-filter-revision.md). The local demo implements username/password login, administrator-assigned cities, independent per-city capabilities and page-level city filters. Controlled provisioning/grant services are implemented; the administrator web interface remains in the planned staff-administration module. Only synthetic accounts are provisioned here.
 
-See the [delivery board](docs/delivery/task-board.md) and [original Phase 2 completion evidence](docs/delivery/phase-2-completion.md). The preservation schema and original four-table foundation addendum are implemented; their local synthetic gate passed. The requested P2.R1–R4 revision is pending. Real staff grants (D07), importer/reconciliation, attachment access and production activation remain subsequent work. Phase 3 will start with P3.0 shared operational domain design, followed by P3.1 deterministic importer. Confirm hosting/provider/runtime and public versus office/VPN access at project completion before deployment.
+See the [delivery board](docs/delivery/task-board.md) and [revision verification](docs/delivery/unified-account-revision.md). Real staff grants (D07), importer/reconciliation, attachment access and production activation remain subsequent work. One physical database is already used; the current combined read adapter operates over preserved source tables. Phase 3 starts with P3.0 shared operational domain design, followed by P3.1 importer consolidation. Confirm hosting/provider/runtime and public versus office/VPN access at project completion before deployment.

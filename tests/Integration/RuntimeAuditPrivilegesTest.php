@@ -2,7 +2,9 @@
 
 namespace Tests\Integration;
 
-use App\Services\AuditTrail;
+use App\Services\AccountAuditTrail;
+use App\Services\AuthenticateAccount;
+use App\Support\SyntheticFoundationFixture;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -32,10 +34,25 @@ class RuntimeAuditPrivilegesTest extends TestCase
         self::assertSame(2, DB::table('source_publications')->where('publication_kind', 'synthetic')->count());
         DB::beginTransaction();
         try {
-            $before = DB::table('audit_events')->count();
-            app(AuditTrail::class)->record(1, null, 'access.denied', 'denied');
-            self::assertSame($before + 1, DB::table('audit_events')->count());
+            // First login must bridge credentials with SELECT-only access to legacy evidence.
+            $account = DB::table('web_accounts')->where('username', 'demo.user')->first();
+            self::assertNotNull($account);
+            DB::table('web_accounts')->where('id', $account->id)->update(['password_hash' => null]);
+            $authenticated = app(AuthenticateAccount::class)->attempt('demo.user', SyntheticFoundationFixture::PASSWORD);
+            self::assertNotNull($authenticated);
+            self::assertStringStartsWith('$argon2id$', $authenticated->password_hash);
+            $before = DB::table('account_audit_events')->count();
+            app(AccountAuditTrail::class)->record(null, 'access.denied', 'denied');
+            self::assertSame($before + 1, DB::table('account_audit_events')->count());
+            self::assertTrue(DB::statement('UPDATE web_accounts SET password_hash = password_hash, updated_at = updated_at WHERE id = 0'));
             foreach ([
+                "UPDATE account_audit_events SET outcome = 'failed' WHERE id = 0",
+                'DELETE FROM account_audit_events WHERE id = 0',
+                'UPDATE web_accounts SET disabled_at = CURRENT_TIMESTAMP WHERE id = 0',
+                'UPDATE web_principals SET password_hash = password_hash WHERE id = 0',
+                'UPDATE account_legacy_links SET revoked_at = CURRENT_TIMESTAMP WHERE id = 0',
+                'UPDATE account_city_capabilities SET revoked_at = CURRENT_TIMESTAMP WHERE id = 0',
+                "INSERT INTO audit_events (source_id, event_type, outcome, occurred_at) VALUES (1, 'access.denied', 'denied', CURRENT_TIMESTAMP)",
                 "UPDATE audit_events SET outcome = 'failed' WHERE id = 0",
                 'DELETE FROM audit_events WHERE id = 0',
                 "UPDATE legacy_a_microproject SET MP_Name = 'forbidden' WHERE record_id = 0",

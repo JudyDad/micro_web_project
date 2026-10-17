@@ -30,7 +30,7 @@ return [
     'open_dialog' => 'Preview dialog', 'save_unavailable' => 'Saving unavailable', 'next_steps' => 'Before operational use',
     'delivery_boundary' => 'IMPLEMENTATION GATES', 'schema_title' => 'Complete the operational schema',
     'schema_note' => 'The preservation schema and identity addendum are approved. Business workflow design continues in later phases.', 'access_title' => 'Verify identity and access',
-    'access_note' => 'The separate sign-in and city project pages apply the accepted access contract. This component page remains a demonstration.',
+    'access_note' => 'Sign-in and project pages apply account and city permissions. This component page remains a demonstration.',
     'assets_title' => 'Provided brand assets', 'assets_note' => 'Somar Sans and the Hope Center logo are packaged unchanged; provenance is documented.',
     'dialog_title' => 'Reusable dialog preview', 'dialog_body' => 'This native dialog supports keyboard focus and Escape to close. It demonstrates a future confirmation surface.',
     'no_changes' => 'No changes to business data', 'no_changes_note' => 'Closing this dialog does not submit or save anything.',
