@@ -31,7 +31,9 @@ def validate():
     sources = read_json(source_path)
     manifest = read_json(manifest_path)
     require(proposal["source_manifest_sha256"] == digest(manifest_path), "Preservation manifest changed")
-    require(proposal["source_schema_sha256"] == digest(source_path), "Source DDL evidence changed")
+    require(proposal["source_schema_hash_encoding"] == "UTF-8 metadata text with LF newlines; preservation manifest remains byte-for-byte", "Unknown metadata hash encoding")
+    source_metadata_hash = hashlib.sha256(source_path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    require(proposal["source_schema_sha256"] == source_metadata_hash, "Source DDL evidence changed")
 
     # Parse source DDL independently rather than trusting generator counts.
     originals = {}

@@ -1,7 +1,8 @@
 {
   "status": "PROPOSED P3.0 physical schema; explicit confirmation required before migrations",
   "source_manifest_sha256": "5e46874d8ee93e72d36d05986fe95154e2c6d6650e908ba1dccbb0cbb2ca8e5d",
-  "source_schema_sha256": "b3a40175f21ccdd8ddcc80026b67a950cae902573f3e372f02dfd32afc39100c",
+  "source_schema_sha256": "3973b3ea0a60c8e35f688907b79c98bb19931e3f43797c679648ded865f1dc91",
+  "source_schema_hash_encoding": "UTF-8 metadata text with LF newlines; preservation manifest remains byte-for-byte",
   "rules": {
     "all_fk_actions": "RESTRICT/RESTRICT",
     "historical_payload": "exact typed values; no normalization or rounding",
