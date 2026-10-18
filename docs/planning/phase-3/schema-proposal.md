@@ -2,6 +2,8 @@
 
 Prepared 17 October 2026. **Review proposal; physical schema confirmation pending. No Phase 3 migrations, importer or data rehearsal has been implemented.** This is the concrete shared business-table proposal required by P3.0, separate from the already approved immutable preservation layer and account schema.
 
+Subsequent approval and implementation: the user confirmed this exact proposal; see [schema-approval.md](schema-approval.md). Migration 000006 and the core staged importer now implement it. The original proposal labels and exhaustive breakdown below describe the approved review baseline. The later request to share whole identical tables is a separate [physical addendum](shared-catalog-schema-proposal.md), which has not yet been confirmed or implemented.
+
 The full column/type/default/nullability breakdown, every foreign key, check and index is in [schema-physical.md](schema-physical.md). The authoritative machine-readable physical schema and complete source projections are in [operational-schema.json](operational-schema.json). [schema-coverage.json](schema-coverage.json) records metadata checks. These are schema descriptions, not executable DDL.
 
 ## Scope and exact coverage

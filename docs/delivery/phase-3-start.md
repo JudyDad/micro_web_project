@@ -2,6 +2,8 @@
 
 Started 17 October 2026 after the user's instruction, “start phase 3.” This authorizes local Phase 3 work under the execution plan, including specialist design and independent review. It does not approve a physical schema that had not yet been presented or authorize production changes.
 
+Current status, 18 October 2026: the subsequently presented P3.0 schema was explicitly approved and implemented. Core import/reconciliation behavior and isolated synthetic verification are recorded in [phase-3-importer.md](phase-3-importer.md). The design-stage gate descriptions below are historical. The new whole-identical-table sharing revision has an aggregate audit and a separate physical proposal; only that new delta remains unconfirmed. Full Phase 3 acceptance is still open.
+
 ## Current gate
 
 P3.0 is the shared operational business schema and complete mappings. The approved preservation schema and four unified-account tables remain unchanged. The new physical schema must be presented and explicitly confirmed before migration code, under the database architecture skill and the execution plan. Importer and reconciler implementation must use that accepted schema.

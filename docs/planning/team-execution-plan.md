@@ -8,6 +8,8 @@ Updated 17 October 2026: [unified-account-city-filter-revision.md](unified-accou
 
 Phase 3 was started on 17 October 2026 at the user's request. The [P3.0 physical proposal](phase-3/schema-proposal.md) now enumerates 118 shared business tables, four import-support tables and two additive existing-table indexes. Independent metadata coverage and application review pass; explicit confirmation of this new schema remains pending before migrations. [Import/file/reconciliation contracts](phase-3-import-file-reconciliation-contract.md) prepare dependent work; no importer or full rehearsal is implemented. Current status is recorded in `../delivery/phase-3-start.md` and the task board.
 
+Updated 18 October 2026: P3.0 is explicitly approved and implemented in migration 000006. Core staged import and independent reconciliation services/CLI are implemented; verification is recorded in `../delivery/phase-3-importer.md`. The user subsequently authorized sharing whole identical tables, excluding matching subsets of differing tables. The frozen archive audit and [concrete sharing addendum](phase-3/shared-catalog-schema-proposal.md) cover that revision; its physical confirmation is still pending. Full five-city import/file/report parity is not claimed.
+
 - Existing desktop source: `D:\MyProjects\MicroProject newTest` (reference only; do not modify).
 - Planning/evidence folder: `D:\MyProjects\MicroProjects-Web-Plan`.
 - Proposed new application folder: `D:\MyProjects\MicroProjects-Web`. Inspect before creating it; never overwrite an existing project.
