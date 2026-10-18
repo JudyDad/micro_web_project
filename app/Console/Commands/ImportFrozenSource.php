@@ -40,11 +40,27 @@ final class ImportFrozenSource extends Command
             $this->info('Staged only. Independent reconciliation and authorized publication remain required.');
 
             return self::SUCCESS;
-        } catch (Throwable) {
+        } catch (Throwable $error) {
             // Database exceptions may contain SQL bindings/private row values.
-            $this->error('Import stopped; durable checkpoints are retained. Inspect the private source and target before retry.');
+            $this->error('Import stopped ('.$this->safeDiagnostic($error).'); durable checkpoints are retained. Inspect the private source and target before retry.');
 
             return self::FAILURE;
         }
+    }
+
+    private function safeDiagnostic(Throwable $error): string
+    {
+        for ($cause = $error; $cause !== null; $cause = $cause->getPrevious()) {
+            if ($cause instanceof \PDOException && is_array($cause->errorInfo ?? null)) {
+                $state = $cause->errorInfo[0] ?? null;
+                $driverCode = $cause->errorInfo[1] ?? null;
+                if (is_string($state) && preg_match('/\A[A-Z0-9]{5}\z/D', $state) === 1
+                    && (is_int($driverCode) || (is_string($driverCode) && preg_match('/\A[0-9]{1,6}\z/D', $driverCode) === 1))) {
+                    return 'database error '.$state.'/'.$driverCode;
+                }
+            }
+        }
+
+        return 'non-database failure';
     }
 }
