@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Middleware\FoundationPreview;
 use App\Http\Middleware\RequireCurrentAccount;
@@ -24,6 +25,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
     Route::middleware('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::middleware(RequireCurrentAccount::class)->group(function () {
+            Route::get('/attachments/{reference}', [AttachmentController::class, 'download'])->where('reference', '[a-f0-9]{32}')->name('attachments.download');
             Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
             Route::get('/projects/{record}', [ProjectController::class, 'show'])->where('record', '[1-9][0-9]{0,19}')->name('projects.show');
             Route::get('/cities', fn (string $locale) => redirect()->route('projects.index', ['locale' => $locale]))->name('cities.index');

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 final class AccountAccess
 {
-    public const CAPABILITIES = ['projects.view'];
+    public const CAPABILITIES = ['projects.view', 'attachments.download'];
 
     public function active(WebAccount $account): bool
     {

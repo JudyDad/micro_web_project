@@ -11,6 +11,8 @@ final class AccountAuditTrail
         'login.succeeded' => ['account'], 'login.denied' => [], 'password.rehashed' => ['account'],
         'logout.succeeded' => ['account'], 'access.denied' => [], 'projects.list' => [], 'projects.view' => ['project_record'],
         'account.provisioned' => ['account'], 'legacy.linked' => ['legacy_link'], 'legacy.revoked' => ['legacy_link'],
+        'attachments.download.started' => ['attachment_record'], 'attachments.download.succeeded' => ['attachment_record'],
+        'attachments.download.failed' => ['attachment_record'], 'attachments.download.denied' => [],
         'legacy.restored' => ['legacy_link'], 'capability.granted' => ['capability_grant'], 'capability.revoked' => ['capability_grant'],
     ];
 
@@ -35,6 +37,9 @@ final class AccountAuditTrail
                 'legacy_link' => DB::table('account_legacy_links')->where('id', $subjectId)->where('account_id', $subjectAccount)->exists(),
                 'capability_grant' => DB::table('account_city_capabilities')->where('id', $subjectId)->where('account_id', $subjectAccount)->where('city_id', $city)->exists(),
                 'project_record' => DB::table('source_records as r')->join('sources as s', 's.id', '=', 'r.source_id')->where('r.id', $subjectId)->where('s.city_id', $city)->where('r.table_id', app(SourceCatalog::class)->tableId('microproject'))->exists(),
+                'attachment_record' => DB::table('source_records as r')->join('sources as s', 's.id', '=', 'r.source_id')
+                    ->join('source_tables as t', 't.id', '=', 'r.table_id')->where('r.id', $subjectId)->where('s.city_id', $city)
+                    ->whereIn('t.name', ['file', 'image'])->exists(),
                 default => false,
             };
             if (! $validSubject) {
