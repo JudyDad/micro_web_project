@@ -3,6 +3,7 @@
 # Approved manifest integrity is byte-for-byte, including original line endings.
 /database/schema/preservation-v1.json -text whitespace=cr-at-eol
 /database/schema/operational-v1.json -text
+/database/schema/shared-catalog-v1.json -text
 
 *.blade.php diff=html
 *.css diff=css

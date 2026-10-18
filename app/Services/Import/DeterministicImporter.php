@@ -97,6 +97,7 @@ final class DeterministicImporter
                 }
                 if ($phase === 'relationships') {
                     $this->db->transaction(function () use ($context, $mapping, $row, $contracts, $lease): void {
+                        $this->db->table('sources')->where('id', $context['source_id'])->lockForUpdate()->first();
                         $this->checkpoints->lock($lease);
                         $this->relationships->resolve($context, $mapping, $row, $contracts);
                     });
@@ -139,6 +140,7 @@ final class DeterministicImporter
         $hook && $hook('before_batch', $info);
         $next = $lease;
         $this->db->transaction(function () use ($context, $mapping, $contracts, $phase, $batch, &$next, $complete, $hook, $info): void {
+            $this->db->table('sources')->where('id', $context['source_id'])->lockForUpdate()->first();
             $this->checkpoints->lock($next);
             $digest = hash_init('sha256');
             foreach ($batch as $row) {

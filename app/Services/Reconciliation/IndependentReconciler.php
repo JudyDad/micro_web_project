@@ -6,6 +6,7 @@ namespace App\Services\Reconciliation;
 
 use App\Services\Import\FrozenSourceReader;
 use Database\Schema\OperationalManifest;
+use Database\Schema\SharedCatalogManifest;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -13,6 +14,8 @@ use RuntimeException;
 /** Reads frozen source occurrences and both target projections independently of import code. */
 final class IndependentReconciler
 {
+    private array $checkedSharingScopes = [];
+
     public function __construct(private CellComparator $cells, private SourceKeyInspector $keys) {}
 
     public function reconcile(FrozenSourceReader $reader): array
@@ -25,8 +28,19 @@ final class IndependentReconciler
         return DB::transaction(fn (): array => $this->compare($reader));
     }
 
-    private function compare(FrozenSourceReader $reader): array
+    /** Converter-owned transaction, called before it clears any local payload. */
+    public function verifySharingTableInTransaction(FrozenSourceReader $reader, string $table): array
     {
+        if (DB::connection()->getDriverName() !== 'mysql' || DB::transactionLevel() < 1 || ! in_array($table, $reader->tables(), true)) {
+            throw new RuntimeException('Sharing verification requires a scoped table in the converter transaction.');
+        }
+
+        return $this->compare($reader, $table);
+    }
+
+    private function compare(FrozenSourceReader $reader, ?string $onlyTable = null): array
+    {
+        $this->checkedSharingScopes = [];
         $contract = $reader->contract();
         require_once database_path('schema/OperationalManifest.php');
         $schema = OperationalManifest::load();
@@ -50,6 +64,9 @@ final class IndependentReconciler
         }
         $report = ['snapshot_id' => (int) $contract['snapshot_id'], 'source_id' => (int) $contract['source_id'], 'tables' => [], 'mismatch_count' => 0, 'mismatches' => [], 'source_anomalies' => 0, 'checked_cells' => 0, 'checked_relationships' => 0];
         foreach ($mappings as $name => $mapping) {
+            if ($onlyTable !== null && $onlyTable !== $name) {
+                continue;
+            }
             $seen = [];
             $expectedCount = 0;
             $ordinalRecords = [];
@@ -129,7 +146,10 @@ final class IndependentReconciler
                         || ($expectedKind === 'ordinal' && ($entity->first_key_bytes !== null || $entity->first_key_sha256 !== null))) {
                         $this->issue($report, $name, $ordinal, 'entity_original_identity');
                     }
-                    $this->compareProjection($report, $mapping, $row, $operational, true);
+                    $payload = $this->sharedPayload($contract, $mapping, $row, $operational, $report, (int) $city->id);
+                    if ($payload !== null) {
+                        $this->compareProjection($report, $mapping, $row, $payload, true);
+                    }
                     foreach ($schema['relationships'] as $relationship) {
                         if ($relationship['child_source_table'] === $name
                             && count(array_filter($relationship['occurrences'], fn (array $item): bool => $item['city'] === $contract['city'])) === 0
@@ -165,26 +185,38 @@ final class IndependentReconciler
             }
             $report['tables'][$name] = ['expected' => $expectedCount, 'registry' => $actual, 'preservation' => $typed];
         }
-        $this->relationships($reader, $schema, $mappings, $report);
+        $this->relationships($reader, $schema, $mappings, $report, $onlyTable);
         $report['matches'] = $report['mismatch_count'] === 0;
         $report['core_ready'] = $report['matches'] && $report['source_anomalies'] === 0;
         $report['publishable'] = false;
-        $report['target_read'] = 'read-only repeatable-read transaction';
+        $report['target_read'] = $onlyTable === null ? 'read-only repeatable-read transaction' : 'converter-owned transaction before conversion';
         $report['coverage'] = 'source/preservation/shared cells, occurrence counts and mapped relationships; external files and report totals not certified';
 
         return $report;
     }
 
-    private function relationships(FrozenSourceReader $reader, array $schema, array $mappings, array &$report): void
+    private function relationships(FrozenSourceReader $reader, array $schema, array $mappings, array &$report, ?string $onlyTable = null): void
     {
         $contract = $reader->contract();
+        $sourceIndexes = [];
         foreach ($schema['relationships'] as $relationship) {
+            if ($onlyTable !== null && $relationship['child_source_table'] !== $onlyTable) {
+                continue;
+            }
             $occurrences = array_values(array_filter($relationship['occurrences'], fn (array $item): bool => $item['city'] === $contract['city']));
             if ($occurrences === []) {
                 continue;
             }
             $childMapping = $mappings[$relationship['child_source_table']];
             $parentMapping = $mappings[$relationship['parent_source_table']];
+            $indexKey = $relationship['parent_source_table'].':'.implode(',', $relationship['parent_columns']);
+            if (! isset($sourceIndexes[$indexKey])) {
+                $referenceColumns = [];
+                foreach ($relationship['parent_columns'] as $column) {
+                    $referenceColumns[$column] = $this->column($parentMapping, $column)['source_definition'];
+                }
+                $sourceIndexes[$indexKey] = new IntegerReferenceIndex($reader->rows($relationship['parent_source_table']), $referenceColumns, $parentMapping['legacy_primary_key']);
+            }
             foreach ($reader->rows($relationship['child_source_table']) as $row) {
                 $child = $this->typed($contract, $childMapping);
                 foreach ($childMapping['legacy_primary_key'] as $column) {
@@ -194,19 +226,26 @@ final class IndependentReconciler
                 if ($childRecord === null) {
                     continue;
                 }
-                $parent = $this->typed($contract, $parentMapping);
-                $null = false;
-                foreach ($relationship['child_columns'] as $index => $column) {
-                    $value = $row['values'][$column];
-                    $null = $null || $value === null;
-                    $parent->where('p.'.$relationship['parent_columns'][$index], $value);
-                }
-                $parents = $null ? collect() : $parent->limit(2)->get();
-                $expectedState = $null ? 'null' : ($parents->count() === 1 ? 'resolved' : ($parents->isEmpty() ? 'orphan' : 'ambiguous'));
+                $tuple = array_map(fn (string $column): ?string => $row['values'][$column], $relationship['child_columns']);
+                $null = in_array(null, $tuple, true);
+                $sourceParent = $null ? null : $sourceIndexes[$indexKey]->find($tuple);
+                $expectedState = $null ? 'null' : ($sourceParent === null ? 'orphan' : ($sourceParent['count'] === 1 ? 'resolved' : 'ambiguous'));
                 if ($expectedState === 'orphan' && $relationship['child_source_table'] === 'user_notification' && $relationship['child_columns'] === ['MicroProject_ID'] && $row['values']['MicroProject_ID'] === '-1') {
                     $expectedState = 'sentinel';
                 }
-                $expectedId = $expectedState === 'resolved' ? (int) $parents->first()->record_id : null;
+                $expectedId = null;
+                if ($expectedState === 'resolved') {
+                    $targetParent = $this->typed($contract, $parentMapping);
+                    foreach ($sourceParent['primary'] as $column => $value) {
+                        $targetParent->where('p.'.$column, $value);
+                    }
+                    $targetParents = $targetParent->limit(2)->get();
+                    if ($targetParents->count() !== 1) {
+                        $this->issue($report, $relationship['child_source_table'], $row['ordinal'], 'source_parent_target_cardinality');
+                    } else {
+                        $expectedId = (int) $targetParents->first()->record_id;
+                    }
+                }
                 foreach ($occurrences as $occurrence) {
                     $report['checked_relationships']++;
                     $ledgerContract = DB::table('relationship_contracts')->where('source_id', $contract['source_id'])->where('child_table_id', $childMapping['source_table_id'])->where('name', 'p3:'.$relationship['id'])->first();
@@ -235,14 +274,20 @@ final class IndependentReconciler
             }
         }
         // An overloaded notification target is unresolved even when every declared FK matches.
-        foreach ($reader->rows('user_notification') as $row) {
-            $report['source_anomalies']++;
+        if ($onlyTable === null || $onlyTable === 'user_notification') {
+            foreach ($reader->rows('user_notification') as $row) {
+                $report['source_anomalies']++;
+            }
         }
         // Validate the independent answer/question compatibility rule from source occurrences.
-        foreach ($reader->rows('microproject_ag_answer') as $row) {
+        if ($onlyTable === null || $onlyTable === 'microproject_ag_answer') {
+            $answerQuestions = [];
             foreach ($reader->rows('aganswer') as $answer) {
-                if ($this->cells->equal($row['values']['Answer_ID'], $answer['values']['ID'], 'int')
-                    && ! $this->cells->equal($row['values']['Question_ID'], $answer['values']['Question_ID'], 'int')) {
+                $answerQuestions[$answer['values']['ID']] = $answer['values']['Question_ID'];
+            }
+            foreach ($reader->rows('microproject_ag_answer') as $row) {
+                if (array_key_exists($row['values']['Answer_ID'], $answerQuestions)
+                    && ! $this->cells->equal($row['values']['Question_ID'], $answerQuestions[$row['values']['Answer_ID']], 'int')) {
                     $report['source_anomalies']++;
                 }
             }
@@ -258,6 +303,75 @@ final class IndependentReconciler
                 $this->issue($report, $mapping['source_table'], $row['ordinal'], $operational ? 'operational_value' : 'preservation_value', $column['source_column']);
             }
         }
+    }
+
+    private function sharedPayload(array $contract, array $mapping, array $row, object $alias, array &$report, int $cityId): ?object
+    {
+        if (! property_exists($alias, 'shared_row_id')) {
+            return $alias;
+        }
+        if ($alias->shared_row_id === null) {
+            if ($alias->shared_group_id !== null || $alias->shared_snapshot_id !== null) {
+                $this->issue($report, $mapping['source_table'], $row['ordinal'], 'partial_shared_pointer');
+            }
+
+            return $alias;
+        }
+        require_once database_path('schema/SharedCatalogManifest.php');
+        $definition = SharedCatalogManifest::table($mapping['source_table']);
+        $group = DB::table('shared_catalog_groups')->where('id', $alias->shared_group_id)->first();
+        $canonical = DB::table($definition['name'])->where('id', $alias->shared_row_id)->first();
+        $member = DB::table('shared_catalog_memberships')->where('group_id', $alias->shared_group_id)->where('source_id', $contract['source_id'])->where('snapshot_id', $contract['snapshot_id'])->where('city_id', $cityId)->where('source_table_id', $mapping['source_table_id'])->first();
+        if ($group === null || $canonical === null || $member === null || $group->status !== 'published' || $group->published_at === null || $group->verified_evidence_locator === null
+            || (int) $alias->shared_snapshot_id !== (int) $contract['snapshot_id'] || (int) $canonical->group_id !== (int) $group->id
+            || (int) $canonical->source_table_id !== (int) $mapping['source_table_id'] || (int) $group->source_table_id !== (int) $mapping['source_table_id']) {
+            $this->issue($report, $mapping['source_table'], $row['ordinal'], 'shared_membership_scope');
+
+            return null;
+        }
+        if ((new CanonicalPayloadFingerprint)->digest($canonical, $definition) !== $canonical->row_sha256) {
+            $this->issue($report, $mapping['source_table'], $row['ordinal'], 'canonical_row_fingerprint');
+        }
+        foreach (get_object_vars($alias) as $column => $value) {
+            if (str_starts_with($column, 'c_') && $value !== null) {
+                $this->issue($report, $mapping['source_table'], $row['ordinal'], 'shared_alias_retains_payload', $column);
+            }
+        }
+        $scope = $group->id.':'.$contract['source_id'].':'.$contract['snapshot_id'];
+        if (! isset($this->checkedSharingScopes[$scope])) {
+            $this->checkedSharingScopes[$scope] = true;
+            $members = DB::table('shared_catalog_memberships as m')->join('sources as s', 's.id', '=', 'm.source_id')->join('cities as c', 'c.id', '=', 's.city_id')->where('m.group_id', $group->id)->get(['m.*', 'c.name_en']);
+            $cities = $members->pluck('name_en')->all();
+            sort($cities, SORT_STRING);
+            $approved = null;
+            foreach (SharedCatalogManifest::groups($mapping['source_table']) as $candidate) {
+                $candidateCities = $candidate['cities'];
+                sort($candidateCities, SORT_STRING);
+                if ($candidateCities === $cities) {
+                    $approved = $candidate;
+                    break;
+                }
+            }
+            $count = DB::table($definition['name'])->where('group_id', $group->id)->count();
+            $maximum = DB::table($definition['name'])->where('group_id', $group->id)->max('row_ordinal');
+            if ($approved === null || $group->full_table_sha256 !== hex2bin($approved['full_table_sha256'])
+                || $group->schema_contract_sha256 !== hex2bin($approved['schema_contract_sha256'])
+                || (int) $group->row_count !== (int) $approved['rows_per_city'] || $count !== (int) $approved['rows_per_city'] || (int) $maximum !== $count
+                || $count !== (int) $contract['table_counts'][$mapping['source_table']]) {
+                $this->issue($report, $mapping['source_table'], 0, 'shared_complete_group');
+            }
+            foreach ($members as $membership) {
+                $aliases = DB::table($mapping['target_table'])->where('source_id', $membership->source_id)->where('shared_group_id', $group->id)->where('shared_snapshot_id', $membership->snapshot_id)->count();
+                $distinct = DB::table($mapping['target_table'])->where('source_id', $membership->source_id)->where('shared_group_id', $group->id)->where('shared_snapshot_id', $membership->snapshot_id)->distinct()->count('shared_row_id');
+                $allScoped = DB::table($mapping['target_table'])->where('source_id', $membership->source_id)->where('source_table_id', $mapping['source_table_id'])->count();
+                $origins = DB::table('operational_origins')->where('source_id', $membership->source_id)->where('source_table_id', $mapping['source_table_id'])->where('snapshot_id', $membership->snapshot_id)->count();
+                if ((int) $membership->row_count !== $count || $aliases !== $count || $distinct !== $count || $allScoped !== $count || $origins !== $count || (int) $membership->source_table_id !== (int) $mapping['source_table_id']) {
+                    $this->issue($report, $mapping['source_table'], 0, 'shared_complete_membership');
+                }
+            }
+        }
+
+        return $canonical;
     }
 
     private function typed(array $contract, array $mapping): Builder

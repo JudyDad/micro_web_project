@@ -63,6 +63,10 @@ class RuntimeAuditPrivilegesTest extends TestCase
                 "UPDATE operational_entities SET identity_kind = 'web' WHERE id = 0",
                 'DELETE FROM operational_origins WHERE source_record_id = 0',
                 'UPDATE migration_checkpoints SET committed_count = 0 WHERE id = 0',
+                "UPDATE shared_catalog_groups SET status = 'published' WHERE id = 0",
+                'DELETE FROM shared_catalog_memberships WHERE group_id = 0',
+                'DELETE FROM shared_age WHERE id = 0',
+                'UPDATE op_age SET shared_row_id = NULL WHERE id = 0',
             ] as $sql) {
                 try {
                     DB::statement($sql);

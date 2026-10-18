@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Services\Reconciliation\CellComparator;
+use App\Services\Reconciliation\IntegerReferenceIndex;
 use App\Services\Reconciliation\SourceKeyInspector;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -57,5 +58,21 @@ final class ReconciliationComparatorTest extends TestCase
         self::assertFalse($inspector->primaryMatches($wire, array_reverse($columns, true), $values));
         self::assertFalse($inspector->primaryMatches($wire, $columns, ['project' => '7', 'answer' => '8']));
         self::assertFalse($inspector->primaryMatches(substr($wire, 0, -1), $columns, $values));
+    }
+
+    public function test_source_reference_index_uses_exact_integer_semantics_and_keeps_ambiguity(): void
+    {
+        $rows = [
+            ['ordinal' => 1, 'values' => ['ID' => '1', 'ref' => '009007199254740993']],
+            ['ordinal' => 2, 'values' => ['ID' => '2', 'ref' => '9007199254740993']],
+            ['ordinal' => 3, 'values' => ['ID' => '3', 'ref' => null]],
+        ];
+        $index = new IntegerReferenceIndex($rows, ['ref' => 'bigint'], ['ID']);
+        self::assertSame(2, $index->find(['+9007199254740993'])['count']);
+        self::assertSame(['ID' => '1'], $index->find(['9007199254740993'])['primary']);
+        self::assertNull($index->find(['9007199254740992']));
+        self::assertNull($index->find([null]));
+        $this->expectException(RuntimeException::class);
+        new IntegerReferenceIndex($rows, ['ref' => 'varchar(20) COLLATE utf8mb4_unicode_ci'], ['ID']);
     }
 }

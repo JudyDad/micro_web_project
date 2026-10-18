@@ -97,7 +97,8 @@ final class PreservationSchemaTest extends TestCase
         $legacyTables = $actualTables->filter(fn ($table) => str_starts_with($table->name, 'legacy_'));
         self::assertCount(616, $legacyTables);
         $operational = json_decode(file_get_contents(database_path('schema/operational-v1.json')), true, flags: JSON_THROW_ON_ERROR);
-        self::assertCount(635 + count($operational['tables']) + count($operational['support_tables']), $actualTables,
+        $sharing = json_decode(file_get_contents(database_path('schema/shared-catalog-v1.json')), true, flags: JSON_THROW_ON_ERROR);
+        self::assertCount(635 + count($operational['tables']) + count($operational['support_tables']) + count($sharing['canonical_tables']) + count($sharing['support_tables']), $actualTables,
             'Preservation/account foundation plus approved shared domain/support tables.');
         $columns = collect(DB::select('SELECT TABLE_NAME AS tbl, COLUMN_NAME AS col, COLUMN_TYPE AS type, IS_NULLABLE AS nullable, COLLATION_NAME AS collation, EXTRA AS extra FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()'))->groupBy('tbl');
         $indexes = collect(DB::select('SELECT TABLE_NAME AS tbl, INDEX_NAME AS idx, COLUMN_NAME AS col, NON_UNIQUE AS non_unique, SUB_PART AS prefix FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX'))->groupBy('tbl');

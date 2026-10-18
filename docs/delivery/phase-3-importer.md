@@ -1,6 +1,6 @@
 # Phase 3 core importer — implementation and operation
 
-Updated 18 October 2026. The user approved the concrete P3.0 schema, then requested whole-identical-table sharing. The approved schema and core staged import are implemented. The new sharing physical addendum is separate and not implemented. This record does not certify the full Phase 3 gate.
+Updated 18 October 2026. The user approved the concrete P3.0 schema, then requested whole-identical-table sharing. The approved schema and core staged import are implemented. The subsequently approved sharing addendum is implemented separately; see [sharing delivery](phase-3-sharing.md). This record does not certify the full Phase 3 gate.
 
 ## Delivered behavior
 

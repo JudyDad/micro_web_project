@@ -4,7 +4,7 @@ Phase 2 foundation with unified username/password login, reviewed historical acc
 
 ## Local setup
 
-Requires PHP 8.2+ with Argon2id, mbstring, XML, PDO MySQL and OpenSSL, Composer 2, Node 22.12+ and MySQL 8.4. Use patched runtimes for deployment. Local verification used PHP 8.2.4, Node 22.19.0 and MySQL 8.4.8; hosting is deferred until project completion.
+Requires PHP 8.2+ with Argon2id, mbstring, XML, PDO MySQL and OpenSSL (also ZIP for archive sharing proof), Composer 2, Node 22.12+ and MySQL 8.4. Use patched runtimes for deployment. Local verification used PHP 8.2.4, Node 22.19.0 and MySQL 8.4.8; hosting is deferred until project completion.
 
 ```powershell
 composer install
@@ -21,7 +21,7 @@ php artisan migrate
 php artisan phase2:demo
 ```
 
-These commands create 616 typed preservation tables, ten support tables, four historical foundation tables and four unified-account tables. They seed two entirely invented projects, their historical principals and one explicitly reviewed global demo account. The fixture refuses production, remote databases, URL/socket overrides and databases containing snapshots or principals. Rollback refuses retained evidence. Never run these commands against source or business databases.
+These commands create 616 typed preservation tables, ten support tables, four historical foundation tables, four unified-account tables, 122 operational/import tables and 57 sharing tables. They seed two entirely invented projects, their historical principals and one explicitly reviewed global demo account. The fixture refuses production, remote databases, URL/socket overrides and databases containing snapshots or principals. Rollback refuses retained evidence. Never run these commands against source or business databases.
 
 To upgrade the existing two-city synthetic Phase 2 demo, use the migration account to run `php artisan migrate` and `php artisan phase2:upgrade-demo`. The latter accepts only the known synthetic snapshot identities and preserves history, password and grant changes on repeat runs. Configure the revised runtime grants below afterward. Authentication now uses the distinct `account` session guard, so old principal sessions cannot become global account sessions merely by matching numeric IDs.
 
@@ -66,4 +66,4 @@ The user approved the [unified-account schema and plan](docs/planning/unified-ac
 
 See the [delivery board](docs/delivery/task-board.md) and [revision verification](docs/delivery/unified-account-revision.md). Real staff grants (D07), complete source/file/report reconciliation, attachment access and production activation remain subsequent work. One physical database is already used; the current combined web read adapter operates over preserved source tables while Phase 3 staged consolidation is verified. Confirm hosting/provider/runtime and public versus office/VPN access at project completion before deployment.
 
-The approved P3.0 schema now has migration 000006. See [Phase 3 importer operation and evidence](docs/delivery/phase-3-importer.md) for freezing a restored source, registering its immutable snapshot, staged import and independent reconciliation. Those CLI operations require isolated loopback MySQL and never publish data or activate accounts. The five-city complete import, file coverage and report parity gates remain open. The [whole-table audit](docs/planning/phase-3/shared-data-candidate-audit.md) and [sharing addendum](docs/planning/phase-3/shared-catalog-schema-proposal.md) distinguish common task definitions from city-specific task assignments; no sharing conversion has executed.
+The approved P3.0 schema now has migration 000006. See [Phase 3 importer operation and evidence](docs/delivery/phase-3-importer.md) for freezing a restored source, registering its immutable snapshot, staged import and independent reconciliation. Those CLI operations require isolated loopback MySQL and never publish data or activate accounts. The five-city complete import, file coverage and report parity gates remain open. The [whole-table audit](docs/planning/phase-3/shared-data-candidate-audit.md) and [sharing addendum](docs/planning/phase-3/shared-catalog-schema-proposal.md) distinguish common task definitions from city-specific task assignments; the approved converter is implemented and verified on invented isolated data. See [sharing operation and evidence](docs/delivery/phase-3-sharing.md). Actual private-data conversion remains part of the full rehearsal.

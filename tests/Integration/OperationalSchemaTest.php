@@ -92,6 +92,8 @@ final class OperationalSchemaTest extends TestCase
         self::assertSame(OperationalManifest::SHA256, hash_file('sha256', database_path('schema/operational-v1.json')));
         $tables = OperationalManifest::tables();
         self::assertCount(122, $tables);
+        $sharing = json_decode(file_get_contents(database_path('schema/shared-catalog-v1.json')), true, flags: JSON_THROW_ON_ERROR);
+        $alterations = array_column($sharing['operational_table_alterations'], null, 'table');
         $columns = collect(DB::select('SELECT TABLE_NAME AS tbl,COLUMN_NAME AS col,COLUMN_TYPE AS type,IS_NULLABLE AS nullable,COLLATION_NAME AS collation FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()'))->groupBy('tbl');
         $indices = collect(DB::select('SELECT TABLE_NAME AS tbl,INDEX_NAME AS idx,COLUMN_NAME AS col,NON_UNIQUE AS non_unique FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX'))->groupBy('tbl');
         $fks = collect(DB::select('SELECT TABLE_NAME AS tbl,CONSTRAINT_NAME AS name,DELETE_RULE AS del,UPDATE_RULE AS upd FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE()'))->groupBy('tbl');
@@ -99,7 +101,7 @@ final class OperationalSchemaTest extends TestCase
             $name = $table['name'];
             self::assertTrue($columns->has($name), $name);
             $actual = $columns[$name]->keyBy('col');
-            self::assertCount(count($table['columns']), $actual, $name);
+            self::assertCount(count($table['columns']) + count($alterations[$name]['add_columns'] ?? []), $actual, $name);
             foreach ($table['columns'] as $column) {
                 $found = $actual[$column['name']];
                 preg_match('/^([a-z]+(?:\([^)]*\))?(?: unsigned)?)/i', $column['definition'], $type);
@@ -117,7 +119,7 @@ final class OperationalSchemaTest extends TestCase
                 self::assertSame($index['columns'], $actualIndices[$indexName]->pluck('col')->all());
                 self::assertSame($index['kind'] === 'INDEX' ? 1 : 0, (int) $actualIndices[$indexName]->first()->non_unique);
             }
-            self::assertCount(count($table['foreign_keys']), $fks->get($name, collect()), $name);
+            self::assertCount(count($table['foreign_keys']) + count($alterations[$name]['add_foreign_keys'] ?? []), $fks->get($name, collect()), $name);
             foreach ($fks->get($name, collect()) as $foreign) {
                 self::assertSame('RESTRICT', $foreign->del);
                 self::assertSame('RESTRICT', $foreign->upd);

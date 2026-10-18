@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Import;
 
+use App\Services\Sharing\SharedPayloadProjection;
+use App\Services\Sharing\TargetWarnings;
 use Database\Schema\OperationalManifest;
 use Illuminate\Database\ConnectionInterface;
 use RuntimeException;
@@ -92,7 +94,7 @@ final class ImportRecordWriter
                 || ! $this->db->table('migration_runs')->where('id', $origin->linked_by_run_id)->where('snapshot_id', $context['snapshot_id'])->exists()) {
                 throw new RuntimeException('Operational entity or origin identity evidence is corrupt.');
             }
-            $this->verify($mapping['target_table'], 'id', $entity, $mapping['columns'], $row['values'], true);
+            $this->verify($mapping['target_table'], 'id', $entity, $mapping['columns'], $row['values'], true, $context);
             $inactive = $this->inactiveReferences[$context['city']][$mapping['target_table']] ?? [];
             if ($inactive !== []) {
                 $shared = $this->db->table($mapping['target_table'])->where('id', $entity)->first();
@@ -136,17 +138,24 @@ final class ImportRecordWriter
                 'source_record_id' => $id, 'source_id' => $context['source_id'], 'source_table_id' => $mapping['source_table_id'],
                 'snapshot_id' => $context['snapshot_id'], 'entity_id' => $entity, 'linked_by_run_id' => $context['run_id'], 'linked_at' => now('UTC'),
             ]);
-            $this->verify($mapping['target_table'], 'id', $entity, $mapping['columns'], $row['values'], true);
+            $this->verify($mapping['target_table'], 'id', $entity, $mapping['columns'], $row['values'], true, $context);
         }
 
         return $id;
     }
 
-    private function verify(string $table, string $idColumn, int $id, array $columns, array $values, bool $operational): void
+    private function verify(string $table, string $idColumn, int $id, array $columns, array $values, bool $operational, ?array $context = null): void
     {
         $stored = $this->db->table($table)->where($idColumn, $id)->first();
         if (! $stored) {
             throw new RuntimeException('Mapped typed row is missing.');
+        }
+        if ($operational) {
+            if ($context === null) {
+                throw new RuntimeException('Operational verification requires exact source/snapshot context.');
+            }
+            $stored = (new SharedPayloadProjection($this->db))->project(substr($table, 3), $stored,
+                $context['source_id'], $context['snapshot_id']);
         }
         foreach ($columns as $column) {
             $target = $column[$operational ? 'target_column' : 'preservation_column'];
@@ -166,20 +175,6 @@ final class ImportRecordWriter
 
     private function assertNoWarnings(): void
     {
-        // PDO::query also prepares on mysqlnd when emulation is disabled.
-        // Send this static diagnostic through the text protocol so it cannot
-        // manufacture warning 1295 and replace the insert's diagnostics.
-        $pdo = $this->db->getPdo();
-        $emulate = $pdo->getAttribute(\PDO::ATTR_EMULATE_PREPARES);
-        try {
-            $pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
-            $warnings = $pdo->query('SHOW WARNINGS')->fetchAll(\PDO::FETCH_OBJ);
-        } finally {
-            $pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, $emulate);
-        }
-        if ($warnings !== []) {
-            $codes = array_map(static fn (object $warning): int => (int) $warning->Code, $warnings);
-            throw new RuntimeException('Target warned while storing exact source values; batch rolled back. Codes: '.implode(',', $codes));
-        }
+        TargetWarnings::assertNone($this->db);
     }
 }
