@@ -19,6 +19,7 @@ return [
     */
 
     'driver' => env('SESSION_DRIVER', 'database'),
+    'block_store' => env('SESSION_BLOCK_STORE', 'file'),
 
     /*
     |--------------------------------------------------------------------------

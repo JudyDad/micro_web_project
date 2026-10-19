@@ -1,5 +1,16 @@
 # Delivery task board
 
+## Phase 4 — project intake and lifecycle
+
+Started 19 October 2026 on the user's instruction “start p4.1.” Phase 4 may run beside Phase 3 using synthetic fixtures under the execution plan.
+
+| Task | State | Evidence / remaining acceptance |
+|---|---|---|
+| P4.1 People and families | implemented local workflow; acceptance review open | [Delivery](p4-1-people-families.md), [source contract](p4-1-workflow-contract.md). People create/edit/search, family create/link/membership edit, education/work/course editors, scoped capabilities/audit, duplicate review, stale/retry protection and EN/AR screens. Ten isolated workflow tests and rendered browser checks pass; actual-schema MySQL write/lifecycle test passes 18 assertions. Concurrent requests, realistic catalog scale and staff acceptance remain open |
+| P4.2 Applications | todo | Preliminary/full/agriculture/rehabilitation forms, project associations and durable draft behavior |
+| P4.3 Assessment and lifecycle | todo | Checklists, scoring, decisions and allowed transitions |
+| P4.4 Intake acceptance | todo | Integrated workflow, historical data, permissions, concurrency and print comparisons |
+
 Prepared 16 October 2026. This is now the canonical delivery board in the Git checkout at `D:\MyProjects\MicroProjects-Web`. Repository creation and publication were explicitly requested after Phase 0; a database-free Phase 2 application foundation has now been scaffolded. Historical planning-folder references remain as discovery provenance. Planning artifacts live under `docs/planning` in this repository.
 
 | Task | Owner | Reviewer | Dependencies | State | Changed files | Evidence | Unresolved decisions |

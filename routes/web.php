@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Middleware\FoundationPreview;
 use App\Http\Middleware\RequireCurrentAccount;
@@ -25,6 +26,14 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
     Route::middleware('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::middleware(RequireCurrentAccount::class)->group(function () {
+            Route::get('/people', [PeopleController::class, 'index'])->name('people.index');
+            Route::get('/people/create', [PeopleController::class, 'create'])->name('people.create');
+            Route::post('/people', [PeopleController::class, 'store'])->block(10, 10)->name('people.store');
+            Route::post('/people/families', [PeopleController::class, 'storeFamily'])->block(10, 10)->name('people.families.store');
+            Route::get('/people/{person}', [PeopleController::class, 'show'])->where('person', '[1-9][0-9]{0,18}')->name('people.show');
+            Route::put('/people/{person}', [PeopleController::class, 'update'])->where('person', '[1-9][0-9]{0,18}')->name('people.update');
+            Route::post('/people/{person}/family', [PeopleController::class, 'family'])->where('person', '[1-9][0-9]{0,18}')->name('people.family');
+            Route::post('/people/{person}/details/{kind}', [PeopleController::class, 'detail'])->where(['person' => '[1-9][0-9]{0,18}', 'kind' => 'education|workexp|course'])->name('people.detail');
             Route::get('/attachments/{reference}', [AttachmentController::class, 'download'])->where('reference', '[a-f0-9]{32}')->name('attachments.download');
             Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
             Route::get('/projects/{record}', [ProjectController::class, 'show'])->where('record', '[1-9][0-9]{0,19}')->name('projects.show');

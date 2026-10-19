@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
         $middleware->trimStrings(except: ['username', 'password']);
+        $middleware->trimStrings(except: [fn (Request $request) => $request->is('en/people', 'en/people/*', 'ar/people', 'ar/people/*')]);
+        $middleware->convertEmptyStringsToNull(except: [fn (Request $request) => $request->is('en/people', 'en/people/*', 'ar/people', 'ar/people/*')]);
         $middleware->redirectGuestsTo(fn (Request $request) => route('auth.login', ['locale' => in_array($request->route('locale'), ['en', 'ar'], true) ? $request->route('locale') : 'ar']));
         $middleware->redirectUsersTo(fn (Request $request) => route('projects.index', ['locale' => in_array($request->route('locale'), ['en', 'ar'], true) ? $request->route('locale') : 'ar']));
     })

@@ -8,6 +8,8 @@ use InvalidArgumentException;
 final class AccountAuditTrail
 {
     private const SUBJECTS = [
+        'people.list' => [], 'people.view' => ['person_entity'],
+        'people.created' => ['person_entity', 'family_entity'], 'people.updated' => ['person_entity'],
         'login.succeeded' => ['account'], 'login.denied' => [], 'password.rehashed' => ['account'],
         'logout.succeeded' => ['account'], 'access.denied' => [], 'projects.list' => [], 'projects.view' => ['project_record'],
         'account.provisioned' => ['account'], 'legacy.linked' => ['legacy_link'], 'legacy.revoked' => ['legacy_link'],
@@ -33,6 +35,8 @@ final class AccountAuditTrail
         }
         if ($subjectType !== null) {
             $validSubject = match ($subjectType) {
+                'person_entity' => DB::table('op_person')->where('id', $subjectId)->where('city_id', $city)->exists(),
+                'family_entity' => DB::table('op_family')->where('id', $subjectId)->where('city_id', $city)->exists(),
                 'account' => $subjectAccount === $subjectId && DB::table('web_accounts')->where('id', $subjectId)->exists(),
                 'legacy_link' => DB::table('account_legacy_links')->where('id', $subjectId)->where('account_id', $subjectAccount)->exists(),
                 'capability_grant' => DB::table('account_city_capabilities')->where('id', $subjectId)->where('account_id', $subjectAccount)->where('city_id', $city)->exists(),
