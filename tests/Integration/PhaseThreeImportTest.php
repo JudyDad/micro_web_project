@@ -66,7 +66,17 @@ final class PhaseThreeImportTest extends TestCase
                 }
             }), 'Synthetic lost commit acknowledgement.');
             self::assertSame(1, DB::table('source_records')->count());
-            $importer->import($aleppo, 1);
+            $runId = (int) DB::table('migration_run_contracts')->where('snapshot_id', $aleppo->contract()['snapshot_id'])->value('run_id');
+            self::assertSame('interrupted', DB::table('migration_runs')->where('id', $runId)->value('status'));
+            $resumeStatuses = [];
+            $importer->import($aleppo, 1, static function (string $event, array $info) use (&$resumeStatuses, $runId): void {
+                if ($event === 'before_batch' && $info['run_id'] === $runId) {
+                    $resumeStatuses[] = DB::table('migration_runs')->where('id', $runId)->value('status');
+                }
+            });
+            self::assertNotEmpty($resumeStatuses);
+            self::assertSame(['running'], array_values(array_unique($resumeStatuses)));
+            self::assertSame('imported', DB::table('migration_runs')->where('id', $runId)->value('status'));
             $this->mustFail(fn () => $importer->import($homs, 1, static function (string $event, array $info): void {
                 if ($event === 'after_row' && $info['phase'] === 'relationships') {
                     throw new RuntimeException('Synthetic interruption inside relationship transaction.');

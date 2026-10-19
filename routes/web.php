@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Middleware\FoundationPreview;
 use App\Http\Middleware\RequireCurrentAccount;

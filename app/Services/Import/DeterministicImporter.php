@@ -264,7 +264,11 @@ final class DeterministicImporter
                     }
                 }
 
-                return (int) $existing->run_id;
+                $run = (int) $existing->run_id;
+                $this->db->table('migration_runs')->where('id', $run)->where('snapshot_id', $context['snapshot_id'])
+                    ->update(['status' => 'running', 'completed_at' => null]);
+
+                return $run;
             }
             $run = (int) $this->db->table('migration_runs')->insertGetId(['snapshot_id' => $context['snapshot_id'],
                 'tool_version' => 'phase3-import-v1', 'started_at' => now('UTC'), 'status' => 'running']);
