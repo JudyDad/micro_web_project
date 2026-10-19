@@ -61,6 +61,10 @@ final class ImportFrozenSource extends Command
             }
         }
 
-        return 'non-database failure';
+        $type = class_basename($error);
+
+        return preg_match('/\A[A-Za-z][A-Za-z0-9_]{0,79}\z/D', $type) === 1
+            ? 'non-database failure ('.$type.')'
+            : 'non-database failure';
     }
 }
