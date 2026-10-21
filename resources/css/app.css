@@ -156,6 +156,12 @@ footer { padding-block: 25px 0; font-size: 11px; color: #6d6e71; }
 .project-details { margin: 0; padding: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; }
 .project-details dt { font-size: 13px; color: #6d6e71; margin-bottom: 6px; }
 .project-details dd { margin: 0; overflow-wrap: anywhere; font-size: 16px; }
+.is-flagged { color: #c2151c; font-weight: 600; }
+.finance-totals { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0 0 20px; padding: 0; list-style: none; }
+.finance-table .input { width: 100%; min-width: 7rem; }
+.finance-table select.input { min-width: 8.5rem; }
+.finance-table input[type="date"] { min-width: 10.5rem; }
+.finance-table td:last-child .input { min-width: 12rem; }
 .detail-wide { grid-column: 1 / -1; padding-top: 20px; border-top: 1px solid #eee; }
 .preserve-text { white-space: pre-wrap; }
 .people-form { padding: 24px; margin-block: 20px; }

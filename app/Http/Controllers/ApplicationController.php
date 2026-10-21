@@ -97,6 +97,11 @@ final class ApplicationController
         return view('applications.show', $data + [
             'lifecycle' => $lifecycle->panel($request->user(), $this->id($application)),
             'assessees' => $canAssess ? $checklists->beneficiaries($request->user(), $this->id($application)) : collect(),
+            'financeLinks' => array_filter([
+                'finance.show' => $access->check($request->user(), $city, 'finance.view'),
+                'executive.show' => $access->check($request->user(), $city, 'executive_files.view'),
+                'purchasing.show' => $access->check($request->user(), $city, 'purchasing.view'),
+            ]),
             'applicantDetails' => $applicantDetails,
             'personReferenceColumn' => $personRelation['resolved_column'], 'headerReferenceColumn' => $headerRelation['resolved_column'],
             'cityId' => $city, 'canManage' => $canManage, 'canLinkPeople' => $canLinkPeople,

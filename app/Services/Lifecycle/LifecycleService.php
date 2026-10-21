@@ -28,6 +28,8 @@ final class LifecycleService
 
     public const WITHDREW = 'Withdrew';
 
+    public const FINISHED = 'Finished';
+
     public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables) {}
 
     private function authorize(WebAccount $account, int $city, ?string $capability = null): void
@@ -222,6 +224,26 @@ final class LifecycleService
         if ($project->{$donor['state_column']} === 'resolved') {
             DB::table('op_microproject')->where('id', $project->id)->update($this->tables->link('microproject', 'MP_Donor', null));
         }
+    }
+
+    /** The state row in force for a project, with its catalog names resolved. */
+    public function currentState(object $project): ?object
+    {
+        return $this->current($this->history($project));
+    }
+
+    /**
+     * Finance-driven move (Financed on the first loan, Finished on the last payment). Writes nothing and returns false when the
+     * project is already in that state, so a retry cannot add a duplicate history row. Caller holds the project lock and has authorized.
+     */
+    public function enterNamed(object $project, string $nameEn): bool
+    {
+        if ($this->currentState($project)?->state_name_en === $nameEn) {
+            return false;
+        }
+        $this->enter($project, $this->catalogState($project, $nameEn), null, null);
+
+        return true;
     }
 
     /** Preliminary creation: first history row. Called inside the creation transaction. */
