@@ -6,11 +6,11 @@ namespace Tests\Integration;
 
 use App\Services\Applications\ApplicationService;
 use App\Services\Lifecycle\LifecycleService;
-use Database\Schema\OperationalManifest;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Process\Process;
 use Tests\Support\ApplicationFixture;
+use Tests\Support\FullApplicationFixture;
 use Tests\TestCase;
 
 /** Opt-in: two real PHP processes race the same form version against the approved MySQL schema. */
@@ -45,13 +45,7 @@ final class LifecycleConcurrencyTest extends TestCase
             $applications = app(ApplicationService::class);
             $lifecycle = app(LifecycleService::class);
             $id = $applications->create($account, 1, ['c_MP_Name' => 'سباق', 'c_MP_DateOfRequest' => '2026-10-21'], $fixture['person'], $fixture['references']);
-            $references = [];
-            foreach (['MP_FundType_ID', 'MP_PlaceType_ID'] as $key) {
-                $relation = collect(OperationalManifest::load()['relationships'])->first(fn ($r) => $r['child_source_table'] === 'microproject' && $r['child_columns'] === [$key]);
-                $references[$key] = ApplicationFixture::row($relation['parent_source_table'], 1, ['c_ID' => 70]);
-            }
-            $applications->update($account, $id, ['c_MP_RequestedAmount' => '10'] + array_combine(array_map(fn ($n) => 'c_MP_Agreement'.$n, range(1, 5)), array_fill(0, 5, '1')), $applications->find($account, $id)['version'], $references);
-            $applications->saveDetail($account, $id, 'material', ['c_Name' => 'مادة', 'c_Price' => '1', 'c_Amount' => '1'], $applications->find($account, $id)['version']);
+            FullApplicationFixture::complete($id, $fixture['person'], $fixture);
 
             $results = $this->race('complete', $account->id, $id, 0, $applications->find($account, $id)['version']);
             self::assertSame([200, 409], $this->statuses($results), json_encode($results));

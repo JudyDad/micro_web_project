@@ -11,6 +11,7 @@ use Database\Schema\OperationalManifest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\ApplicationFixture;
+use Tests\Support\FullApplicationFixture;
 use Tests\TestCase;
 
 /** P4.4: whole intake journeys over HTTP with invented data (Arabic text, sentinels, retries, grants). */
@@ -58,9 +59,13 @@ final class IntakeAcceptanceTest extends TestCase
         }
         $this->post($url, ['city_id' => 1, 'version' => $this->version($id), 'references' => $references,
             'fields' => ['c_MP_RequestedAmount' => '1500.5'] + array_combine(array_map(fn ($n) => 'c_MP_Agreement'.$n, range(1, 5)), array_fill(0, 5, '1'))])->assertRedirect()->assertSessionHasNoErrors();
-        $this->post($url.'/complete', ['city_id' => 1, 'version' => $this->version($id)])->assertSessionHasErrors('material');
+        $this->post($url.'/complete', ['city_id' => 1, 'version' => $this->version($id)])->assertSessionHasErrors('readiness');
 
         $this->post($url.'/details/material', ['city_id' => 1, 'version' => $this->version($id), 'fields' => ['c_Name' => 'ماكينة خياطة', 'c_Price' => '320', 'c_Amount' => '1']])->assertRedirect()->assertSessionHasNoErrors();
+        // The budget alone is not enough: the household, story, work and support sections are still missing.
+        $this->post($url.'/complete', ['city_id' => 1, 'version' => $this->version($id)])->assertSessionHasErrors('readiness');
+        self::assertSame('zero', $this->column($id, 'c_ApplicationState'));
+        FullApplicationFixture::complete($id, $this->intake[1]['person'], $this->intake[1]);
         $version = $this->version($id);
         $this->post($url.'/complete', ['city_id' => 1, 'version' => $version])->assertRedirect()->assertSessionHasNoErrors();
         $this->post($url.'/complete', ['city_id' => 1, 'version' => $version])->assertStatus(409);
@@ -80,6 +85,39 @@ final class IntakeAcceptanceTest extends TestCase
         self::assertSame(4, DB::table('op_task_microproject')->count());
         $this->get($url)->assertOk()->assertSee('Accepted');
         $this->get('/ar/applications/'.$id)->assertOk()->assertSee('dir="rtl"', false)->assertSee('مقبول');
+    }
+
+    public function test_refused_conversion_lists_each_missing_section_in_both_languages_and_changes_nothing(): void
+    {
+        $id = $this->preliminary();
+        $before = DB::table('op_microproject_state')->count();
+        $en = $this->from('/en/applications/'.$id)->post('/en/applications/'.$id.'/complete', ['city_id' => 1, 'version' => $this->version($id)]);
+        $en->assertRedirect('/en/applications/'.$id)->assertSessionHasErrors('readiness');
+        $messages = session('errors')->get('readiness');
+        self::assertTrue(collect($messages)->contains(fn ($m) => str_starts_with($m, 'Beneficiary — Father’s name is missing')), implode(' | ', $messages));
+        self::assertTrue(collect($messages)->contains(fn ($m) => str_starts_with($m, 'Family — ')));
+        $page = $this->followRedirects($en)->assertOk();
+        $page->assertSee('Beneficiary — ')->assertSee('needs at least one entry');
+
+        $ar = $this->from('/ar/applications/'.$id)->post('/ar/applications/'.$id.'/complete', ['city_id' => 1, 'version' => $this->version($id)]);
+        $this->followRedirects($ar)->assertOk()->assertSee('dir="rtl"', false)->assertSee('المستفيد — ')->assertSee('يحتاج إدخالاً واحداً على الأقل');
+
+        self::assertSame('zero', $this->column($id, 'c_ApplicationState'));
+        self::assertSame($before, DB::table('op_microproject_state')->count());
+        self::assertSame(0, DB::table('op_task_microproject')->count());
+    }
+
+    public function test_conversion_succeeds_only_when_every_section_is_complete_and_a_broken_row_is_named(): void
+    {
+        $id = $this->preliminary();
+        FullApplicationFixture::complete($id, $this->intake[1]['person'], $this->intake[1]);
+        $row = (int) DB::table('op_material')->value('id');
+        DB::table('op_material')->where('id', $row)->update(['c_Price' => '']);
+        $this->post('/en/applications/'.$id.'/complete', ['city_id' => 1, 'version' => $this->version($id)])->assertSessionHasErrors('readiness');
+        self::assertTrue(collect(session('errors')->get('readiness'))->contains(fn ($m) => str_contains($m, '(entry #'.$row.')')));
+        DB::table('op_material')->where('id', $row)->update(['c_Price' => '2']);
+        $this->post('/en/applications/'.$id.'/complete', ['city_id' => 1, 'version' => $this->version($id)])->assertRedirect()->assertSessionHasNoErrors();
+        self::assertSame('project', $this->column($id, 'c_ApplicationState'));
     }
 
     public function test_rejected_withdrawn_and_reopened_projects_keep_one_current_state_and_readable_history(): void

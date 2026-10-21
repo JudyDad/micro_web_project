@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ApplicationFixture;
+use Tests\Support\FullApplicationFixture;
 use Tests\TestCase;
 
 final class LifecycleWorkflowTest extends TestCase
@@ -170,16 +171,9 @@ final class LifecycleWorkflowTest extends TestCase
 
     private function completeApplication(int $id, bool $budget = true): void
     {
-        $city = 1;
-        $references = [];
-        foreach (['MP_FundType_ID', 'MP_PlaceType_ID'] as $key) {
-            $relation = collect(OperationalManifest::load()['relationships'])->first(fn ($r) => $r['child_source_table'] === 'microproject' && $r['child_columns'] === [$key]);
-            $references[$key] = ApplicationFixture::row($relation['parent_source_table'], $city, ['c_ID' => 70]);
-        }
-        $fields = ['c_MP_RequestedAmount' => '1500.5'] + array_combine(array_map(fn ($n) => 'c_MP_Agreement'.$n, range(1, 5)), array_fill(0, 5, '1'));
-        $this->applications->update($this->account, $id, $fields, $this->applications->find($this->account, $id)['version'], $references);
-        if ($budget) {
-            $this->applications->saveDetail($this->account, $id, 'material', ['c_Name' => 'Item', 'c_Price' => '2.5', 'c_Amount' => '4'], $this->applications->find($this->account, $id)['version']);
+        FullApplicationFixture::complete($id, $this->intake[1]['person'], $this->intake[1]);
+        if (! $budget) {
+            DB::table('op_material')->delete();
         }
     }
 

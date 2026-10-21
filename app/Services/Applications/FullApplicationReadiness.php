@@ -68,6 +68,29 @@ final class FullApplicationReadiness
         return $this->issues;
     }
 
+    /**
+     * Human-readable lines for the current locale, one per issue.
+     *
+     * @param  list<array{section: string, code: string, field: string, row: ?int}>  $issues
+     * @return list<string>
+     */
+    public function messages(array $issues): array
+    {
+        return array_map(function (array $issue) {
+            $label = $issue['field'];
+            foreach (['fullapp.fields.', 'applications.fields.', 'people.fields.'] as $prefix) {
+                if (__($prefix.$issue['field']) !== $prefix.$issue['field']) {
+                    $label = __($prefix.$issue['field']);
+                    break;
+                }
+            }
+            $label = $label === $issue['field'] ? str_replace('_', ' ', $label) : $label;
+            $line = __('fullapp.sections.'.$issue['section']).' — '.$label.' '.__('fullapp.codes.'.$issue['code']);
+
+            return $issue['row'] === null ? $line : $line.' ('.__('fullapp.row', ['id' => $issue['row']]).')';
+        }, $issues);
+    }
+
     private function add(string $section, string $code, string $field, ?int $row = null): void
     {
         $this->issues[] = ['section' => $section, 'code' => $code, 'field' => $field, 'row' => $row];

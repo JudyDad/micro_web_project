@@ -225,7 +225,28 @@ final class ApplicationService
                 $rules['c_MP_Agreement'.$n] = ['required', 'integer', 'in:0,1'];
             }
         }
-        Validator::make($payload, $rules)->validate();
+        Validator::make($payload, $rules, [], $this->attributeNames(array_keys($rules)))->validate();
+    }
+
+    /** Readable field names for messages: resolved reference columns are named after their relationship key. */
+    private function attributeNames(array $columns): array
+    {
+        $names = [];
+        foreach ($columns as $column) {
+            $key = substr($column, 2);
+            foreach ($this->relationships('application') as $relation) {
+                if ($relation['resolved_column'] === $column) {
+                    $key = $relation['child_columns'][0];
+                }
+            }
+            $label = __('applications.fields.'.$key);
+            if ($label === 'applications.fields.'.$key) {
+                $label = __('people.fields.'.$key);
+            }
+            $names[$column] = $label === 'people.fields.'.$key ? str_replace('_', ' ', $key) : $label;
+        }
+
+        return $names;
     }
 
     private function categoryPayload(int $city, int $source, array $payload): array
@@ -420,15 +441,19 @@ final class ApplicationService
         if ($application->c_ApplicationState !== 'zero') {
             throw ValidationException::withMessages(['version' => __('applications.complete_not_preliminary')]);
         }
-        $this->requireIntake((array) $application, true);
-        $materials = $this->childrenOf('material', 'MicroProject_ID', $application);
-        if ($materials->isEmpty()) {
-            throw ValidationException::withMessages(['material' => __('applications.complete_budget')]);
+        // One complete list: project identity fields first, then the desktop full-form rules
+        // for the beneficiary, household and budget (docs/delivery/full-application-readiness.md).
+        $messages = [];
+        try {
+            $this->requireIntake((array) $application, true);
+        } catch (ValidationException $exception) {
+            $messages = collect($exception->errors())->flatten()->all();
         }
-        foreach ($materials as $material) {
-            $this->requiredValues($material, ['c_Name', 'c_Price', 'c_Amount']);
+        $readiness = app(FullApplicationReadiness::class);
+        $messages = array_merge($messages, $readiness->messages($readiness->check($application)));
+        if ($messages !== []) {
+            throw ValidationException::withMessages(['readiness' => $messages]);
         }
-        // Household, story, work and education gates of the desktop full form are not implemented yet (see P4.3 delivery record).
         $this->lifecycle->enterFull($application);
     }
 

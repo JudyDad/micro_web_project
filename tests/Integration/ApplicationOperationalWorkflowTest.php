@@ -7,10 +7,10 @@ namespace Tests\Integration;
 use App\Services\Applications\ApplicationService;
 use App\Services\Assessments\ChecklistService;
 use App\Services\Lifecycle\LifecycleService;
-use Database\Schema\OperationalManifest;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\ApplicationFixture;
+use Tests\Support\FullApplicationFixture;
 use Tests\TestCase;
 
 /** Opt-in writes against the actual approved schema on an empty disposable MySQL target. */
@@ -70,12 +70,7 @@ final class ApplicationOperationalWorkflowTest extends TestCase
             // P4.3: lifecycle handoff, state history, tasks and the assessment checklist on the real constraints.
             $lifecycle = app(LifecycleService::class);
             self::assertSame('On Hold', $lifecycle->panel($account, $id)['current']->state_name_en);
-            $references = [];
-            foreach (['MP_FundType_ID', 'MP_PlaceType_ID'] as $key) {
-                $relation = collect(OperationalManifest::load()['relationships'])->first(fn ($r) => $r['child_source_table'] === 'microproject' && $r['child_columns'] === [$key]);
-                $references[$key] = ApplicationFixture::row($relation['parent_source_table'], 1, ['c_ID' => 70]);
-            }
-            $applications->update($account, $id, ['c_MP_RequestedAmount' => '1500.5'] + array_combine(array_map(fn ($n) => 'c_MP_Agreement'.$n, range(1, 5)), array_fill(0, 5, '1')), $applications->find($account, $id)['version'], $references);
+            FullApplicationFixture::complete($id, $fixture['person'], $fixture);
             $applications->convertToFull($account, $id, $applications->find($account, $id)['version']);
             self::assertSame('project', DB::table('op_microproject')->where('id', $id)->value('c_ApplicationState'));
             $panel = $lifecycle->panel($account, $id);
