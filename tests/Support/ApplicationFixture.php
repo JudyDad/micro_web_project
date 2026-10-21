@@ -1,0 +1,112 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Support;
+
+use App\Models\WebAccount;
+use Database\Schema\OperationalManifest;
+use Database\Schema\PreservationManifest;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+
+require_once __DIR__.'/../../database/schema/OperationalManifest.php';
+
+/** Invented data only. The SQLite schema tests behavior, never MySQL DDL or locking. */
+final class ApplicationFixture
+{
+    public static function intake(int $city): array
+    {
+        $person = self::row('person', $city, ['c_P_FirstName' => 'Synthetic', 'c_P_LastName' => 'Applicant', 'c_P_Sex' => 'Unknown']);
+        $category = self::row('category', $city, ['c_ID' => 10, 'c_Name' => 'Synthetic category']);
+        $subcategory = self::row('subcategory', $city, ['c_ID' => 11, 'c_Name' => 'Synthetic subcategory'], ['Category_ID' => $category]);
+        $career = self::row('career', $city, ['c_ID' => 12, 'c_Name' => 'Synthetic career'], ['SubCategory_ID' => $subcategory]);
+        $type = self::row('microprojecttype', $city, ['c_ID' => 13, 'c_Name' => 'Synthetic type']);
+        $subtype = self::row('microprojectsubtype', $city, ['c_ID' => 14, 'c_Name' => 'Synthetic subtype'], ['Type_ID' => $type]);
+
+        return ['person' => $person, 'references' => ['SubCategory_ID' => $subcategory, 'Career_ID' => $career, 'MP_Type_ID' => $type, 'MP_SubType_ID' => $subtype]];
+    }
+
+    public static function sqliteSchema(): void
+    {
+        $support = [
+            'web_accounts' => ['username', 'password_hash', 'credential_principal_id', 'disabled_at', 'created_at', 'updated_at'],
+            'cities' => ['name_en', 'name_ar'], 'sources' => ['city_id', 'name'], 'source_tables' => ['name'],
+            'account_city_capabilities' => ['account_id', 'city_id', 'capability', 'revoked_at', 'decision_locator', 'granted_at'],
+            'account_audit_events' => ['actor_account_id', 'subject_account_id', 'city_id', 'event_type', 'outcome', 'subject_type', 'subject_id', 'decision_locator', 'occurred_at'],
+            'source_records' => ['source_id', 'table_id', 'snapshot_id'],
+            'source_publications' => ['source_id', 'snapshot_id', 'publication_kind'],
+            'project_number_sequences' => ['source_id', 'next_number'],
+        ];
+        foreach ($support as $name => $columns) {
+            Schema::create($name, function (Blueprint $table) use ($columns) {
+                $table->id();
+                foreach ($columns as $column) {
+                    str_ends_with($column, '_id') || $column === 'next_number' ? $table->integer($column)->nullable() : $table->text($column)->nullable();
+                }
+            });
+        }
+        foreach (OperationalManifest::tables() as $definition) {
+            if (! str_starts_with($definition['name'], 'op_') && ! in_array($definition['name'], ['operational_entities', 'operational_origins'], true)) {
+                continue;
+            }
+            Schema::create($definition['name'], function (Blueprint $table) use ($definition) {
+                foreach ($definition['columns'] as $column) {
+                    $name = $column['name'];
+                    if ($name === 'id') {
+                        $table->id();
+
+                        continue;
+                    }
+                    $field = preg_match('/^(?:BIGINT|int|tinyint)/i', $column['definition']) ? $table->integer($name) : $table->text($name);
+                    $field->nullable();
+                    if (preg_match("/DEFAULT '([^']*)'/", $column['definition'], $match)) {
+                        $field->default($match[1]);
+                    }
+                }
+            });
+        }
+        foreach ([1 => 'Aleppo', 2 => 'Damascus'] as $id => $name) {
+            DB::table('cities')->insert(['id' => $id, 'name_en' => $name, 'name_ar' => 'مدينة تجريبية']);
+            DB::table('sources')->insert(['id' => $id, 'city_id' => $id, 'name' => $name]);
+        }
+        foreach (PreservationManifest::tableIds(PreservationManifest::load()) as $name => $id) {
+            DB::table('source_tables')->insert(['id' => $id, 'name' => $name]);
+        }
+    }
+
+    public static function account(): WebAccount
+    {
+        $id = DB::table('web_accounts')->insertGetId(['username' => 'synthetic.applications', 'password_hash' => Hash::make('Synthetic-P42-Only!'), 'created_at' => now('UTC'), 'updated_at' => now('UTC')]);
+        foreach ([1, 2] as $city) {
+            foreach (['people.view', 'people.manage', 'applications.view', 'applications.manage'] as $capability) {
+                DB::table('account_city_capabilities')->insert(['account_id' => $id, 'city_id' => $city, 'capability' => $capability, 'decision_locator' => 'synthetic:p42', 'granted_at' => now('UTC')]);
+            }
+            DB::table('project_number_sequences')->updateOrInsert(['source_id' => $city], ['next_number' => 1000]);
+        }
+
+        return WebAccount::findOrFail($id);
+    }
+
+    public static function row(string $kind, int $city, array $fields = [], array $references = []): int
+    {
+        $table = OperationalManifest::table($kind);
+        $tableId = PreservationManifest::tableIds(PreservationManifest::load())[$kind];
+        $scope = ['city_id' => $city, 'source_id' => $city, 'source_table_id' => $tableId];
+        $id = DB::table('operational_entities')->insertGetId($scope + ['identity_kind' => 'web', 'created_at' => now('UTC')]);
+        $payload = $scope + ['id' => $id] + $fields;
+        foreach ($references as $column => $target) {
+            $relation = collect(OperationalManifest::load()['relationships'])->first(fn ($r) => $r['target_table'] === $table['name'] && $r['child_columns'] === [$column]);
+            if ($relation === null) {
+                throw new \RuntimeException('Unknown fixture relationship '.$kind.'.'.$column);
+            }
+            $payload[$relation['resolved_column']] = $target;
+            $payload[$relation['state_column']] = 'resolved';
+        }
+        DB::table($table['name'])->insert($payload);
+
+        return $id;
+    }
+}

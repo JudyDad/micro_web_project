@@ -7,7 +7,7 @@ Started 19 October 2026 on the user's instruction “start p4.1.” Phase 4 may 
 | Task | State | Evidence / remaining acceptance |
 |---|---|---|
 | P4.1 People and families | implemented local workflow; acceptance review open | [Delivery](p4-1-people-families.md), [source contract](p4-1-workflow-contract.md). People create/edit/search, family create/link/membership edit, education/work/course editors, scoped capabilities/audit, duplicate review, stale/retry protection and EN/AR screens. Ten isolated workflow tests and rendered browser checks pass; actual-schema MySQL write/lifecycle test passes 18 assertions. Concurrent requests, realistic catalog scale and staff acceptance remain open |
-| P4.2 Applications | todo | Preliminary/full/agriculture/rehabilitation forms, project associations and durable draft behavior |
+| P4.2 Applications | implemented locally; acceptance review open | [Delivery](p4-2-applications.md), [source contract](p4-2-workflow-contract.md). Preliminary/full/agriculture/rehabilitation intake, project associations, encrypted private drafts, per-city capabilities. 87 unit/feature tests (5,681 assertions) and actual-schema MySQL test (18 assertions) pass 21 Oct. Rendered browser re-check, cross-process concurrency and staff acceptance remain open |
 | P4.3 Assessment and lifecycle | todo | Checklists, scoring, decisions and allowed transitions |
 | P4.4 Intake acceptance | todo | Integrated workflow, historical data, permissions, concurrency and print comparisons |
 

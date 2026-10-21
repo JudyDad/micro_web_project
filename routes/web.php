@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PeopleController;
@@ -26,6 +27,19 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
     Route::middleware('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::middleware(RequireCurrentAccount::class)->group(function () {
+            Route::get('/applications', [ApplicationController::class, 'index'])->name('applications.index');
+            Route::get('/applications/create', [ApplicationController::class, 'create'])->name('applications.create');
+            Route::post('/applications', [ApplicationController::class, 'store'])->block(10, 10)->name('applications.store');
+            Route::get('/applications/drafts', [ApplicationController::class, 'drafts'])->name('applications.drafts');
+            Route::post('/applications/drafts', [ApplicationController::class, 'saveDraft'])->block(10, 10)->name('applications.drafts.save');
+            Route::get('/applications/drafts/{draft}', [ApplicationController::class, 'restoreDraft'])->where('draft', '[a-f0-9]{32}')->name('applications.drafts.restore');
+            Route::delete('/applications/drafts/{draft}', [ApplicationController::class, 'discardDraft'])->where('draft', '[a-f0-9]{32}')->name('applications.drafts.discard');
+            Route::get('/applications/{application}', [ApplicationController::class, 'show'])->where('application', '[1-9][0-9]{0,18}')->name('applications.show');
+            Route::post('/applications/{application}', [ApplicationController::class, 'update'])->where('application', '[1-9][0-9]{0,18}')->name('applications.update');
+            Route::post('/applications/{application}/people', [ApplicationController::class, 'person'])->where('application', '[1-9][0-9]{0,18}')->name('applications.person');
+            Route::post('/applications/{application}/complete', [ApplicationController::class, 'complete'])->where('application', '[1-9][0-9]{0,18}')->name('applications.complete');
+            Route::post('/applications/{application}/people/{link}/details/{kind}', [ApplicationController::class, 'applicantDetail'])->where(['application' => '[1-9][0-9]{0,18}', 'link' => '[1-9][0-9]{0,18}', 'kind' => 'loss|illness|asset|aid|help|homepower'])->name('applications.applicant-detail');
+            Route::post('/applications/{application}/details/{kind}', [ApplicationController::class, 'detail'])->where(['application' => '[1-9][0-9]{0,18}', 'kind' => 'agriculture|rehab|rehab_answers|powersource|risk|material'])->name('applications.detail');
             Route::get('/people', [PeopleController::class, 'index'])->name('people.index');
             Route::get('/people/create', [PeopleController::class, 'create'])->name('people.create');
             Route::post('/people', [PeopleController::class, 'store'])->block(10, 10)->name('people.store');

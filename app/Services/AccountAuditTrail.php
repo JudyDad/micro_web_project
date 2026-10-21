@@ -8,6 +8,9 @@ use InvalidArgumentException;
 final class AccountAuditTrail
 {
     private const SUBJECTS = [
+        'applications.list' => [], 'applications.view' => ['application_entity'],
+        'applications.created' => ['application_entity'], 'applications.updated' => ['application_entity'],
+        'application_draft.saved' => [], 'application_draft.viewed' => [], 'application_draft.discarded' => [],
         'people.list' => [], 'people.view' => ['person_entity'],
         'people.created' => ['person_entity', 'family_entity'], 'people.updated' => ['person_entity'],
         'login.succeeded' => ['account'], 'login.denied' => [], 'password.rehashed' => ['account'],
@@ -35,6 +38,7 @@ final class AccountAuditTrail
         }
         if ($subjectType !== null) {
             $validSubject = match ($subjectType) {
+                'application_entity' => DB::table('op_microproject')->where('id', $subjectId)->where('city_id', $city)->exists(),
                 'person_entity' => DB::table('op_person')->where('id', $subjectId)->where('city_id', $city)->exists(),
                 'family_entity' => DB::table('op_family')->where('id', $subjectId)->where('city_id', $city)->exists(),
                 'account' => $subjectAccount === $subjectId && DB::table('web_accounts')->where('id', $subjectId)->exists(),

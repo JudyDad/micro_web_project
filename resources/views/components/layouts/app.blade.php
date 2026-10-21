@@ -2,8 +2,11 @@
 @php
     $otherLocale = app()->isLocale('ar') ? 'en' : 'ar';
     $languageFilters = [];
-    if (request()->routeIs('projects.index', 'people.index')) {
+    if (request()->routeIs('projects.index', 'people.index', 'applications.index')) {
         $languageFilters = ['search' => $search ?? '', 'cities' => array_values($selectedCities ?? [])];
+    }
+    if (request()->routeIs('applications.create', 'applications.drafts')) {
+        $languageFilters['city_id'] = request('city_id');
     }
     $languageUrl = route(request()->route()->getName(), array_merge($languageFilters, request()->route()->parameters(), ['locale' => $otherLocale]));
 @endphp
@@ -48,6 +51,7 @@
         <p class="nav-label">{{ __('ui.workspace') }}</p>
         <nav aria-label="{{ __('ui.navigation') }}">
             @if($operational)
+                <a @class(['nav-link', 'is-current' => request()->routeIs('applications.*')]) href="{{ route('applications.index', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">▧</span><span class="nav-text">{{ __('applications.title') }}</span></a>
                 <a @class(['nav-link', 'is-current' => request()->routeIs('people.*')]) href="{{ route('people.index', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">♧</span><span class="nav-text">{{ __('people.title') }}</span></a>
                 <a @class(['nav-link', 'is-current' => request()->routeIs('projects.*')]) href="{{ route('projects.index', ['locale' => app()->getLocale()]) }}" @if(request()->routeIs('projects.index')) aria-current="page" @endif aria-label="{{ __('projects.projects') }}" title="{{ __('projects.projects') }}"><span aria-hidden="true">▤</span><span class="nav-text">{{ __('projects.projects') }}</span></a>
                 <form method="POST" action="{{ route('auth.logout', ['locale' => app()->getLocale()]) }}">@csrf<button class="nav-link nav-button" type="submit" aria-label="{{ __('projects.logout') }}" title="{{ __('projects.logout') }}"><span aria-hidden="true">↪</span><span class="nav-text">{{ __('projects.logout') }}</span></button></form>
@@ -63,3 +67,4 @@
     @livewireScripts
 </body>
 </html>
+
