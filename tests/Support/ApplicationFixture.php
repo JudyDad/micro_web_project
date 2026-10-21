@@ -26,7 +26,30 @@ final class ApplicationFixture
         $type = self::row('microprojecttype', $city, ['c_ID' => 13, 'c_Name' => 'Synthetic type']);
         $subtype = self::row('microprojectsubtype', $city, ['c_ID' => 14, 'c_Name' => 'Synthetic subtype'], ['Type_ID' => $type]);
 
-        return ['person' => $person, 'references' => ['SubCategory_ID' => $subcategory, 'Career_ID' => $career, 'MP_Type_ID' => $type, 'MP_SubType_ID' => $subtype]];
+        $states = [];
+        foreach ([[0, 'مرفوض', 'Rejected'], [1, 'مقبول', 'Accepted'], [2, 'مؤجل', 'Delayed'], [3, 'بالانتظار', 'Waiting'], [4, 'ممول', 'Financed'], [5, 'منتهي', 'Finished'], [6, 'منسحب', 'Withdrew'], [7, 'ملغى', 'Canceled'], [8, 'مغلق', 'Closed'], [9, 'قيد الدراسة', 'Under Review'], [10, 'تسجيل أولي', 'On Hold']] as [$raw, $ar, $en]) {
+            $states[$en] = self::row('state', $city, ['c_ID' => $raw, 'c_Name_ar' => $ar, 'c_Name_en' => $en]);
+        }
+        $tasks = [];
+        foreach ([[1, 'a'], [2, 'a'], [3, 'f'], [4, 'f']] as [$raw, $taskType]) {
+            $tasks[$raw] = self::row('task', $city, ['c_T_ID' => $raw, 'c_T_Name' => 'Synthetic task '.$raw, 'c_T_State' => 0, 'c_T_Type' => $taskType]);
+        }
+        $reason = self::row('statereason', $city, ['c_ID' => 1, 'c_Name' => 'Synthetic reason']);
+
+        return ['person' => $person, 'states' => $states, 'tasks' => $tasks, 'reason' => $reason, 'references' => ['SubCategory_ID' => $subcategory, 'Career_ID' => $career, 'MP_Type_ID' => $type, 'MP_SubType_ID' => $subtype]];
+    }
+
+    /** Checklist catalog: members by location (k, t, c). */
+    public static function checklistCatalog(int $city): array
+    {
+        $members = [];
+        foreach (['k' => 'Key Person', 't' => 'M&E Team', 'c' => 'Program Manager'] as $type => $name) {
+            $position = self::row('checklist_position', $city, ['c_ID' => ord($type), 'c_Name' => $name, 'c_Type' => $type]);
+            $members[$type] = self::row('checklist_member', $city, ['c_ID' => ord($type), 'c_Name' => 'Synthetic '.$type, 'c_IsActive' => 1], ['Position_ID' => $position]);
+        }
+        $members['t2'] = self::row('checklist_member', $city, ['c_ID' => 200, 'c_Name' => 'Synthetic team two', 'c_IsActive' => 1], ['Position_ID' => DB::table('op_checklist_member')->where('id', $members['t'])->value('ref_449348f6780e_id')]);
+
+        return $members;
     }
 
     public static function sqliteSchema(): void
@@ -81,7 +104,7 @@ final class ApplicationFixture
     {
         $id = DB::table('web_accounts')->insertGetId(['username' => 'synthetic.applications', 'password_hash' => Hash::make('Synthetic-P42-Only!'), 'created_at' => now('UTC'), 'updated_at' => now('UTC')]);
         foreach ([1, 2] as $city) {
-            foreach (['people.view', 'people.manage', 'applications.view', 'applications.manage'] as $capability) {
+            foreach (['people.view', 'people.manage', 'applications.view', 'applications.manage', 'lifecycle.manage', 'lifecycle.accept', 'assessments.view', 'assessments.manage'] as $capability) {
                 DB::table('account_city_capabilities')->insert(['account_id' => $id, 'city_id' => $city, 'capability' => $capability, 'decision_locator' => 'synthetic:p42', 'granted_at' => now('UTC')]);
             }
             DB::table('project_number_sequences')->updateOrInsert(['source_id' => $city], ['next_number' => 1000]);

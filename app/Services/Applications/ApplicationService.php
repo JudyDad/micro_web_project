@@ -7,6 +7,7 @@ namespace App\Services\Applications;
 use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
+use App\Services\Lifecycle\LifecycleService;
 use App\Services\ProjectNumberAllocator;
 use App\Services\Sharing\SharedPayloadProjection;
 use Database\Schema\OperationalManifest;
@@ -30,7 +31,7 @@ final class ApplicationService
 
     private const BLOCKED_FIELDS = ['c_ApplicationState', 'c_IsContentUpdated', 'c_MP_Donor', 'c_Created_By', 'c_Edited_By', 'c_PersonType', 'c_MP_AddressAfterFund'];
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private ProjectNumberAllocator $numbers) {}
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private ProjectNumberAllocator $numbers, private LifecycleService $lifecycle) {}
 
     public function fields(string $kind): array
     {
@@ -295,6 +296,7 @@ final class ApplicationService
             foreach ($intake['materials'] ?? [] as $material) {
                 $this->insert('material', $city, $source, $this->validateFields('material', $material) + $this->link('material', 'MicroProject_ID', $id));
             }
+            $this->lifecycle->recordPreliminary($this->row($account, 'application', $id, true));
             if ($stage === 'full') {
                 $this->complete($account, $this->row($account, 'application', $id, true));
             }
@@ -415,8 +417,15 @@ final class ApplicationService
 
     private function complete(WebAccount $account, object $application): void
     {
-        abort(422, 'Full intake submission is unavailable until household/support validation and lifecycle handoff are implemented.');
-
+        abort_unless($application->c_ApplicationState === 'zero', 422, 'Only a preliminary application can be submitted as a full application.');
+        $this->requireIntake((array) $application, true);
+        $materials = $this->childrenOf('material', 'MicroProject_ID', $application);
+        abort_if($materials->isEmpty(), 422, 'Add at least one budget item before submitting the full application.');
+        foreach ($materials as $material) {
+            $this->requiredValues($material, ['c_Name', 'c_Price', 'c_Amount']);
+        }
+        // Household, story, work and education gates of the desktop full form are not implemented yet (see P4.3 delivery record).
+        $this->lifecycle->enterFull($application);
     }
 
     private function childrenOf(string $table, string $key, object $parent): Collection

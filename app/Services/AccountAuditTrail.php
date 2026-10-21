@@ -10,6 +10,8 @@ final class AccountAuditTrail
     private const SUBJECTS = [
         'applications.list' => [], 'applications.view' => ['application_entity'],
         'applications.created' => ['application_entity'], 'applications.updated' => ['application_entity'],
+        'lifecycle.transitioned' => ['application_entity'], 'lifecycle.reason_updated' => ['application_entity'],
+        'assessments.view' => ['application_entity'], 'assessments.saved' => ['application_entity'],
         'application_draft.saved' => [], 'application_draft.viewed' => [], 'application_draft.discarded' => [],
         'people.list' => [], 'people.view' => ['person_entity'],
         'people.created' => ['person_entity', 'family_entity'], 'people.updated' => ['person_entity'],

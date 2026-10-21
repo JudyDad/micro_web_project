@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tests\Integration;
 
 use App\Services\Applications\ApplicationService;
+use App\Services\Assessments\ChecklistService;
+use App\Services\Lifecycle\LifecycleService;
+use Database\Schema\OperationalManifest;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\ApplicationFixture;
@@ -63,6 +66,32 @@ final class ApplicationOperationalWorkflowTest extends TestCase
             self::assertSame(0, DB::table('operational_origins')->count());
             self::assertSame(0, DB::table('source_records')->count());
             self::assertGreaterThan(0, DB::table('account_audit_events')->where('event_type', 'applications.updated')->count());
+
+            // P4.3: lifecycle handoff, state history, tasks and the assessment checklist on the real constraints.
+            $lifecycle = app(LifecycleService::class);
+            self::assertSame('On Hold', $lifecycle->panel($account, $id)['current']->state_name_en);
+            $references = [];
+            foreach (['MP_FundType_ID', 'MP_PlaceType_ID'] as $key) {
+                $relation = collect(OperationalManifest::load()['relationships'])->first(fn ($r) => $r['child_source_table'] === 'microproject' && $r['child_columns'] === [$key]);
+                $references[$key] = ApplicationFixture::row($relation['parent_source_table'], 1, ['c_ID' => 70]);
+            }
+            $applications->update($account, $id, ['c_MP_RequestedAmount' => '1500.5'] + array_combine(array_map(fn ($n) => 'c_MP_Agreement'.$n, range(1, 5)), array_fill(0, 5, '1')), $applications->find($account, $id)['version'], $references);
+            $applications->convertToFull($account, $id, $applications->find($account, $id)['version']);
+            self::assertSame('project', DB::table('op_microproject')->where('id', $id)->value('c_ApplicationState'));
+            $panel = $lifecycle->panel($account, $id);
+            self::assertSame('Waiting', $panel['current']->state_name_en);
+            self::assertSame(2, DB::table('op_task_microproject')->count());
+            $lifecycle->transition($account, $id, $fixture['states']['Accepted'], $fixture['reason'], 'ملاحظة', $panel['version']);
+            self::assertSame(4, DB::table('op_task_microproject')->count());
+            self::assertSame(1, DB::table('op_microproject_state')->where('c_Current_State', 1)->count());
+            self::assertSame(3, DB::table('op_microproject_state')->count());
+            $members = ApplicationFixture::checklistCatalog(1);
+            $checklists = app(ChecklistService::class);
+            $checklists->save($account, $id, $fixture['person'], null, ['c_Notes' => '  تقييم  ', 'c_HasHomeVisit' => '1', 'c_HVisit_Date' => '2026-10-21'], ['HVisit_Visitor1_ID' => $members['t']],
+                [['location' => 't', 'member_id' => $members['t'], 'opinion' => '1', 'notes' => 'ملاحظة']], $checklists->show($account, $id, $fixture['person'])['version']);
+            $assessment = $checklists->show($account, $id, $fixture['person']);
+            self::assertSame('  تقييم  ', $assessment['header']->c_Notes);
+            self::assertCount(1, $assessment['members']);
         } finally {
             while (DB::transactionLevel() > 0) {
                 DB::rollBack();

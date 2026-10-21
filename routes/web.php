@@ -3,6 +3,8 @@
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChecklistController;
+use App\Http\Controllers\LifecycleController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Middleware\FoundationPreview;
@@ -36,6 +38,10 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::delete('/applications/drafts/{draft}', [ApplicationController::class, 'discardDraft'])->where('draft', '[a-f0-9]{32}')->name('applications.drafts.discard');
             Route::get('/applications/{application}', [ApplicationController::class, 'show'])->where('application', '[1-9][0-9]{0,18}')->name('applications.show');
             Route::post('/applications/{application}', [ApplicationController::class, 'update'])->where('application', '[1-9][0-9]{0,18}')->name('applications.update');
+            Route::post('/applications/{application}/lifecycle', [LifecycleController::class, 'transition'])->where('application', '[1-9][0-9]{0,18}')->block(10, 10)->name('lifecycle.transition');
+            Route::post('/applications/{application}/lifecycle/reason', [LifecycleController::class, 'reason'])->where('application', '[1-9][0-9]{0,18}')->block(10, 10)->name('lifecycle.reason');
+            Route::get('/applications/{application}/checklist/{person}', [ChecklistController::class, 'show'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->name('checklists.show');
+            Route::post('/applications/{application}/checklist/{person}', [ChecklistController::class, 'save'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->block(10, 10)->name('checklists.save');
             Route::post('/applications/{application}/people', [ApplicationController::class, 'person'])->where('application', '[1-9][0-9]{0,18}')->name('applications.person');
             Route::post('/applications/{application}/complete', [ApplicationController::class, 'complete'])->where('application', '[1-9][0-9]{0,18}')->name('applications.complete');
             Route::post('/applications/{application}/people/{link}/details/{kind}', [ApplicationController::class, 'applicantDetail'])->where(['application' => '[1-9][0-9]{0,18}', 'link' => '[1-9][0-9]{0,18}', 'kind' => 'loss|illness|asset|aid|help|homepower'])->name('applications.applicant-detail');

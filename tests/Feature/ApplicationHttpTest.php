@@ -93,7 +93,7 @@ final class ApplicationHttpTest extends TestCase
     {
         $id = $this->create();
         $version = app(ApplicationService::class)->find($this->account, $id)['version'];
-        DB::table('account_city_capabilities')->where('account_id', $this->account->id)->where('capability', 'applications.manage')->update(['revoked_at' => now()]);
+        DB::table('account_city_capabilities')->where('account_id', $this->account->id)->whereIn('capability', ['applications.manage', 'lifecycle.manage'])->update(['revoked_at' => now()]);
         $this->actingAs($this->account)->get('/en/applications/'.$id)->assertOk()->assertDontSee('name="version"', false);
         $this->post('/en/applications/'.$id, ['city_id' => 1, 'version' => $version, 'fields' => ['c_MP_Name' => 'Denied']])->assertForbidden();
         $this->get('/en/applications/create?city_id=1')->assertForbidden();

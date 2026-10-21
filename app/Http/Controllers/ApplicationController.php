@@ -8,7 +8,9 @@ use App\Http\Requests\ApplicationWriteRequest;
 use App\Http\Requests\ProjectSearchRequest;
 use App\Services\AccountAccess;
 use App\Services\Applications\ApplicationService;
+use App\Services\Assessments\ChecklistService;
 use App\Services\Drafts\ApplicationDraftStore;
+use App\Services\Lifecycle\LifecycleService;
 use Database\Schema\OperationalManifest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,7 +71,7 @@ final class ApplicationController
         return $this->back($locale, (int) $id);
     }
 
-    public function show(Request $request, string $locale, string $application, ApplicationService $applications, AccountAccess $access): View
+    public function show(Request $request, string $locale, string $application, ApplicationService $applications, AccountAccess $access, LifecycleService $lifecycle, ChecklistService $checklists): View
     {
         $data = $applications->find($request->user(), $this->id($application));
         $city = (int) $data['application']->city_id;
@@ -90,7 +92,11 @@ final class ApplicationController
             }
         }
 
+        $canAssess = $access->check($request->user(), $city, 'assessments.view') && $access->check($request->user(), $city, 'people.view');
+
         return view('applications.show', $data + [
+            'lifecycle' => $lifecycle->panel($request->user(), $this->id($application)),
+            'assessees' => $canAssess ? $checklists->beneficiaries($request->user(), $this->id($application)) : collect(),
             'applicantDetails' => $applicantDetails,
             'personReferenceColumn' => $personRelation['resolved_column'], 'headerReferenceColumn' => $headerRelation['resolved_column'],
             'cityId' => $city, 'canManage' => $canManage, 'canLinkPeople' => $canLinkPeople,

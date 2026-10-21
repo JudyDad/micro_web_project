@@ -2,6 +2,10 @@
     <a class="back-link" href="{{ route('applications.index', ['locale' => app()->getLocale()]) }}">{{ __('applications.back') }}</a>
     <div class="page-heading"><div><p class="eyebrow">{{ app()->isLocale('ar') ? $application->city_name_ar : $application->city_name_en }} · {{ $application->c_MP_ID }}</p><h1>{{ $application->c_MP_Name }}</h1><p>{{ __('applications.state') }}: {{ in_array($application->c_ApplicationState, ['zero', 'project'], true) ? __('applications.states.'.$application->c_ApplicationState) : $application->c_ApplicationState }}</p><p class="page-description">{{ __('applications.boundary') }}</p></div></div>
     @include('people.messages')
+    @include('lifecycle.panel')
+    @if($assessees->isNotEmpty())<section class="card people-form"><h2>{{ __('lifecycle.checklist_link') }}</h2>
+        @foreach($assessees as $assessee)<a class="button button-secondary" href="{{ route('checklists.show', ['locale' => app()->getLocale(), 'application' => $application->id, 'person' => $assessee->id]) }}">{{ $assessee->label }}</a> @endforeach
+    </section>@endif
     @if($canManage)<p><a class="button button-secondary" href="{{ route('applications.drafts', ['locale' => app()->getLocale(), 'city_id' => $cityId]) }}">{{ __('applications.drafts') }}</a></p>@endif
     <details class="card people-form" open><summary>{{ __('applications.application') }}</summary>
     @if($canManage)<form method="POST" action="{{ route('applications.update', ['locale' => app()->getLocale(), 'application' => $application->id]) }}">@csrf
