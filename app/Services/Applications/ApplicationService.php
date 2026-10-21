@@ -417,10 +417,14 @@ final class ApplicationService
 
     private function complete(WebAccount $account, object $application): void
     {
-        abort_unless($application->c_ApplicationState === 'zero', 422, 'Only a preliminary application can be submitted as a full application.');
+        if ($application->c_ApplicationState !== 'zero') {
+            throw ValidationException::withMessages(['version' => __('applications.complete_not_preliminary')]);
+        }
         $this->requireIntake((array) $application, true);
         $materials = $this->childrenOf('material', 'MicroProject_ID', $application);
-        abort_if($materials->isEmpty(), 422, 'Add at least one budget item before submitting the full application.');
+        if ($materials->isEmpty()) {
+            throw ValidationException::withMessages(['material' => __('applications.complete_budget')]);
+        }
         foreach ($materials as $material) {
             $this->requiredValues($material, ['c_Name', 'c_Price', 'c_Amount']);
         }
