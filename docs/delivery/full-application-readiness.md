@@ -1,6 +1,6 @@
 # Full-application readiness check
 
-21 October 2026. Status: validator and tests delivered as **new files only, not yet wired into `convertToFull`**. Another session (P5.1) was editing `ApplicationService.php`, `applications/show.blade.php`, routes and shared lang files, so the hook-up is a deliberately separate small step.
+21 October 2026. Status: validator delivered first as new files only (another session, P5.1, was editing shared files), then wired into `convertToFull` after P5.1 landed; see the hook-up section.
 
 ## What it is
 
@@ -22,9 +22,11 @@ Source: `Application_New_Form.Save_Application` (`:4030–6770`). The desktop va
 
 Family members' own work rows (`FP_Exp`), the goal check boxes, duplicate national-number and family-number prompts, the paper-application user, and partners (only the beneficiary is checked). Catalog names such as "ملك" are matched by exact text as the desktop does.
 
-## Hook-up (next step, after P5.1 lands)
+## Hook-up (done 21 October 2026)
 
-In `ApplicationService::complete`, after `requireIntake`: run `app(FullApplicationReadiness::class)->check($application)` and, when it returns issues, throw a `ValidationException` whose messages come from `lang/*/fullapp.php` (`sections`, `codes`, `row`). The existing budget check can then be dropped. Add a route-level test that conversion fails with each section message and succeeds on a complete fixture. The test helper `FullApplicationReadinessTest::complete()` already builds a complete application.
+`ApplicationService::complete` now collects the project-identity errors (`requireIntake`, with readable field names) and the readiness issues into one `readiness` error list, thrown as a `ValidationException`; the application page shows it through the existing message box. The separate budget check was removed because readiness covers it. Lines read "Section — field needs …" with an `(entry #id)` suffix for a specific row, in English or Arabic. A refused conversion changes nothing.
+
+Tests: `IntakeAcceptanceTest` (refused conversion lists sections in English and Arabic and writes nothing; a broken budget row is named and a complete application converts), the shared `tests/Support/FullApplicationFixture` used by the lifecycle, acceptance and MySQL tests. Verified 21 October: 148 unit/feature cases, plus the actual-schema application test (28 assertions) and the two-process concurrency test (89 assertions) on isolated MySQL. MySQL's real `date` column caught a fixture using a bare year for a birth date; fixtures now use full dates.
 
 ## Verification
 
