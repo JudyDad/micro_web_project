@@ -37,3 +37,9 @@ Started and implemented locally on 21 October 2026 on the user's instruction "st
 - Actual approved schema on the isolated MySQL 8.4.8 target (loopback port 33072): `FinanceOperationalWorkflowTest` passes 1 case / 37 assertions (real enum/float/decimal columns, FKs, MySQL month filter) and `FinanceConcurrencyTest` passes 1 case / 97 assertions: two real PHP processes submitting one form version produce exactly one loan, one Financed row and one instalment (the other receives 409). Existing P4 MySQL tests (application 27 assertions, lifecycle concurrency 107, people 17) still pass. The disposable database was verified empty and the server shut down afterwards.
 - Pint and Vite build pass; Blade compilation passes. Rendered check in the built-in browser (synthetic data, EN and AR, desktop and 375px): no page-level overflow; the wide instalment table scrolls inside its region.
 - Not done: staff acceptance, five-city or real-data parity (the reconciled desktop figures were not compared), concurrency across more than two writers, and the notification/report dependents above.
+
+## Review pass (22 October 2026)
+
+- Re-ran the unit/feature suite: 147 passed (6,324 assertions), one host-dependent symlink case skipped; Pint passes.
+- Reviewed the finance, schedule, purchasing and executive-file services and the finance controller. Fixed one defect: the instalment schedule's year filter refused years before 2018, so older legacy instalments could not be filtered. The lower bound is now 1990; `FinanceHttpTest` covers an old year and an out-of-range year.
+- Not re-run: the MySQL workflow and two-process race tests. No isolated test MySQL was available; the only listener (port 3306) is not a disposable test instance and was deliberately left untouched.
