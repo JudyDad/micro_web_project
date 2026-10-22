@@ -11,6 +11,7 @@ use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchasingController;
 use App\Http\Controllers\SpecialCaseController;
+use App\Http\Controllers\VisitController;
 use App\Http\Middleware\FoundationPreview;
 use App\Http\Middleware\RequireCurrentAccount;
 use App\Http\Middleware\SetLocale;
@@ -47,6 +48,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::get('/applications/{application}/checklist/{person}', [ChecklistController::class, 'show'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->name('checklists.show');
             Route::post('/applications/{application}/checklist/{person}', [ChecklistController::class, 'save'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->block(10, 10)->name('checklists.save');
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
+            Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
             Route::prefix('/applications/{application}')->where(['application' => '[1-9][0-9]{0,18}'])->group(function () {
                 Route::get('/finance', [FinanceController::class, 'show'])->name('finance.show');
                 Route::post('/finance/donor', [FinanceController::class, 'donor'])->block(10, 10)->name('finance.donor');
@@ -59,6 +61,9 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
                 Route::post('/purchasing', [PurchasingController::class, 'save'])->block(10, 10)->name('purchasing.save');
                 Route::get('/special-cases', [SpecialCaseController::class, 'show'])->name('special-cases.show');
                 Route::post('/special-cases', [SpecialCaseController::class, 'save'])->block(10, 10)->name('special-cases.save');
+                Route::get('/visits', [VisitController::class, 'hub'])->name('visits.hub');
+                Route::get('/visits/{kind}', [VisitController::class, 'show'])->where('kind', '[OV]-(op|cl)')->name('visits.show');
+                Route::post('/visits/{kind}', [VisitController::class, 'save'])->where('kind', '[OV]-(op|cl)')->block(10, 10)->name('visits.save');
             });
             Route::post('/applications/{application}/people', [ApplicationController::class, 'person'])->where('application', '[1-9][0-9]{0,18}')->name('applications.person');
             Route::post('/applications/{application}/complete', [ApplicationController::class, 'complete'])->where('application', '[1-9][0-9]{0,18}')->name('applications.complete');

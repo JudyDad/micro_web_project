@@ -2,7 +2,8 @@
 
 return [
     'title' => 'Field operations', 'back' => 'Back to the project', 'saved' => 'Saved.', 'save' => 'Save',
-    'links' => ['special-cases' => 'Special cases'],
+    'links' => ['special-cases' => 'Special cases', 'visits' => 'Visits'],
+    'nav_schedule' => 'Visit schedule',
     'special' => [
         'title' => 'Special cases', 'case' => 'Review of', 'new' => 'New review', 'none' => 'This project has no special-case reviews.',
         'scope' => 'Reviews recorded for this project. The acting account is audited; deleting reviews is not available.',
@@ -10,5 +11,71 @@ return [
     ],
     'errors' => [
         'date' => 'Enter a valid date.', 'type' => 'Choose the review type.', 'reason' => 'Write the reason for the review (up to 65,535 characters).', 'long' => 'The text is too long.',
+        'choice' => 'Choose one of the listed answers.', 'vehicle' => 'The vehicle number is missing. Enter it and try again.', 'vehicle_long' => 'The vehicle number is too long (50 characters at most).',
+        'rehab' => 'Rehabilitation projects have no opening or closing visit on this screen.', 'kind' => 'This kind of visit does not apply to this project.',
+        'exists' => 'A second visit of the same phase cannot be created: this project already has one.', 'street' => 'Choose an area from the list.', 'place_long' => 'The detailed address is too long (255 characters at most).',
+    ],
+    'visit' => [
+        'title' => 'Visits', 'scope' => 'Opening and closing visits of this project. One visit is created per phase and edited in place; deleting visits is not available. Monitoring and evaluation visits and rehabilitation visits have their own screens.',
+        'recorded' => 'Recorded visits', 'none' => 'No opening or closing visit is recorded.', 'record' => 'Record a visit', 'open' => 'Open',
+        'rehab_note' => 'This is a grant-funded rehabilitation project: it has no opening or monitoring visit, and its closing visit has a separate screen that is not available yet.',
+        'phase' => ['opening' => 'Opening visit', 'closing' => 'Closing visit'],
+        'kind' => ['O-op' => 'Opening visit (general project)', 'V-op' => 'Opening visit (vehicle)', 'O-cl' => 'Closing visit (general project)', 'V-cl' => 'Closing visit (vehicle)'],
+        'date' => 'Visit date', 'vehicle' => 'Vehicle plate number', 'street' => 'Project area', 'no_street' => '— none —', 'place_note' => 'Detailed address',
+        'answer' => 'Details', 'unanswered' => 'No answer', 'created_by' => 'Entered by', 'edited_by' => 'Edited by', 'office_title' => 'Beneficiary rating',
+        'visitors_note' => 'This screen does not record who made the visit; the acting account is audited and its user name is stored as the creator.',
+        'rating' => ['bad' => 'Bad', 'acceptable' => 'Acceptable', 'excellent' => 'Excellent'],
+        'choice' => [
+            'yes' => 'Yes', 'no' => 'No', 'p25' => '25%', 'p50' => '50%', 'p75' => '75%', 'p100' => '100%',
+            'debts' => 'Accumulating debts', 'no_change' => 'No change', 'good' => 'Good', 'excellent' => 'Excellent',
+            'declined' => 'Declined', 'same' => 'No change', 'improved' => 'Improved', 'sell' => 'I will sell', 'expand' => 'I will expand',
+        ],
+        'opening_other' => [
+            'q' => [
+                1 => '1) Did you keep to the expected opening period stated when the contract was signed? If not, why?',
+                2 => '2) Did you face difficulties while preparing the project? What were they and how were they overcome?',
+                3 => '3) Did you stay in the area you chose when applying? If not, what is the reason for the change?',
+                4 => '4) What share of the loan amount was used, compared with the real total value of the project?',
+                5 => '5) Were the machines and tools bought from suitable suppliers and as you asked? What is the reason for any change?',
+                6 => '6) Were all the machines, tools and raw materials listed on the purchase invoice received?',
+                7 => '7) After trying the machines, do they match the specifications you asked for and suit the work? If not, why?',
+            ],
+            'office_intro' => '7) How do you describe your experience at each stage from applying at the centre until the project started?',
+            'office' => [1 => 'Reception', 2 => 'Waiting', 3 => 'Visit', 4 => 'Lawyer', 5 => 'Purchases / transaction handler', 6 => 'Photography'],
+            'other_comments' => 'Other comments or suggestions from the beneficiary', 'indicators' => 'Special indicators noted by the M&E team',
+        ],
+        'opening_taxi' => [
+            'q' => [
+                1 => '1) Did you keep to the expected opening period stated when you applied? If not, why?',
+                2 => '2) Did you face difficulties while finding the vehicle? What were they and how were they overcome? If not, why?',
+                3 => '3) What share of the loan amount was used, compared with the real total value of the project?',
+                4 => '4) Was the vehicle bought from a suitable place and person and as you asked? If not, why?',
+                5 => '5) Have you finished all the legal matters for the vehicle and received every invoice for the value paid there? If not, why?',
+                6 => '6) Did you inspect the vehicle, and does it match the specifications you wanted and suit the work? If not, why?',
+            ],
+            'office_intro' => '7) How do you describe your experience at each stage from applying at the centre until the project started?',
+            'office' => [1 => 'Reception', 2 => 'Waiting', 3 => 'Visit', 4 => 'Lawyer', 5 => 'Purchases', 6 => 'Photography'],
+            'other_comments' => 'Other comments or suggestions from the beneficiary', 'indicators' => 'Special indicators noted by the M&E team',
+        ],
+        'closing' => [
+            'q' => [
+                1 => '1) Did the project achieve the goal it was funded for? If not, why?',
+                2 => '2) How do you describe the financial return of the project? If negative, what is the reason?',
+                3 => '3) Did the project achieve financial independence? If negative, what is the reason?',
+                4 => '4) What indirect benefit did the project bring to the family or the home?',
+                5 => '5) Are there future plans for the project? Explain your answer.',
+                6 => '7) What hope did the project give you?',
+            ],
+            'office_intro' => '6) How do you describe your experience at each stage from applying at the centre until the project started?',
+            'office' => [1 => 'Humility in dealing', 2 => 'Listening', 3 => 'Fairness', 4 => 'Responsibility in dealing'],
+            'indicators' => '8) Do you have any comments on the Hope Center team?',
+        ],
+    ],
+    'schedule' => [
+        'title' => 'Visit schedule', 'intro' => 'Visit notices already stored in the cities you can read. This page neither generates notices nor changes their seen state.',
+        'year' => 'Year', 'all_years' => 'All years', 'months' => 'Months', 'kind' => 'Project kind', 'all_kinds' => 'All', 'vehicles' => 'Vehicles', 'others' => 'Other projects',
+        'number' => 'Visit number', 'any_number' => 'All', 'seen' => 'Seen', 'any' => 'All', 'seen_yes' => 'Seen', 'seen_no' => 'Not seen', 'filter' => 'Filter',
+        'project' => 'Project', 'beneficiary' => 'Beneficiary', 'visit' => 'Visit', 'date' => 'Date', 'status' => 'Visit status', 'note' => 'Note', 'city' => 'City',
+        'done' => 'Done', 'na' => 'N/A', 'not_found' => '—', 'empty' => 'No matching visit notices.',
     ],
 ];

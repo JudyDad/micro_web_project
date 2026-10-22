@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 /** Invented field-operations data on top of the application fixture. */
 final class FieldFixture
 {
-    public const CAPABILITIES = ['special_cases.view', 'special_cases.manage'];
+    public const CAPABILITIES = ['special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage'];
 
     public static function grant(WebAccount $account, array $cities = [1, 2], array $capabilities = self::CAPABILITIES): void
     {
@@ -28,5 +28,24 @@ final class FieldFixture
             'phone' => ApplicationFixture::row('specialcasetype', $city, ['c_ID' => 81, 'c_Name' => 'أ هاتفية', 'c_Name_en' => 'Phone']),
             'visit' => ApplicationFixture::row('specialcasetype', $city, ['c_ID' => 82, 'c_Name' => 'ب زيارة', 'c_Name_en' => 'Visit']),
         ];
+    }
+
+    /** The opening and closing tasks (legacy ids 25 and 31) and a street of the city. */
+    public static function visitCatalog(int $city): array
+    {
+        $tasks = [];
+        foreach ([25 => 'Opening visit', 31 => 'Closing visit'] as $raw => $name) {
+            $tasks[$raw] = ApplicationFixture::row('task', $city, ['c_T_ID' => $raw, 'c_T_Name' => $name, 'c_T_State' => 0, 'c_T_Type' => 'f']);
+        }
+
+        return ['tasks' => $tasks, 'street' => ApplicationFixture::row('street', $city, ['c_ID' => 5, 'c_Name' => 'Synthetic street'])];
+    }
+
+    /** Assigns both visit tasks to a project, not done. */
+    public static function assignVisitTasks(int $project, array $catalog, int $city = 1): void
+    {
+        foreach ($catalog['tasks'] as $task) {
+            ApplicationFixture::row('task_microproject', $city, ['c_State' => 0, 'c_Date' => '2026-10-19 00:00:00'], ['MicroProject_ID' => $project, 'Task_ID' => $task]);
+        }
     }
 }
