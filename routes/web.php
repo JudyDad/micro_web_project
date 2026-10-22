@@ -11,6 +11,7 @@ use App\Http\Controllers\MonitoringVisitController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchasingController;
+use App\Http\Controllers\RehabVisitController;
 use App\Http\Controllers\SpecialCaseController;
 use App\Http\Controllers\VisitController;
 use App\Http\Middleware\FoundationPreview;
@@ -69,6 +70,9 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
                 Route::get('/me-visits/{visit}', [MonitoringVisitController::class, 'show'])->where('visit', '[1-9][0-9]{0,18}')->name('me.show');
                 Route::post('/me-visits', [MonitoringVisitController::class, 'save'])->block(10, 10)->name('me.save');
                 Route::post('/me-visits/{visit}/delete', [MonitoringVisitController::class, 'delete'])->where('visit', '[1-9][0-9]{0,18}')->block(10, 10)->name('me.delete');
+                Route::get('/rehab-visit', [RehabVisitController::class, 'show'])->name('rehab.show');
+                Route::post('/rehab-visit', [RehabVisitController::class, 'save'])->block(10, 10)->name('rehab.save');
+                Route::post('/rehab-visit/delete', [RehabVisitController::class, 'delete'])->block(10, 10)->name('rehab.delete');
                 Route::get('/visits', [VisitController::class, 'hub'])->name('visits.hub');
                 Route::get('/visits/{kind}', [VisitController::class, 'show'])->where('kind', '[OV]-(op|cl)')->name('visits.show');
                 Route::post('/visits/{kind}', [VisitController::class, 'save'])->where('kind', '[OV]-(op|cl)')->block(10, 10)->name('visits.save');

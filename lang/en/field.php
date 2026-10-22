@@ -14,6 +14,7 @@ return [
         'me_number' => 'Enter a visit number from 1 to 99.', 'me_number_taken' => 'This person already has a visit with this number.', 'me_profit' => 'Enter the net profit (up to four decimals).',
         'me_profit_range' => 'The net profit falls outside every active profit range, so the result cannot be calculated.', 'me_unanswered' => 'No question can be left without an answer. Answer every question and try again.',
         'not_funded' => 'Monitoring visits are only available for funded projects.',
+        'not_rehab' => 'The rehabilitation closing visit applies to grant-funded rehabilitation projects only.', 'rehab_unanswered' => 'Answer every question and try again.',
         'choice' => 'Choose one of the listed answers.', 'vehicle' => 'The vehicle number is missing. Enter it and try again.', 'vehicle_long' => 'The vehicle number is too long (50 characters at most).',
         'rehab' => 'Rehabilitation projects have no opening or closing visit on this screen.', 'kind' => 'This kind of visit does not apply to this project.',
         'exists' => 'A second visit of the same phase cannot be created: this project already has one.', 'street' => 'Choose an area from the list.', 'place_long' => 'The detailed address is too long (255 characters at most).',
@@ -21,7 +22,7 @@ return [
     'visit' => [
         'title' => 'Visits', 'scope' => 'Opening and closing visits of this project. One visit is created per phase and edited in place; deleting visits is not available. Monitoring and evaluation visits and rehabilitation visits have their own screens.',
         'recorded' => 'Recorded visits', 'none' => 'No opening or closing visit is recorded.', 'record' => 'Record a visit', 'open' => 'Open',
-        'rehab_note' => 'This is a grant-funded rehabilitation project: it has no opening or monitoring visit, and its closing visit has a separate screen that is not available yet.',
+        'rehab_note' => 'This is a grant-funded rehabilitation project: it has no opening or monitoring visit; only the rehabilitation closing visit applies.',
         'phase' => ['opening' => 'Opening visit', 'closing' => 'Closing visit'],
         'kind' => ['O-op' => 'Opening visit (general project)', 'V-op' => 'Opening visit (vehicle)', 'O-cl' => 'Closing visit (general project)', 'V-cl' => 'Closing visit (vehicle)'],
         'date' => 'Visit date', 'vehicle' => 'Vehicle plate number', 'street' => 'Project area', 'no_street' => '— none —', 'place_note' => 'Detailed address',
@@ -80,6 +81,22 @@ return [
         'profit' => 'Net profit', 'ans1' => 'Visit summary', 'indicators' => 'Indicators', 'notes' => 'Notes', 'note' => 'Note', 'result' => 'Result', 'questions' => 'Questions', 'none_questions' => 'The catalog has no questions for this kind of project.',
         'rehab' => 'Rehabilitation projects have no monitoring and evaluation visits.', 'not_funded' => 'Monitoring visits can be added only after the project is funded.', 'kind' => ['o' => 'Other projects', 'v' => 'Vehicles'],
         'type' => ['مستفيد' => 'Beneficiary', 'شريك' => 'Partner'], 'person' => 'Person', 'open' => 'Open', 'back' => 'Back to the visits',
+    ],
+    'rehab' => [
+        'title' => 'Rehabilitation closing visit',
+        'choice' => ['bad' => 'Bad', 'acceptable' => 'Acceptable', 'excellent' => 'Excellent', 'na' => 'N/A', 'yes' => 'Yes', 'no' => 'No'],
+        'section' => [
+            1 => '1) How do you describe your experience with Hope Center at each stage of the rehabilitation project?',
+            2 => '2) How do you describe the execution stage by the workshops?',
+            3 => '3) Is there any damage to the project from the earthquake that has not been repaired?',
+            4 => '4) Were you told about all the amounts spent during the rehabilitation stage?',
+            5 => '5) Do you have any suggestions or comments on the rehabilitation project?',
+        ],
+        'q' => [
+            1 => 'Initial visit', 2 => 'Reception', 3 => 'Photography', 4 => 'Purchasing officer',
+            5 => 'Tiles and concrete', 6 => 'Plumbing', 7 => 'Electrical', 8 => 'Aluminium', 9 => 'Paint', 10 => 'Carpentry', 11 => 'Blacksmith', 12 => 'Air conditioning',
+            13 => 'Answer', 14 => 'Answer', 15 => 'Answer',
+        ],
     ],
     'schedule' => [
         'title' => 'Visit schedule', 'intro' => 'Visit notices already stored in the cities you can read. This page neither generates notices nor changes their seen state.',

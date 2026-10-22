@@ -1,6 +1,6 @@
 # P5.2 field operations
 
-Started 22 October 2026 on the user's instruction "Yes, start P5.2 field operations". Status: **slices S1 (special cases), S2 (opening/closing visits and the visit schedule) and S3 (M&E visits) implemented locally; P5.2 is not complete and no acceptance is claimed.** No physical schema change: every payload maps to the approved `op_specialcase` / `op_specialcasetype` tables.
+Started 22 October 2026 on the user's instruction "Yes, start P5.2 field operations". Status: **slices S1 (special cases), S2 (opening/closing visits and the visit schedule) and S3 (M&E visits) and S4 (rehabilitation closing visit) implemented locally; P5.2 is not complete and no acceptance is claimed.** No physical schema change: every payload maps to the approved `op_specialcase` / `op_specialcasetype` tables.
 
 ## Scope and slicing
 
@@ -11,7 +11,7 @@ P5.2 covers about 11,000 lines of desktop code. It is delivered in independently
 | S1 Special cases | `SpecialCase_Form.cs`, `Classes/SpecialCase.cs` | implemented locally (this record) |
 | S2 Opening/closing visits and visit schedule | `Visit Forms/ChooseVisitKind_Form`, `VOpening_*`, `VClosing_Form`, `Visits_Schedule_Form`, `Classes/Visit.cs`, `Classes/Office_Monitoring.cs` | implemented locally (see S2 below) |
 | S3 Monitoring and evaluation (M&E) | `V_ME_Taxi_Form`, `V_ME_Other_Form`, `Classes/M_and_E.cs` | implemented locally (see S3 below) |
-| S4 Rehabilitation follow-up | `VClosing_Rehab_Form`, `Classes/VisitRehab.cs` | todo |
+| S4 Rehabilitation closing visit | `VClosing_Rehab_Form`, `Classes/VisitRehab.cs` | implemented locally (see S4 below) |
 | S5 Profession meetings | `ProfessionMeetings_Form.cs` (3,448 lines), `ProfessionMeetings_Schema.sql` | todo |
 | S6 Visit results / statistics | `Visit_Results_Form`, `Visits_Statistics` | belongs with P6.1/P6.2 reporting |
 
@@ -41,6 +41,15 @@ Source: `ChooseVisitKind_Form.cs`, `VOpening_Other_Form.cs`, `VOpening_Taxi_Form
 3. **Notifications:** the desktop marks the opening notice seen on save, and generates M1–M5 notices on the first loan (P5.3). Neither is done here, so the schedule shows only already stored notices. The desktop's project-state/donor/phone/residence columns, street and type filters and Excel export (P6.2) are not built; the desktop's "current state" join condition is not reproduced.
 4. **Role mapping** (desktop roles 1/8/2 may save; 3/4/7/9 refused) is not provisioned; capabilities are assigned per city.
 5. The "visit status" is blank when the matching visit is not found (as the desktop's SQL yields NULL); say if "Not yet" is preferred.
+## S4 rehabilitation closing visit — delivered
+
+Source: `VClosing_Rehab_Form.cs` (+ Designer), `Classes/VisitRehab.cs`. No schema change: a visit of kind `R-cl` in `op_visit` plus one `op_rehabvisit` row.
+
+- Page `/applications/{id}/rehab-visit`, linked from the visit overview, for grant-funded rehabilitation projects (type contains "ترميم", fund type "منحة"). Date and fifteen answers, each with a note: four ratings (initial visit, reception, photography, purchasing officer), eight workshop ratings that may be N/A (tiles and concrete, plumbing, electrical, aluminium, paint, carpentry, blacksmith, air conditioning), and three yes/no questions (earthquake damage not repaired, informed of the amounts spent, suggestions), where "yes" is stored as 0 as on the desktop. Every question must be answered on every save.
+- A save marks the project's assignment of task 31 done and moves the project to Finished (written once). The desktop also marked the project's notifications seen; that belongs to P5.3.
+- **Desktop defect not copied:** the desktop's edit path overwrote its own SQL string and never saved edited answers. The web saves edits properly (only changed fields; stale/repeat saves refused with 409).
+- The "at least one visitor" rule is dropped because visitors are historical source users and are not recorded (see the owner decisions above). Uses the `visits.*` grants; web-created visits can be deleted (task and project state are left as they are, as the desktop did); imported ones cannot.
+- `RehabVisitTest`: 5 cases / 57 assertions.
 ## S3 monitoring and evaluation visits — delivered
 
 Source: `V_ME_Other_Form.cs`, `V_ME_Taxi_Form.cs` (identical logic; kind `o` or `v`), `Classes/M_and_E.cs`, `Partners_MessageBox.cs`. No schema change: `op_mevisit`, `op_mevisit_answer`, and the catalogs `op_mequestion`, `op_meanswer`, `op_meprofitmarks`.
@@ -75,4 +84,8 @@ Source: `V_ME_Other_Form.cs`, `V_ME_Taxi_Form.cs` (identical logic; kind `o` or 
 - `SpecialCaseTest`: 5 cases / 48 assertions (create and edit with exact text, desktop validation, other-city type refused, stale and repeated submissions, legacy values preserved, grants and both languages over HTTP).
 - `VisitWorkflowTest`: 8 cases / 109 assertions (exact opening values and side effects once, validation and kind rules, taxi questionnaire and plate number, closing choices and Finished once, legacy values preserved, rehabilitation exclusion, pages in both languages with grants, schedule filters/status/city permissions).
 - `MonitoringVisitTest`: 6 cases / 87 assertions (answers, result and task, validation and eligibility, vehicle questions, legacy values and unrelated answers preserved, delete/imported kept, pages in both languages with grants).
-- SQLite only. Not done: actual-schema MySQL tests for S1–S3, rendered browser check, five-city data parity, staff acceptance, slices S4–S5.
+- SQLite only. Not done: actual-schema MySQL tests for S1–S4, rendered browser check, five-city data parity, staff acceptance, slice S5 (profession meetings).
+
+## Deleting imported records
+
+The owner first chose to keep imported records protected, then asked for the system to cover old data too. The design needed (a tombstone table, so nothing in the preserved data is destroyed) is in [imported-record-deletion-proposal.md](../planning/phase-5/imported-record-deletion-proposal.md) and awaits approval.

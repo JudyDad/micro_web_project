@@ -131,7 +131,9 @@ final class VisitService
         }
         $this->audit->record($account->id, 'visits.view', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
 
-        return ['project' => $project, 'version' => $this->version($visits, $this->officeRows($visits), $project), 'visits' => $visits, 'rehab' => $class['rehab'], 'vehicle' => $class['vehicle'], 'available' => $available, 'canManage' => $canManage];
+        $rehabVisit = $class['rehab'] ? $visits->first(fn ($visit) => ((string) $visit->c_Kind) === RehabVisitService::KIND) : null;
+
+        return ['rehabVisit' => $rehabVisit, 'canRehab' => $class['rehab'] && $canManage, 'project' => $project, 'version' => $this->version($visits, $this->officeRows($visits), $project), 'visits' => $visits, 'rehab' => $class['rehab'], 'vehicle' => $class['vehicle'], 'available' => $available, 'canManage' => $canManage];
     }
 
     /** Read model of one visit questionnaire (an existing visit of the kind, or an empty form when the kind can be recorded). */
