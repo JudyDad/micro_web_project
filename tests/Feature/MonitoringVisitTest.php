@@ -172,8 +172,16 @@ final class MonitoringVisitTest extends TestCase
 
         $legacy = ApplicationFixture::row('mevisit', 1, ['c_Kind' => 'o', 'c_Number' => '9', 'c_Date' => '2020-01-01', 'c_Profit' => 5, 'c_Result' => 3], ['Person_ID' => $this->person]);
         FieldFixture::markImported($legacy, 'op_mevisit');
-        $this->rejected('delete', fn () => $this->me->delete($this->account, $this->project, $legacy, $this->version()));
+        $this->assertHttpStatus(403, fn () => $this->me->delete($this->account, $this->project, $legacy, $this->version()));
         self::assertSame(1, DB::table('op_mevisit')->count());
+        FieldFixture::grantImportedDelete($this->account);
+        $this->me->delete($this->account, $this->project, $legacy, $this->version());
+        self::assertSame(1, DB::table('op_mevisit')->count(), 'the imported visit is hidden, never removed');
+        $hub = $this->me->hub($this->account, $this->project);
+        self::assertCount(0, $hub['people']->first()->visits);
+        self::assertSame([$legacy], $hub['deleted']->pluck('id')->all());
+        $this->me->restore($this->account, $this->project, $legacy);
+        self::assertCount(1, $this->me->hub($this->account, $this->project)['people']->first()->visits);
     }
 
     public function test_pages_render_in_both_languages_and_grants_gate_them(): void

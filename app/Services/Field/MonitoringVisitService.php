@@ -24,6 +24,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class MonitoringVisitService
 {
+    use RetiresRecords;
+
     /** Phase task per visit number (`TasksOfProjects`: 26–30 for visits 1–5). */
     private const TASKS = [1 => 26, 2 => 27, 3 => 28, 4 => 29, 5 => 30];
 
@@ -73,14 +75,14 @@ final class MonitoringVisitService
         })->filter()->unique('id')->sortBy(fn ($p) => $p->type === 'مستفيد' ? 0 : 1)->values();
     }
 
-    private function visitRows(Collection $people): Collection
+    private function visitRows(Collection $people, bool $deleted = false): Collection
     {
         if ($people->isEmpty()) {
             return collect();
         }
         $ref = $this->tables->relation('mevisit', 'Person_ID');
 
-        return $this->tables->query('mevisit')->whereIn('p.'.$ref['resolved_column'], $people->pluck('id')->all())->where('p.'.$ref['state_column'], 'resolved')->orderBy('p.id')->get();
+        return $this->tables->query('mevisit', $deleted)->whereIn('p.'.$ref['resolved_column'], $people->pluck('id')->all())->where('p.'.$ref['state_column'], 'resolved')->orderBy('p.id')->get();
     }
 
     private function answerRows(Collection $visits): Collection
@@ -139,8 +141,10 @@ final class MonitoringVisitService
         $canManage = $this->access->check($account, $city, 'me_visits.manage');
         $creatable = $canManage && ! $class['rehab'] && $this->funded($project);
         $this->audit->record($account->id, 'me_visits.view', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
+        $canRestore = $this->mayRestore($account, $city, 'me_visits.delete');
 
         return [
+            'canRestore' => $canRestore, 'deleted' => $canRestore ? $this->visitRows($people, true)->sortBy(fn ($v) => (int) $v->c_Number)->values() : collect(),
             'project' => $project, 'version' => $this->version($visits, $this->answerRows($visits), $project), 'rehab' => $class['rehab'], 'funded' => $this->funded($project), 'creatable' => $creatable, 'canManage' => $canManage,
             'people' => $people->map(function ($person) use ($visits) {
                 $person->visits = $visits->filter(fn ($v) => $this->personOf($v) === $person->id)->sortBy(fn ($v) => (int) $v->c_Number)->values();
@@ -179,7 +183,7 @@ final class MonitoringVisitService
             'given' => $existing->keyBy(fn ($a) => (int) $a->{$this->tables->relation('mevisit_answer', 'Question_ID')['resolved_column']}),
             'answerRef' => $this->tables->relation('mevisit_answer', 'Answer_ID')['resolved_column'],
             'next' => 1 + (int) $visits->filter(fn ($v) => $this->personOf($v) === $personId)->map(fn ($v) => (int) $v->c_Number)->max(),
-            'canManage' => $canManage, 'canDelete' => $visit !== null && $this->access->check($account, $city, 'me_visits.delete'),
+            'canManage' => $canManage, 'canDelete' => $visit !== null && $this->mayRetire($account, $city, 'me_visits.delete', $visit),
             'version' => $this->version($visits, $answers, $project), 'mark' => $visit === null ? null : (int) ($visit->c_Result ?? 0),
         ];
     }
@@ -346,17 +350,32 @@ final class MonitoringVisitService
             abort_unless(hash_equals($this->version($visits, $answers, $project), $version), 409, 'Visits changed. Reload before deleting.');
             $visit = $visits->firstWhere('id', $visitId);
             abort_if($visit === null, 404);
-            $this->tables->isWeb($visit) || $this->fail('delete', 'imported');
             $visitRef = $this->tables->relation('mevisit_answer', 'Visit_ID')['resolved_column'];
-            foreach ($answers->filter(fn ($a) => (int) $a->{$visitRef} === $visitId) as $answer) {
-                $this->tables->isWeb($answer) || $this->fail('delete', 'imported');
-                $this->tables->deleteWeb('mevisit_answer', $answer);
-            }
-            $this->tables->deleteWeb('mevisit', $visit);
+            $this->retire($account, $city, 'mevisit', $visit, function () use ($answers, $visitRef, $visitId) {
+                foreach ($answers->filter(fn ($a) => (int) $a->{$visitRef} === $visitId) as $answer) {
+                    $this->tables->isWeb($answer) || $this->fail('delete', 'imported');
+                    $this->tables->deleteWeb('mevisit_answer', $answer);
+                }
+            });
             if (isset(self::TASKS[(int) $visit->c_Number])) {
                 $this->completeTask($project, self::TASKS[(int) $visit->c_Number], 0);
             }
             $this->audit->record($account->id, 'me_visits.deleted', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
+        });
+    }
+
+    /** Makes a hidden imported M&E visit visible again. */
+    public function restore(WebAccount $account, int $projectId, int $visitId): void
+    {
+        DB::transaction(function () use ($account, $projectId, $visitId) {
+            DB::table('op_microproject')->where('id', $projectId)->lockForUpdate()->first();
+            $project = $this->project($projectId);
+            $city = (int) $project->city_id;
+            $this->authorize($account, $city, false, 'me_visits.delete');
+            $this->requireImportedDelete($account, $city);
+            abort_if($this->visitRows($this->people($project), true)->firstWhere('id', $visitId) === null, 404);
+            $this->tables->unhide('mevisit', $visitId);
+            $this->audit->record($account->id, 'me_visits.restored', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
         });
     }
 

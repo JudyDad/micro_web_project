@@ -41,6 +41,12 @@ final class FieldFixture
         return ['tasks' => $tasks, 'street' => ApplicationFixture::row('street', $city, ['c_ID' => 5, 'c_Name' => 'Synthetic street'])];
     }
 
+    /** Grants the administrator-only capability that allows deleting and restoring imported records. */
+    public static function grantImportedDelete(WebAccount $account, array $cities = [1, 2]): void
+    {
+        self::grant($account, $cities, ['imported.delete']);
+    }
+
     /** Makes a fixture row look imported: legacy identity with a published synthetic origin, so it stays visible. */
     public static function markImported(int $id, string $table, int $city = 1): void
     {

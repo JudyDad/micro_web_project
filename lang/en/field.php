@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Field operations', 'back' => 'Back to the project', 'saved' => 'Saved.', 'deleted' => 'Deleted.', 'delete' => 'Delete', 'delete_confirm' => 'Confirm deletion', 'save' => 'Save',
+    'title' => 'Field operations', 'back' => 'Back to the project', 'saved' => 'Saved.', 'deleted' => 'Deleted.', 'restored' => 'Restored.', 'restore' => 'Restore', 'deleted_records' => 'Deleted records (administrators)', 'delete' => 'Delete', 'delete_confirm' => 'Confirm deletion', 'save' => 'Save',
     'links' => ['special-cases' => 'Special cases', 'visits' => 'Visits', 'me' => 'Monitoring and evaluation visits'],
     'nav_schedule' => 'Visit schedule',
     'special' => [

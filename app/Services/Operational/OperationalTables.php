@@ -42,9 +42,13 @@ final class OperationalTables
         abort(422, 'Unsupported reference contract.');
     }
 
-    public function query(string $sourceTable): Builder
+    /**
+     * @param  bool  $deleted  false (default): records hidden by an authorized deletion are excluded; true: only those records
+     */
+    public function query(string $sourceTable, bool $deleted = false): Builder
     {
         $table = $this->table($sourceTable);
+        $tombstone = fn (Builder $q) => $q->selectRaw('1')->from('operational_deletions as od')->whereColumn('od.entity_id', 'p.id')->whereColumn('od.source_table_id', 'p.source_table_id');
 
         return DB::table($table['name'].' as p')
             ->join('operational_entities as e', fn ($j) => $j->on('e.id', '=', 'p.id')->on('e.city_id', '=', 'p.city_id')->on('e.source_id', '=', 'p.source_id')->on('e.source_table_id', '=', 'p.source_table_id'))
@@ -60,7 +64,8 @@ final class OperationalTables
                             ->whereIn('pub.publication_kind', app()->environment(['local', 'testing']) ? ['synthetic', 'validated'] : ['validated']);
                     });
                 });
-            })->select(['p.*', 'e.identity_kind', 'c.name_en as city_name_en', 'c.name_ar as city_name_ar']);
+            })->when($deleted, fn (Builder $q) => $q->whereExists($tombstone), fn (Builder $q) => $q->whereNotExists($tombstone))
+            ->select(['p.*', 'e.identity_kind', 'c.name_en as city_name_en', 'c.name_ar as city_name_ar']);
     }
 
     /** Catalog rows for one city and source, with shared whole-table aliases projected to their values. */
@@ -111,6 +116,22 @@ final class OperationalTables
     public function isWeb(object $row): bool
     {
         return ($row->identity_kind ?? null) === 'web';
+    }
+
+    /** Hides an imported record from the web without touching the entity, its origins or the preserved source row. */
+    public function hide(string $sourceTable, object $row, int $accountId, ?string $reason = null): void
+    {
+        abort_if($this->isWeb($row), 409, 'Records created in the web are deleted, not hidden.');
+        DB::table('operational_deletions')->insertOrIgnore([
+            'city_id' => $row->city_id, 'source_id' => $row->source_id, 'source_table_id' => $this->tableId($sourceTable), 'entity_id' => $row->id,
+            'deleted_by_account_id' => $accountId, 'deleted_at' => now('UTC')->format('Y-m-d H:i:s.u'), 'reason' => $reason,
+        ]);
+    }
+
+    /** Makes a hidden record visible again. */
+    public function unhide(string $sourceTable, int $entityId): void
+    {
+        DB::table('operational_deletions')->where('source_table_id', $this->tableId($sourceTable))->where('entity_id', $entityId)->delete();
     }
 
     /** Deletes a web-created typed row and its entity identity. Callers delete dependent rows first and check {@see isWeb()}. */

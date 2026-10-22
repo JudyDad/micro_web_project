@@ -143,16 +143,28 @@ final class SpecialCaseTest extends TestCase
         $this->assertHttpStatus(403, fn () => $this->cases->delete($this->account, $this->project, $id, $this->version()));
         DB::table('account_city_capabilities')->where('capability', 'special_cases.delete')->update(['revoked_at' => null]);
         $this->assertHttpStatus(409, fn () => $this->cases->delete($this->account, $this->project, $id, str_repeat('0', 64)));
-        try {
-            $this->cases->delete($this->account, $this->project, $legacy, $this->version());
-            self::fail('An imported review must be kept.');
-        } catch (ValidationException $e) {
-            self::assertArrayHasKey('delete', $e->errors());
-        }
+        // An imported review needs the administrator-only capability; without it nothing changes.
+        $this->assertHttpStatus(403, fn () => $this->cases->delete($this->account, $this->project, $legacy, $this->version()));
+        self::assertSame(0, DB::table('operational_deletions')->count());
         $this->cases->delete($this->account, $this->project, $id, $this->version());
         self::assertSame([$legacy], DB::table('op_specialcase')->pluck('id')->all());
+
+        FieldFixture::grantImportedDelete($this->account);
+        $this->cases->delete($this->account, $this->project, $legacy, $this->version());
+        self::assertSame([$legacy], DB::table('op_specialcase')->pluck('id')->all(), 'the imported row is hidden, never removed');
+        self::assertSame(1, DB::table('operational_deletions')->where('entity_id', $legacy)->count());
+        $shown = $this->cases->show($this->account, $this->project);
+        self::assertCount(0, $shown['cases']);
+        self::assertSame([$legacy], $shown['deleted']->pluck('id')->all());
+        $this->cases->restore($this->account, $this->project, $legacy);
+        self::assertCount(1, $this->cases->show($this->account, $this->project)['cases']);
+        self::assertSame(0, DB::table('operational_deletions')->count());
+        self::assertSame(1, DB::table('account_audit_events')->where('event_type', 'special_cases.restored')->count());
+        $this->assertHttpStatus(404, fn () => $this->cases->restore($this->account, $this->project, $legacy));
+        DB::table('account_city_capabilities')->where('capability', 'imported.delete')->update(['revoked_at' => now()]);
+        $this->assertHttpStatus(403, fn () => $this->cases->restore($this->account, $this->project, $legacy));
         self::assertSame(0, DB::table('operational_entities')->where('id', $id)->count());
-        self::assertSame(1, DB::table('account_audit_events')->where('event_type', 'special_cases.deleted')->count());
+        self::assertSame(2, DB::table('account_audit_events')->where('event_type', 'special_cases.deleted')->count());
     }
 
     private function assertHttpStatus(int $expected, callable $call): void

@@ -35,6 +35,13 @@ final class SpecialCaseController
         return redirect()->route('special-cases.show', ['locale' => $locale, 'application' => $application])->with('status', __('field.deleted'));
     }
 
+    public function restore(Request $request, string $locale, string $application, string $case, SpecialCaseService $cases): RedirectResponse
+    {
+        $cases->restore($request->user(), $this->id($application), $this->id($case));
+
+        return redirect()->route('special-cases.show', ['locale' => $locale, 'application' => $application])->with('status', __('field.restored'));
+    }
+
     private function id(string $value): int
     {
         $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);

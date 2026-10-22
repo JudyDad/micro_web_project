@@ -20,6 +20,7 @@ final class AccountAuditTrail
         'visits.schedule' => [], 'visits.view' => ['application_entity'], 'visits.saved' => ['application_entity'],
         'special_cases.deleted' => ['application_entity'], 'visits.deleted' => ['application_entity'],
         'me_visits.view' => ['application_entity'], 'me_visits.saved' => ['application_entity'], 'me_visits.deleted' => ['application_entity'],
+        'special_cases.restored' => ['application_entity'], 'visits.restored' => ['application_entity'], 'me_visits.restored' => ['application_entity'],
         'application_draft.saved' => [], 'application_draft.viewed' => [], 'application_draft.discarded' => [],
         'people.list' => [], 'people.view' => ['person_entity'],
         'people.created' => ['person_entity', 'family_entity'], 'people.updated' => ['person_entity'],

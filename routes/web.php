@@ -70,6 +70,9 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
                 Route::get('/me-visits/{visit}', [MonitoringVisitController::class, 'show'])->where('visit', '[1-9][0-9]{0,18}')->name('me.show');
                 Route::post('/me-visits', [MonitoringVisitController::class, 'save'])->block(10, 10)->name('me.save');
                 Route::post('/me-visits/{visit}/delete', [MonitoringVisitController::class, 'delete'])->where('visit', '[1-9][0-9]{0,18}')->block(10, 10)->name('me.delete');
+                Route::post('/special-cases/{case}/restore', [SpecialCaseController::class, 'restore'])->where('case', '[1-9][0-9]{0,18}')->block(10, 10)->name('special-cases.restore');
+                Route::post('/visits/{visit}/restore', [VisitController::class, 'restore'])->where('visit', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.restore');
+                Route::post('/me-visits/{visit}/restore', [MonitoringVisitController::class, 'restore'])->where('visit', '[1-9][0-9]{0,18}')->block(10, 10)->name('me.restore');
                 Route::get('/rehab-visit', [RehabVisitController::class, 'show'])->name('rehab.show');
                 Route::post('/rehab-visit', [RehabVisitController::class, 'save'])->block(10, 10)->name('rehab.save');
                 Route::post('/rehab-visit/delete', [RehabVisitController::class, 'delete'])->block(10, 10)->name('rehab.delete');

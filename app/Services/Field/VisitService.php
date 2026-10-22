@@ -21,6 +21,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class VisitService
 {
+    use RetiresRecords;
+
     public const OFFICE_SLOTS = 6;
 
     public const QUESTION_SLOTS = 7;
@@ -72,11 +74,11 @@ final class VisitService
         ];
     }
 
-    private function visits(object $project): Collection
+    private function visits(object $project, bool $deleted = false): Collection
     {
         $ref = $this->tables->relation('visit', 'MicroProject_ID');
 
-        return $this->tables->query('visit')->where('p.city_id', $project->city_id)->where('p.source_id', $project->source_id)
+        return $this->tables->query('visit', $deleted)->where('p.city_id', $project->city_id)->where('p.source_id', $project->source_id)
             ->where('p.'.$ref['resolved_column'], $project->id)->where('p.'.$ref['state_column'], 'resolved')->orderBy('p.id')->get();
     }
 
@@ -133,7 +135,9 @@ final class VisitService
 
         $rehabVisit = $class['rehab'] ? $visits->first(fn ($visit) => ((string) $visit->c_Kind) === RehabVisitService::KIND) : null;
 
-        return ['rehabVisit' => $rehabVisit, 'canRehab' => $class['rehab'] && $canManage, 'project' => $project, 'version' => $this->version($visits, $this->officeRows($visits), $project), 'visits' => $visits, 'rehab' => $class['rehab'], 'vehicle' => $class['vehicle'], 'available' => $available, 'canManage' => $canManage];
+        $canRestore = $this->mayRestore($account, $city, 'visits.delete');
+
+        return ['canRestore' => $canRestore, 'deleted' => $canRestore ? $this->visits($project, true) : collect(), 'rehabVisit' => $rehabVisit, 'canRehab' => $class['rehab'] && $canManage, 'project' => $project, 'version' => $this->version($visits, $this->officeRows($visits), $project), 'visits' => $visits, 'rehab' => $class['rehab'], 'vehicle' => $class['vehicle'], 'available' => $available, 'canManage' => $canManage];
     }
 
     /** Read model of one visit questionnaire (an existing visit of the kind, or an empty form when the kind can be recorded). */
@@ -155,7 +159,7 @@ final class VisitService
 
         return [
             'project' => $project, 'kind' => $kind, 'definition' => $definition, 'wording' => VisitKinds::wording($kind), 'visit' => $visit,
-            'office' => $visit === null ? null : $offices->get((int) $visit->id), 'canManage' => $canManage, 'canDelete' => $visit !== null && $this->access->check($account, $city, 'visits.delete'), 'version' => $this->version($visits, $offices, $project),
+            'office' => $visit === null ? null : $offices->get((int) $visit->id), 'canManage' => $canManage, 'canDelete' => $visit !== null && $this->mayRetire($account, $city, 'visits.delete', $visit), 'version' => $this->version($visits, $offices, $project),
             'streets' => $definition['place'] ? $this->tables->catalog('street', $city, (int) $project->source_id)->sortBy('c_Name', SORT_STRING)->values() : collect(),
             'streetId' => $project->{$street['state_column']} === 'resolved' ? (int) $project->{$street['resolved_column']} : null,
             'placeNote' => (string) ($project->c_MP_AddressAfterFund ?? ''),
@@ -236,15 +240,30 @@ final class VisitService
             abort_unless(hash_equals($this->version($visits, $offices, $project), $version), 409, 'Visits changed. Reload before deleting.');
             $visit = $this->ofKind($visits, $kind);
             abort_if($visit === null, 404);
-            $this->tables->isWeb($visit) || $this->fail('delete', 'imported');
             $office = $offices->get((int) $visit->id);
-            if ($office !== null) {
-                $this->tables->isWeb($office) || $this->fail('delete', 'imported');
-                $this->tables->deleteWeb('office_monitoring', $office);
-            }
-            $this->tables->deleteWeb('visit', $visit);
+            $this->retire($account, $city, 'visit', $visit, function () use ($office) {
+                if ($office !== null) {
+                    $this->tables->isWeb($office) || $this->fail('delete', 'imported');
+                    $this->tables->deleteWeb('office_monitoring', $office);
+                }
+            });
             $this->completeTask($project, $definition['task'], 0);
             $this->audit->record($account->id, 'visits.deleted', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
+        });
+    }
+
+    /** Makes a hidden imported visit (of any kind) visible again. */
+    public function restore(WebAccount $account, int $projectId, int $visitId): void
+    {
+        DB::transaction(function () use ($account, $projectId, $visitId) {
+            DB::table('op_microproject')->where('id', $projectId)->lockForUpdate()->first();
+            $project = $this->project($projectId);
+            $city = (int) $project->city_id;
+            $this->authorize($account, $city, false, 'visits.delete');
+            $this->requireImportedDelete($account, $city);
+            abort_if($this->visits($project, true)->firstWhere('id', $visitId) === null, 404);
+            $this->tables->unhide('visit', $visitId);
+            $this->audit->record($account->id, 'visits.restored', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
         });
     }
 

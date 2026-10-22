@@ -259,7 +259,16 @@ final class VisitWorkflowTest extends TestCase
 
         $legacy = ApplicationFixture::row('visit', 1, ['c_Kind' => 'O-cl', 'c_Date' => '2020-01-01'], ['MicroProject_ID' => $this->project]);
         FieldFixture::markImported($legacy, 'op_visit');
-        $this->rejected('delete', fn () => $this->visits->delete($this->account, $this->project, 'O-cl', $this->version()));
+        $this->assertHttpStatus(403, fn () => $this->visits->delete($this->account, $this->project, 'O-cl', $this->version()));
         self::assertSame(1, DB::table('op_visit')->count());
+        FieldFixture::grantImportedDelete($this->account);
+        $this->visits->delete($this->account, $this->project, 'O-cl', $this->version());
+        self::assertSame(1, DB::table('op_visit')->count(), 'the imported visit is hidden, never removed');
+        $hub = $this->visits->hub($this->account, $this->project);
+        self::assertCount(0, $hub['visits']);
+        self::assertSame([$legacy], $hub['deleted']->pluck('id')->all());
+        $this->visits->restore($this->account, $this->project, $legacy);
+        self::assertCount(1, $this->visits->hub($this->account, $this->project)['visits']);
+        self::assertSame(1, DB::table('account_audit_events')->where('event_type', 'visits.restored')->count());
     }
 }

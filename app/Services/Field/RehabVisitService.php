@@ -21,6 +21,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class RehabVisitService
 {
+    use RetiresRecords;
+
     public const KIND = 'R-cl';
 
     public const CLOSING_TASK = 31;
@@ -110,7 +112,7 @@ final class RehabVisitService
 
         return [
             'project' => $project, 'visit' => $visit, 'answers' => $answers, 'canManage' => $canManage,
-            'canDelete' => $visit !== null && $this->access->check($account, $city, 'visits.delete'), 'version' => $this->version($visit, $answers, $project),
+            'canDelete' => $visit !== null && $this->mayRetire($account, $city, 'visits.delete', $visit), 'version' => $this->version($visit, $answers, $project),
         ];
     }
 
@@ -202,12 +204,12 @@ final class RehabVisitService
             $answers = $this->answers($visit);
             abort_unless(hash_equals($this->version($visit, $answers, $project), $version), 409, 'The rehabilitation visit changed. Reload before deleting.');
             abort_if($visit === null, 404);
-            $this->tables->isWeb($visit) || $this->fail('delete', 'imported');
-            if ($answers !== null) {
-                $this->tables->isWeb($answers) || $this->fail('delete', 'imported');
-                $this->tables->deleteWeb('rehabvisit', $answers);
-            }
-            $this->tables->deleteWeb('visit', $visit);
+            $this->retire($account, $city, 'visit', $visit, function () use ($answers) {
+                if ($answers !== null) {
+                    $this->tables->isWeb($answers) || $this->fail('delete', 'imported');
+                    $this->tables->deleteWeb('rehabvisit', $answers);
+                }
+            });
             $this->audit->record($account->id, 'visits.deleted', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
         });
     }

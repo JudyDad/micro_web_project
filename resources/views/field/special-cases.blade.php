@@ -13,13 +13,18 @@
         @else
             <dl class="project-details"><div><dt>{{ __('field.special.reason') }}</dt><dd>{{ $case->c_Reason }}</dd></div><div><dt>{{ __('field.special.description') }}</dt><dd>{{ $case->c_Description }}</dd></div><div><dt>{{ __('field.special.action') }}</dt><dd>{{ $case->c_Action }}</dd></div></dl>
         @endif
-        @if($canDelete)
+        @if($case->deletable)
         <details><summary>{{ __('field.delete') }}</summary>
             <form method="POST" action="{{ route('special-cases.delete', ['locale' => $locale, 'application' => $applicationId, 'case' => $case->id]) }}">@csrf<input type="hidden" name="version" value="{{ $version }}"><x-ui.button type="submit">{{ __('field.delete_confirm') }}</x-ui.button></form>
         </details>
         @endif
     </section>
     @endforeach
+    @if($canRestore && $deleted->isNotEmpty())<section class="card people-form"><h2>{{ __('field.deleted_records') }}</h2>
+        @foreach($deleted as $gone)
+        <form method="POST" action="{{ route('special-cases.restore', ['locale' => $locale, 'application' => $applicationId, 'case' => $gone->id]) }}">@csrf<bdi>{{ substr((string) $gone->c_Date, 0, 10) }}</bdi> · {{ $gone->c_Reason }} <x-ui.button type="submit">{{ __('field.restore') }}</x-ui.button></form>
+        @endforeach
+    </section>@endif
     @if($cases->isEmpty())<section class="card"><p>{{ __('field.special.none') }}</p></section>@endif
     @if($canManage)<section class="card people-form"><h2>{{ __('field.special.new') }}</h2>@include('field.special-case-form', ['scope' => 'case-new', 'case' => null])</section>@endif
 </x-layouts.app>

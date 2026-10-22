@@ -18,4 +18,9 @@
         @if($creatable)<a class="button button-secondary" href="{{ route('me.create', ['locale' => $locale, 'application' => $applicationId, 'person' => $person->id]) }}">{{ __('field.me.add', ['number' => $person->next]) }}</a>@endif
     </section>
     @empty<section class="card"><p>{{ __('field.me.no_people') }}</p></section>@endforelse
+    @if($canRestore && $deleted->isNotEmpty())<section class="card people-form"><h2>{{ __('field.deleted_records') }}</h2>
+        @foreach($deleted as $gone)
+        <form method="POST" action="{{ route('me.restore', ['locale' => $locale, 'application' => $applicationId, 'visit' => $gone->id]) }}">@csrf<bdi>#{{ $gone->c_Number }}</bdi> · <bdi>{{ substr((string) $gone->c_Date, 0, 10) }}</bdi> <x-ui.button type="submit">{{ __('field.restore') }}</x-ui.button></form>
+        @endforeach
+    </section>@endif
 </x-layouts.app>

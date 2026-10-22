@@ -155,8 +155,17 @@ final class RehabVisitTest extends TestCase
 
         $legacy = ApplicationFixture::row('visit', 1, ['c_Kind' => 'R-cl', 'c_Date' => '2020-01-01'], ['MicroProject_ID' => $this->project]);
         FieldFixture::markImported($legacy, 'op_visit');
-        $this->rejected('delete', fn () => $this->rehab->delete($this->account, $this->project, $this->version()));
+        try {
+            $this->rehab->delete($this->account, $this->project, $this->version());
+            self::fail('Deleting an imported visit needs imported.delete.');
+        } catch (HttpException $e) {
+            self::assertSame(403, $e->getStatusCode());
+        }
         self::assertSame(1, DB::table('op_visit')->count());
+        FieldFixture::grantImportedDelete($this->account);
+        $this->rehab->delete($this->account, $this->project, $this->version());
+        self::assertSame(1, DB::table('op_visit')->count(), 'the imported visit is hidden, never removed');
+        self::assertSame(1, DB::table('operational_deletions')->count());
     }
 
     public function test_pages_render_in_both_languages_and_grants_gate_them(): void

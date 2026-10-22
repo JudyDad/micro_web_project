@@ -1,6 +1,6 @@
 # Proposal: deleting imported (old) records from the web
 
-22 October 2026. **Proposal only: no migration or code exists yet, and the physical schema below needs the owner's explicit approval before it is implemented** (project rule: confirm the physical schema before generating migrations).
+22 October 2026. **Approved by the owner on 22 October 2026 ("Approved: build operational_deletions with the admin-only imported.delete rule, delete and restore") and implemented as migration `2026_10_22_000008_create_operational_deletions`** (project rule: confirm the physical schema before generating migrations).
 
 ## Why imported records are protected today
 
@@ -17,3 +17,9 @@ An imported row in an `op_*` table is the working copy of a source row. It is ti
 ## What I need from you
 
 Approve (with the administrator-only `imported.delete` rule above) the `operational_deletions` table as described (or ask for changes). On approval I will add the migration, the read-path filter with a regression test over every operational table, delete and restore actions for special cases, visits, M&E visits and the rehabilitation visit, and the reconciler change.
+## Implementation record
+
+- Migration 000008 creates `operational_deletions` exactly as proposed (unique `(source_table_id, entity_id)`, composite FK to `operational_entities`, FK to `web_accounts`, RESTRICT). Rollback is refused while any deletion record exists. It follows the other migrations' MySQL-only pattern and has **not** been run against MySQL (no isolated test server was available); the tests use the same table in the SQLite fixtures.
+- `OperationalTables::query()` excludes hidden entities (`query($table, true)` returns only hidden ones); `hide()` / `unhide()` write and remove the record. Capability `imported.delete` (administrator-only, not part of the `data-entry` role) plus the area's own delete capability are required to delete or restore an imported record. Special cases, visits (all kinds including the rehabilitation closing visit) and M&E visits support delete and restore; each administrator page lists hidden records with a Restore button. Delete and restore are audited (`*.deleted`, `*.restored`). Records created in the web are still deleted outright.
+- Children of a hidden record (office rows, answers) are not hidden separately: they are only ever read through their parent. The importer and reconciler read the physical tables, which are unchanged, so counts reconcile and nothing is resurrected.
+- Not yet covered: deleting imported people, applications, finance and other earlier areas (those areas have no delete capabilities at all), and a reason text (the column exists, nothing fills it yet).

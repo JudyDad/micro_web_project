@@ -62,6 +62,7 @@ final class ApplicationFixture
             'source_records' => ['source_id', 'table_id', 'snapshot_id'],
             'source_publications' => ['source_id', 'snapshot_id', 'publication_kind'],
             'project_number_sequences' => ['source_id', 'next_number'],
+            'operational_deletions' => ['city_id', 'source_id', 'source_table_id', 'entity_id', 'deleted_by_account_id', 'deleted_at', 'reason'],
         ];
         foreach ($support as $name => $columns) {
             Schema::create($name, function (Blueprint $table) use ($columns) {

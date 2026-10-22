@@ -20,6 +20,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class SpecialCaseService
 {
+    use RetiresRecords;
+
     public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables) {}
 
     private function authorize(WebAccount $account, int $city, bool $write = false, ?string $extra = null): void
@@ -40,11 +42,11 @@ final class SpecialCaseService
         return $row;
     }
 
-    private function cases(object $project): Collection
+    private function cases(object $project, bool $deleted = false): Collection
     {
         $ref = $this->tables->relation('specialcase', 'MicroProject_ID');
 
-        return $this->tables->query('specialcase')->where('p.city_id', $project->city_id)->where('p.source_id', $project->source_id)
+        return $this->tables->query('specialcase', $deleted)->where('p.city_id', $project->city_id)->where('p.source_id', $project->source_id)
             ->where('p.'.$ref['resolved_column'], $project->id)->where('p.'.$ref['state_column'], 'resolved')->orderBy('p.id')->get();
     }
 
@@ -74,13 +76,16 @@ final class SpecialCaseService
         $typeRef = $this->tables->relation('specialcase', 'Type_ID');
         $names = $types->keyBy('id');
         $this->audit->record($account->id, 'special_cases.view', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
+        $canRestore = $this->mayRestore($account, $city, 'special_cases.delete');
 
         return [
+            'canRestore' => $canRestore, 'deleted' => $canRestore ? $this->cases($project, true) : collect(),
             'project' => $project, 'types' => $types, 'canManage' => $this->access->check($account, $city, 'special_cases.manage'), 'canDelete' => $this->access->check($account, $city, 'special_cases.delete'), 'version' => $this->version($cases),
-            'cases' => $cases->map(function ($row) use ($typeRef, $names) {
+            'cases' => $cases->map(function ($row) use ($typeRef, $names, $account) {
                 $row = clone $row;
                 $row->type_id = $row->{$typeRef['state_column']} === 'resolved' ? (int) $row->{$typeRef['resolved_column']} : null;
                 $type = $row->type_id === null ? null : $names->get($row->type_id);
+                $row->deletable = $this->mayRetire($account, (int) $row->city_id, 'special_cases.delete', $row);
                 $row->type_name = $type === null ? null : (app()->isLocale('ar') ? $type->c_Name : ($type->c_Name_en ?: $type->c_Name));
 
                 return $row;
@@ -129,9 +134,23 @@ final class SpecialCaseService
             abort_unless(hash_equals($this->version($cases), $version), 409, 'Special cases changed. Reload before deleting.');
             $case = $cases->firstWhere('id', $caseId);
             abort_if($case === null, 404);
-            $this->tables->isWeb($case) || $this->fail('delete', 'imported');
-            $this->tables->deleteWeb('specialcase', $case);
+            $this->retire($account, $city, 'specialcase', $case);
             $this->audit->record($account->id, 'special_cases.deleted', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
+        });
+    }
+
+    /** Makes an imported review that an administrator deleted visible again. */
+    public function restore(WebAccount $account, int $projectId, int $caseId): void
+    {
+        DB::transaction(function () use ($account, $projectId, $caseId) {
+            DB::table('op_microproject')->where('id', $projectId)->lockForUpdate()->first();
+            $project = $this->project($projectId);
+            $city = (int) $project->city_id;
+            $this->authorize($account, $city, false, 'special_cases.delete');
+            $this->requireImportedDelete($account, $city);
+            abort_if($this->cases($project, true)->firstWhere('id', $caseId) === null, 404);
+            $this->tables->unhide('specialcase', $caseId);
+            $this->audit->record($account->id, 'special_cases.restored', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
         });
     }
 
