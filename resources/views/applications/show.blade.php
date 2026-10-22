@@ -9,6 +9,9 @@
     @if($financeLinks !== [])<section class="card people-form"><h2>{{ __('finance.title') }}</h2>
         @foreach(array_keys($financeLinks) as $routeName)<a class="button button-secondary" href="{{ route($routeName, ['locale' => app()->getLocale(), 'application' => $application->id]) }}">{{ __('finance.links.'.explode('.', $routeName)[0]) }}</a> @endforeach
     </section>@endif
+    @if($fieldLinks !== [])<section class="card people-form"><h2>{{ __('field.title') }}</h2>
+        @foreach(array_keys($fieldLinks) as $routeName)<a class="button button-secondary" href="{{ route($routeName, ['locale' => app()->getLocale(), 'application' => $application->id]) }}">{{ __('field.links.'.explode('.', $routeName)[0]) }}</a> @endforeach
+    </section>@endif
     @if($canManage)<p><a class="button button-secondary" href="{{ route('applications.drafts', ['locale' => app()->getLocale(), 'city_id' => $cityId]) }}">{{ __('applications.drafts') }}</a></p>@endif
     <details class="card people-form" open><summary>{{ __('applications.application') }}</summary>
     @if($canManage)<form method="POST" action="{{ route('applications.update', ['locale' => app()->getLocale(), 'application' => $application->id]) }}">@csrf

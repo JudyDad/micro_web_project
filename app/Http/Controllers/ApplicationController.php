@@ -102,6 +102,7 @@ final class ApplicationController
                 'executive.show' => $access->check($request->user(), $city, 'executive_files.view'),
                 'purchasing.show' => $access->check($request->user(), $city, 'purchasing.view'),
             ]),
+            'fieldLinks' => array_filter(['special-cases.show' => $access->check($request->user(), $city, 'special_cases.view')]),
             'applicantDetails' => $applicantDetails,
             'personReferenceColumn' => $personRelation['resolved_column'], 'headerReferenceColumn' => $headerRelation['resolved_column'],
             'cityId' => $city, 'canManage' => $canManage, 'canLinkPeople' => $canLinkPeople,

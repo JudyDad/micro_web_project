@@ -10,6 +10,7 @@ use App\Http\Controllers\LifecycleController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchasingController;
+use App\Http\Controllers\SpecialCaseController;
 use App\Http\Middleware\FoundationPreview;
 use App\Http\Middleware\RequireCurrentAccount;
 use App\Http\Middleware\SetLocale;
@@ -56,6 +57,8 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
                 Route::post('/executive-files', [ExecutiveFileController::class, 'save'])->block(10, 10)->name('executive.save');
                 Route::get('/purchasing', [PurchasingController::class, 'show'])->name('purchasing.show');
                 Route::post('/purchasing', [PurchasingController::class, 'save'])->block(10, 10)->name('purchasing.save');
+                Route::get('/special-cases', [SpecialCaseController::class, 'show'])->name('special-cases.show');
+                Route::post('/special-cases', [SpecialCaseController::class, 'save'])->block(10, 10)->name('special-cases.save');
             });
             Route::post('/applications/{application}/people', [ApplicationController::class, 'person'])->where('application', '[1-9][0-9]{0,18}')->name('applications.person');
             Route::post('/applications/{application}/complete', [ApplicationController::class, 'complete'])->where('application', '[1-9][0-9]{0,18}')->name('applications.complete');

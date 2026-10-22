@@ -17,7 +17,7 @@ final class FinanceController
     {
         $filters = $request->validate([
             'cities' => ['sometimes', 'array', 'max:20'], 'cities.*' => ['integer', 'min:1'],
-            'state' => ['sometimes', Rule::in(['pending', 'paid'])], 'year' => ['nullable', 'integer', 'between:1990,'.(now()->year + 2)],
+            'state' => ['sometimes', Rule::in(['pending', 'paid'])], 'year' => ['nullable', 'integer', 'between:2018,'.(now()->year + 2)],
             'months' => ['sometimes', 'array', 'max:12'], 'months.*' => ['integer', 'between:1,12'], 'group' => ['nullable', 'string', 'max:50'],
         ]);
 

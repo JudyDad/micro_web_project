@@ -81,8 +81,8 @@ final class FinanceHttpTest extends TestCase
         self::assertSame(1, DB::table('op_payment')->count());
         $this->get($this->url())->assertOk()->assertSee('2026-11-01')->assertSee('Remaining to return');
         $this->get('/en/payments')->assertOk()->assertSee('2026-11-01')->assertSee('USD');
-        $this->get('/en/payments?year=2012')->assertOk()->assertDontSee('2026-11-01');
-        $this->get('/en/payments?year=1900')->assertSessionHasErrors('year');
+        $this->get('/en/payments?year=2019')->assertOk()->assertDontSee('2026-11-01');
+        $this->get('/en/payments?year=2017')->assertSessionHasErrors('year');
     }
 
     public function test_donor_group_executive_and_purchasing_forms_post_and_redirect(): void
