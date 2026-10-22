@@ -14,6 +14,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchasingController;
 use App\Http\Controllers\RehabVisitController;
 use App\Http\Controllers\SpecialCaseController;
+use App\Http\Controllers\TaskBoardController;
 use App\Http\Controllers\VisitController;
 use App\Http\Middleware\FoundationPreview;
 use App\Http\Middleware\RequireCurrentAccount;
@@ -58,6 +59,8 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/profession-meetings', [ProfessionMeetingController::class, 'save'])->block(10, 10)->name('meetings.save');
             Route::post('/profession-meetings/{meeting}/delete', [ProfessionMeetingController::class, 'delete'])->where('meeting', '[1-9][0-9]{0,18}')->block(10, 10)->name('meetings.delete');
             Route::post('/profession-meetings/{meeting}/restore', [ProfessionMeetingController::class, 'restore'])->where('meeting', '[1-9][0-9]{0,18}')->block(10, 10)->name('meetings.restore');
+            Route::get('/task-board', [TaskBoardController::class, 'index'])->name('tasks.board');
+            Route::post('/task-board/toggle', [TaskBoardController::class, 'toggle'])->block(10, 10)->name('tasks.toggle');
             Route::prefix('/applications/{application}')->where(['application' => '[1-9][0-9]{0,18}'])->group(function () {
                 Route::get('/finance', [FinanceController::class, 'show'])->name('finance.show');
                 Route::post('/finance/donor', [FinanceController::class, 'donor'])->block(10, 10)->name('finance.donor');

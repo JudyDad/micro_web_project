@@ -12,7 +12,8 @@ final class AccountAccess
         'finance.view', 'finance.manage', 'executive_files.view', 'executive_files.manage', 'purchasing.view', 'purchasing.manage',
         'special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage',
         'special_cases.delete', 'visits.delete', 'me_visits.view', 'me_visits.manage', 'me_visits.delete', 'imported.delete',
-        'profession_meetings.view', 'profession_meetings.manage', 'profession_meetings.delete'];
+        'profession_meetings.view', 'profession_meetings.manage', 'profession_meetings.delete',
+        'tasks.view', 'tasks.manage', 'tasks.manage_all', 'notifications.view', 'notifications.send', 'accounts.manage'];
 
     public function active(WebAccount $account): bool
     {

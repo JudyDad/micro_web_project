@@ -1,5 +1,17 @@
 # Delivery task board
 
+## Phase 9 — full import from the latest databases (final phase)
+
+Added 22 October 2026 on the user's instruction; see [plan](../planning/team-execution-plan.md). Until it runs, testing uses a 100-application sample from more than one city.
+
+| Task | State | Evidence / remaining acceptance |
+|---|---|---|
+| P9.1 Fresh source intake | todo | New archives, hashes, isolated restores, schema diff against October sources |
+| P9.2 Full import | todo | Serial five-city import into a fresh target |
+| P9.3 Independent reconciliation | todo | Zero unexplained mismatches, money by city/currency, project-number floors |
+| P9.4 Attachments | todo | Catalog and file coverage on latest data |
+| P9.5 Re-acceptance | todo | Workflow and report re-check at full scale |
+
 ## Phase 5 — finance, monitoring and daily operations
 
 Started 21 October 2026 on the user's instruction “start executing phase 5 task p5.1.” Phase 5 depends on Phase 4's stable project interfaces; the P4.4 gate is still open.
@@ -8,7 +20,7 @@ Started 21 October 2026 on the user's instruction “start executing phase 5 tas
 |---|---|---|
 | P5.1 Finance | implemented locally; acceptance review open | [Delivery](p5-1-finance.md), [source contract](p5-1-workflow-contract.md). Donor rules, loans, instalment schedules and a per-currency schedule list, executive files and the opt-in purchasing editor; six new per-city grants; version-checked transactional writes. 141 unit/feature tests (6,250 assertions), the actual-schema MySQL workflow (37 assertions) and a two-process race (97 assertions) pass 21 Oct. Deletions, notifications (P5.2/P5.3), exports (P6.2), role-to-grant mapping, five-city data parity and staff acceptance remain open; five owner decisions are listed in the delivery record |
 | P5.2 Field operations | all five slices implemented locally (special cases, visits and schedule, M&E, rehabilitation closing visit, profession meetings); acceptance review open | [Delivery](p5-2-field-operations.md). Scoped view/manage/delete grants, `data-entry` role bundle, administrator-only `imported.delete` with the approved `operational_deletions` table ([record](../planning/phase-5/imported-record-deletion-proposal.md)), audit, stale/retry protection. Open: visitors and notifications (P5.3), MySQL tests including the new migration, browser check, five-city parity, staff acceptance |
-| P5.3 Staff operations | todo | Task board, notifications (including those deferred by P5.1), account administration |
+| P5.3 Staff operations | in progress; S1 task board implemented locally | [Delivery](p5-3-staff-operations.md). S1: task board for funded and application stages, filters, per-city grants, toggling restricted to responsible staff through reviewed legacy links (`tasks.manage_all` for administrators), purchases notice. 8 cases / 94 assertions; full suite 191 tests pass 22 Oct. Open: S2 notification inbox/messages, S3 notification generation (deferred by P4.3/P5.1/P5.2), S4 account administration, MySQL test, browser check, staff acceptance |
 | P5.4 Integration review | todo | End-to-end project → finance → visits → state history |
 
 ## Phase 4 — project intake and lifecycle
