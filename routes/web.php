@@ -8,6 +8,7 @@ use App\Http\Controllers\ExecutiveFileController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\LifecycleController;
 use App\Http\Controllers\MonitoringVisitController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\ProfessionMeetingController;
 use App\Http\Controllers\ProjectController;
@@ -53,12 +54,18 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/applications/{application}/checklist/{person}', [ChecklistController::class, 'save'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->block(10, 10)->name('checklists.save');
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
             Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
+            Route::post('/visit-schedule/{notice}/seen', [VisitController::class, 'scheduleSeen'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.seen');
+            Route::post('/visit-schedule/{notice}/note', [VisitController::class, 'scheduleNote'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.note');
             Route::get('/profession-meetings', [ProfessionMeetingController::class, 'index'])->name('meetings.index');
             Route::get('/profession-meetings/new', [ProfessionMeetingController::class, 'create'])->name('meetings.create');
             Route::get('/profession-meetings/{meeting}', [ProfessionMeetingController::class, 'show'])->where('meeting', '[1-9][0-9]{0,18}')->name('meetings.show');
             Route::post('/profession-meetings', [ProfessionMeetingController::class, 'save'])->block(10, 10)->name('meetings.save');
             Route::post('/profession-meetings/{meeting}/delete', [ProfessionMeetingController::class, 'delete'])->where('meeting', '[1-9][0-9]{0,18}')->block(10, 10)->name('meetings.delete');
             Route::post('/profession-meetings/{meeting}/restore', [ProfessionMeetingController::class, 'restore'])->where('meeting', '[1-9][0-9]{0,18}')->block(10, 10)->name('meetings.restore');
+            Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+            Route::post('/notifications/seen', [NotificationController::class, 'seen'])->block(10, 10)->name('notifications.seen');
+            Route::get('/notifications/send', [NotificationController::class, 'create'])->name('notifications.create');
+            Route::post('/notifications/send', [NotificationController::class, 'send'])->block(10, 10)->name('notifications.send');
             Route::get('/task-board', [TaskBoardController::class, 'index'])->name('tasks.board');
             Route::post('/task-board/toggle', [TaskBoardController::class, 'toggle'])->block(10, 10)->name('tasks.toggle');
             Route::prefix('/applications/{application}')->where(['application' => '[1-9][0-9]{0,18}'])->group(function () {

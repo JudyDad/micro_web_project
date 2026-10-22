@@ -72,6 +72,22 @@ final class VisitController
         return redirect()->route('visits.hub', ['locale' => $locale, 'application' => $application])->with('status', __('field.restored'));
     }
 
+    public function scheduleSeen(Request $request, string $locale, string $notice, VisitScheduleService $schedule): RedirectResponse
+    {
+        $data = $request->validate(['seen' => ['required', 'in:0,1']]);
+        $schedule->setSeen($request->user(), $this->id($notice), (int) $data['seen']);
+
+        return back()->with('status', __('field.saved'));
+    }
+
+    public function scheduleNote(Request $request, string $locale, string $notice, VisitScheduleService $schedule): RedirectResponse
+    {
+        $data = $request->validate(['note' => ['nullable', 'string', 'max:65535']]);
+        $schedule->setNote($request->user(), $this->id($notice), (string) ($data['note'] ?? ''));
+
+        return back()->with('status', __('field.saved'));
+    }
+
     private function id(string $value): int
     {
         $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);

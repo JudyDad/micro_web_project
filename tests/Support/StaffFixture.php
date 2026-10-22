@@ -106,4 +106,27 @@ final class StaffFixture
     {
         return ApplicationFixture::row('task_microproject', $city, ['c_State' => $state, 'c_Date' => '2026-10-19 00:00:00'], ['MicroProject_ID' => $project, 'Task_ID' => $taskRow]);
     }
+
+    /**
+     * An unseen notice addressed to a historical source user (`$record` = its source_records id, `$userId` = its desktop number).
+     *
+     * @param  array<string, mixed>  $fields  overrides of the payload columns
+     */
+    public static function notice(int $city, int $record, int $userId, string $body, string $date, array $fields = [], ?int $project = null, ?int $sender = null): int
+    {
+        $id = ApplicationFixture::row('user_notification', $city, $fields + [
+            'c_Body' => $body, 'c_Date' => $date, 'c_P_Name' => 'Synthetic beneficiary', 'c_Pay_ID' => 0, 'c_Seen' => 0, 'c_User_ID' => $userId,
+            'c_MicroProject_ID' => $project === null ? null : DB::table('op_microproject')->where('id', $project)->value('c_MP_ID'),
+        ], $project === null ? [] : ['MicroProject_ID' => $project]);
+        $relations = collect(OperationalManifest::load()['relationships'])->filter(fn ($r) => $r['target_table'] === 'op_user_notification');
+        $user = $relations->first(fn ($r) => $r['child_columns'] === ['User_ID']);
+        $values = [$user['resolved_column'] => $record, $user['state_column'] => 'resolved'];
+        if ($sender !== null) {
+            $from = $relations->first(fn ($r) => $r['child_columns'] === ['Sender_ID']);
+            $values += [$from['resolved_column'] => $sender, $from['state_column'] => 'resolved'];
+        }
+        DB::table('op_user_notification')->where('id', $id)->update($values);
+
+        return $id;
+    }
 }

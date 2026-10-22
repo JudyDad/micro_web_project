@@ -8,13 +8,14 @@ use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
 use App\Services\Operational\OperationalTables;
+use App\Services\Staff\NotificationService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
  * The visit schedule (`Visits_Schedule_Form`, `UserNotification.Select_VisitNotifications`): read-only list of the visit notices
- * already stored (`Pay_ID` = -21, no recipient). Generating or marking notices belongs to the notification work (P5.3).
+ * already stored (`Pay_ID` = -21, no recipient), with the desktop's two actions: hide / restore a notice (its seen flag) and edit its note.
  */
 final class VisitScheduleService
 {
@@ -23,7 +24,7 @@ final class VisitScheduleService
     /** The discriminator the desktop gives visit notices (see the Phase 3 notification contract). */
     public const VISIT_NOTICE = -21;
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables) {}
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private NotificationService $notices) {}
 
     /** Cities where the account may read visits. */
     public function cities(WebAccount $account): Collection
@@ -81,7 +82,9 @@ final class VisitScheduleService
             return $row;
         }));
 
-        return ['rows' => $rows, 'cities' => $permitted];
+        $manage = $permitted->filter(fn ($city) => $this->access->check($account, (int) $city->id, 'visits.manage'))->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return ['rows' => $rows, 'cities' => $permitted, 'manageCities' => $manage];
     }
 
     /**
@@ -134,5 +137,41 @@ final class VisitScheduleService
         }
 
         return $result;
+    }
+
+    /** Hides (seen = 1) or restores (0) a visit notice, as the desktop's schedule delete / restore: every copy of the notice changes. */
+    public function setSeen(WebAccount $account, int $noticeId, int $seen): void
+    {
+        $notice = $this->manageable($account, $noticeId);
+        DB::transaction(function () use ($account, $notice, $seen) {
+            $this->notices->setSeenLike($notice, $seen);
+            $this->audit->record($account->id, 'notifications.seen', 'succeeded', (int) $notice->city_id);
+        });
+    }
+
+    /** Replaces the note of a visit notice (`Update_Notification_Note`); the text is stored as typed. */
+    public function setNote(WebAccount $account, int $noticeId, string $note): void
+    {
+        $notice = $this->manageable($account, $noticeId);
+        abort_if(strlen($note) > 65535, 422, 'The note is too long.');
+        DB::transaction(function () use ($account, $notice, $note) {
+            DB::table('op_user_notification')->where('id', $notice->id)->update(['c_Note' => $note]);
+            $this->audit->record($account->id, 'notifications.noted', 'succeeded', (int) $notice->city_id);
+        });
+    }
+
+    /** The stored visit notice when the account may manage visits of its city. */
+    private function manageable(WebAccount $account, int $noticeId): object
+    {
+        $notice = $this->tables->query('user_notification')->where('p.id', $noticeId)->where('p.c_Pay_ID', self::VISIT_NOTICE)->whereNull('p.c_User_ID')->first();
+        abort_if($notice === null, 404);
+        foreach (['applications.view', 'visits.view', 'visits.manage'] as $capability) {
+            if (! $this->access->check($account, (int) $notice->city_id, $capability)) {
+                $this->audit->record($account->id, 'access.denied', 'denied');
+                abort(403);
+            }
+        }
+
+        return $notice;
     }
 }

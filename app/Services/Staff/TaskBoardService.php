@@ -152,8 +152,9 @@ final class TaskBoardService
             if ($legacyTask === TaskBoardColumns::PURCHASES) {
                 if ($done === 1) {
                     $name = $this->names([$projectId])[$projectId] ?? '';
+                    $sender = $this->notices->senderFor($account, $source);
                     foreach ($this->notices->recipients($source, 'communication') as $recipient) {
-                        $this->notices->add($city, $source, $project, now()->toDateString(), 'انتهاء المشتريات', $name, NotificationService::PURCHASES_DONE, $recipient);
+                        $this->notices->add($city, $source, $project, now()->toDateString(), 'انتهاء المشتريات', $name, NotificationService::PURCHASES_DONE, $recipient, $sender);
                     }
                 } else {
                     $this->notices->setSeenForProject($project, NotificationService::PURCHASES_DONE, 1);

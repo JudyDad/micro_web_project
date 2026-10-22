@@ -42,4 +42,4 @@ Started and implemented locally on 21 October 2026 on the user's instruction "st
 
 - Re-ran the unit/feature suite: 147 passed (6,324 assertions), one host-dependent symlink case skipped; Pint passes.
 - Reviewed the finance, schedule, purchasing and executive-file services and the finance controller and found no defect. An earlier edit that widened the schedule year filter to 1990 was reverted: the desktop offers years 2018 to current + 2 (see the workflow contract), so 2018 is the intended lower bound. `FinanceHttpTest` now covers a year inside and a year below that range.
-- Not re-run: the MySQL workflow and two-process race tests. No isolated test MySQL was available; the only listener (port 3306) is not a disposable test instance and was deliberately left untouched.
+- MySQL re-run on 22 October 2026 on a fresh isolated MySQL 8.4.8 (loopback port 33082): `FinanceOperationalWorkflowTest` passes 1 case / 36 assertions and `FinanceConcurrencyTest` 1 case / 135 assertions (two real PHP processes).

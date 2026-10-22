@@ -166,6 +166,20 @@ Execute only after an explicitly authorized production window. One coordinator o
 
 Gate: confirmed operational handover and successful scheduled backups/restores. Keep source archives and mapping evidence under the agreed retention policy.
 
+## Phase 9 — full import from the latest databases
+
+Added 22 October 2026 on the user's instruction. Until this phase, every workflow is built and tested against synthetic fixtures or a **100-application sample** drawn from more than one city; the October 16 archives used by the Phase 3 rehearsal are discovery inputs only. This phase runs last and imports the complete, current data of all five cities.
+
+| Task | Owner | Deliverable / acceptance |
+|---|---|---|
+| P9.1 Fresh source intake | Data engineer | New archives/backups for Aleppo, Damascus, Homs, Latakia and AlWadi taken after a coordinated write pause; archive and SQL hashes recorded; each restored separately into an isolated `micro_projects_source_*` database; schema compared with the October sources, with every difference listed before any import |
+| P9.2 Full import | Data engineer | `phase3:freeze-source`, `register-snapshot` and `import` for all five cities into a fresh target, serially, using the Phase 3 pipeline; no reuse of rehearsal or sample rows; interrupted runs resume only from the exact frozen artifacts |
+| P9.3 Independent reconciliation | QA | `phase3:reconcile` per city with zero unexplained mismatches and every anomaly dispositioned; money by city and currency; project-number floors initialized from MAX(MP_ID)+1 and the source AUTO_INCREMENT counter |
+| P9.4 Attachments | Data engineer | Attachment catalog and file coverage rerun against the latest data; missing files listed |
+| P9.5 Re-acceptance | QA + staff | Re-run the workflow acceptance and report comparison on the full dataset; performance of search and lists measured at full size; publication only after the gate below |
+
+Gate: all five cities reconciled against the latest snapshots, and the sample-based test findings re-verified at full scale. Real data stays in private storage outside Git; no publication, account activation or write enablement without explicit authorization.
+
 ## Copy-ready coordinator prompt
 
 Paste this into the chat that will lead implementation:
