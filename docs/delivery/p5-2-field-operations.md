@@ -1,6 +1,6 @@
 # P5.2 field operations
 
-Started 22 October 2026 on the user's instruction "Yes, start P5.2 field operations". Status: **slices S1 (special cases), S2 (opening/closing visits and the visit schedule) and S3 (M&E visits) and S4 (rehabilitation closing visit) implemented locally; P5.2 is not complete and no acceptance is claimed.** No physical schema change: every payload maps to the approved `op_specialcase` / `op_specialcasetype` tables.
+Started 22 October 2026 on the user's instruction "Yes, start P5.2 field operations". Status: **slices S1 (special cases), S2 (opening/closing visits and the visit schedule) and S3 (M&E visits) and S4 (rehabilitation closing visit) and S5 (profession meetings) implemented locally; P5.2 is not complete and no acceptance is claimed.** No physical schema change: every payload maps to the approved `op_specialcase` / `op_specialcasetype` tables.
 
 ## Scope and slicing
 
@@ -12,7 +12,7 @@ P5.2 covers about 11,000 lines of desktop code. It is delivered in independently
 | S2 Opening/closing visits and visit schedule | `Visit Forms/ChooseVisitKind_Form`, `VOpening_*`, `VClosing_Form`, `Visits_Schedule_Form`, `Classes/Visit.cs`, `Classes/Office_Monitoring.cs` | implemented locally (see S2 below) |
 | S3 Monitoring and evaluation (M&E) | `V_ME_Taxi_Form`, `V_ME_Other_Form`, `Classes/M_and_E.cs` | implemented locally (see S3 below) |
 | S4 Rehabilitation closing visit | `VClosing_Rehab_Form`, `Classes/VisitRehab.cs` | implemented locally (see S4 below) |
-| S5 Profession meetings | `ProfessionMeetings_Form.cs` (3,448 lines), `ProfessionMeetings_Schema.sql` | todo |
+| S5 Profession meetings | `ProfessionMeetings_Form.cs` (3,448 lines), `ProfessionMeetings_Schema.sql` | implemented locally (see S5 below) |
 | S6 Visit results / statistics | `Visit_Results_Form`, `Visits_Statistics` | belongs with P6.1/P6.2 reporting |
 
 ## S1 special cases — delivered
@@ -41,6 +41,17 @@ Source: `ChooseVisitKind_Form.cs`, `VOpening_Other_Form.cs`, `VOpening_Taxi_Form
 3. **Notifications:** the desktop marks the opening notice seen on save, and generates M1–M5 notices on the first loan (P5.3). Neither is done here, so the schedule shows only already stored notices. The desktop's project-state/donor/phone/residence columns, street and type filters and Excel export (P6.2) are not built; the desktop's "current state" join condition is not reproduced.
 4. **Role mapping** (desktop roles 1/8/2 may save; 3/4/7/9 refused) is not provisioned; capabilities are assigned per city.
 5. The "visit status" is blank when the matching visit is not found (as the desktop's SQL yields NULL); say if "Not yet" is preferred.
+## S5 profession meetings — delivered
+
+Source: `ProfessionMeetings_Form.cs` (+ Designer), `ProfessionMeetings_Schema.sql`. No schema change beyond the approved `operational_deletions`: the operational `profession_*` tables already exist (`op_profession_meeting` and nine detail tables, plus the `profession_section` / `question` / `option` catalogs). The operational columns are the authority; the SQL file in the desktop folder differs slightly (for example it has `Rtf_Content` and no `Season_Count`).
+
+- **Pages:** `/profession-meetings` (cross-city list with year and city filters, "New meeting" per city where the account may manage, hidden meetings for administrators), `/profession-meetings/new?city=` and `/profession-meetings/{id}`.
+- **Header:** profession (career), date, place, number invited and attending; absent = invited − attending. The sub-category is taken from the career.
+- **Survey:** rendered from the city's catalog by answer type: counted options (questions 1, 2, 3, 7, 11, 13, 17; counts must add up to the number attending, and an "other"/detail option needs its details), multi-choice (4, 9; at least one, details required where the option has details), required text (5, 14, 15, 18), competition levels (6; three fixed levels with count and reason, total = attending), season table (8; a counted row needs from, to and reason, total = attending), brands one per line (10, required), equipment (12; at least one complete row), challenges (16; total = attending, a counted row needs solutions; the six standard challenges are prefilled on a new meeting) and four optional participant lists (19–22).
+- **Minutes:** attendee rows (the number of rows must equal the number attending; an optional project number links a row to a project of that profession in the city, and the person is linked when exactly one linked person has the typed name) and one required text per axis.
+- **Edits keep preserved rows:** the desktop deleted and re-inserted every detail row on each save, which would destroy imported rows. The web matches detail rows by question, option, section or position and only updates what changed; rows removed by an edit are deleted (created in the web) or hidden (imported, through `operational_deletions`), so nothing preserved is lost.
+- **Permissions and logs:** `profession_meetings.view|manage|delete` per city (added to the `data-entry` role); delete/restore follow the imported-record rules (`imported.delete` for imported meetings); audit events `profession_meetings.list|view|saved|deleted|restored`. The form version for a new meeting changes as soon as any meeting is added in the city, so a repeated submission is refused with 409.
+- **Not built:** the meeting registrars (`PaperRegistrar`/`ProgramRegistrar`/`Edited_By` are historical source users and are not recorded; the audit trail records the account), Word/print output and the meeting statistics (Phase 6), rich-text formatting (plain text only), the project and beneficiary pick-lists of the desktop grids (the web uses a project number and a typed name), and the exact English wording of the survey (the catalog's Arabic text is shown).
 ## S4 rehabilitation closing visit — delivered
 
 Source: `VClosing_Rehab_Form.cs` (+ Designer), `Classes/VisitRehab.cs`. No schema change: a visit of kind `R-cl` in `op_visit` plus one `op_rehabvisit` row.
@@ -84,7 +95,8 @@ Source: `V_ME_Other_Form.cs`, `V_ME_Taxi_Form.cs` (identical logic; kind `o` or 
 - `SpecialCaseTest`: 5 cases / 48 assertions (create and edit with exact text, desktop validation, other-city type refused, stale and repeated submissions, legacy values preserved, grants and both languages over HTTP).
 - `VisitWorkflowTest`: 8 cases / 109 assertions (exact opening values and side effects once, validation and kind rules, taxi questionnaire and plate number, closing choices and Finished once, legacy values preserved, rehabilitation exclusion, pages in both languages with grants, schedule filters/status/city permissions).
 - `MonitoringVisitTest`: 6 cases / 87 assertions (answers, result and task, validation and eligibility, vehicle questions, legacy values and unrelated answers preserved, delete/imported kept, pages in both languages with grants).
-- SQLite only. Not done: actual-schema MySQL tests for S1–S4, rendered browser check, five-city data parity, staff acceptance, slice S5 (profession meetings).
+- `ProfessionMeetingTest`: 6 cases / 89 assertions (every answer type, the desktop validation rules, in-place sync, imported rows hidden rather than destroyed, stale saves and delete/restore, pages in both languages with grants).
+- SQLite only. Not done: actual-schema MySQL tests for S1–S5 (including the `operational_deletions` migration), rendered browser check, five-city data parity, staff acceptance.
 
 ## Deleting imported records
 

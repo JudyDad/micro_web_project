@@ -20,7 +20,8 @@ final class AccountAuditTrail
         'visits.schedule' => [], 'visits.view' => ['application_entity'], 'visits.saved' => ['application_entity'],
         'special_cases.deleted' => ['application_entity'], 'visits.deleted' => ['application_entity'],
         'me_visits.view' => ['application_entity'], 'me_visits.saved' => ['application_entity'], 'me_visits.deleted' => ['application_entity'],
-        'special_cases.restored' => ['application_entity'], 'visits.restored' => ['application_entity'], 'me_visits.restored' => ['application_entity'],
+        'special_cases.restored' => ['application_entity'],
+        'profession_meetings.list' => [], 'profession_meetings.view' => ['meeting_entity'], 'profession_meetings.saved' => ['meeting_entity'], 'profession_meetings.deleted' => ['meeting_entity'], 'profession_meetings.restored' => ['meeting_entity'], 'visits.restored' => ['application_entity'], 'me_visits.restored' => ['application_entity'],
         'application_draft.saved' => [], 'application_draft.viewed' => [], 'application_draft.discarded' => [],
         'people.list' => [], 'people.view' => ['person_entity'],
         'people.created' => ['person_entity', 'family_entity'], 'people.updated' => ['person_entity'],
@@ -51,6 +52,7 @@ final class AccountAuditTrail
             $validSubject = match ($subjectType) {
                 'application_entity' => DB::table('op_microproject')->where('id', $subjectId)->where('city_id', $city)->exists(),
                 'person_entity' => DB::table('op_person')->where('id', $subjectId)->where('city_id', $city)->exists(),
+                'meeting_entity' => DB::table('op_profession_meeting')->where('id', $subjectId)->where('city_id', $city)->exists(),
                 'family_entity' => DB::table('op_family')->where('id', $subjectId)->where('city_id', $city)->exists(),
                 'account' => $subjectAccount === $subjectId && DB::table('web_accounts')->where('id', $subjectId)->exists(),
                 'legacy_link' => DB::table('account_legacy_links')->where('id', $subjectId)->where('account_id', $subjectAccount)->exists(),

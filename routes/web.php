@@ -9,6 +9,7 @@ use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\LifecycleController;
 use App\Http\Controllers\MonitoringVisitController;
 use App\Http\Controllers\PeopleController;
+use App\Http\Controllers\ProfessionMeetingController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchasingController;
 use App\Http\Controllers\RehabVisitController;
@@ -51,6 +52,12 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/applications/{application}/checklist/{person}', [ChecklistController::class, 'save'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->block(10, 10)->name('checklists.save');
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
             Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
+            Route::get('/profession-meetings', [ProfessionMeetingController::class, 'index'])->name('meetings.index');
+            Route::get('/profession-meetings/new', [ProfessionMeetingController::class, 'create'])->name('meetings.create');
+            Route::get('/profession-meetings/{meeting}', [ProfessionMeetingController::class, 'show'])->where('meeting', '[1-9][0-9]{0,18}')->name('meetings.show');
+            Route::post('/profession-meetings', [ProfessionMeetingController::class, 'save'])->block(10, 10)->name('meetings.save');
+            Route::post('/profession-meetings/{meeting}/delete', [ProfessionMeetingController::class, 'delete'])->where('meeting', '[1-9][0-9]{0,18}')->block(10, 10)->name('meetings.delete');
+            Route::post('/profession-meetings/{meeting}/restore', [ProfessionMeetingController::class, 'restore'])->where('meeting', '[1-9][0-9]{0,18}')->block(10, 10)->name('meetings.restore');
             Route::prefix('/applications/{application}')->where(['application' => '[1-9][0-9]{0,18}'])->group(function () {
                 Route::get('/finance', [FinanceController::class, 'show'])->name('finance.show');
                 Route::post('/finance/donor', [FinanceController::class, 'donor'])->block(10, 10)->name('finance.donor');

@@ -18,7 +18,7 @@ final class AccessRoles
         'data-entry' => [
             'projects.view', 'people.view', 'people.manage', 'applications.view', 'applications.manage',
             'special_cases.view', 'special_cases.manage', 'special_cases.delete', 'visits.view', 'visits.manage', 'visits.delete',
-            'me_visits.view', 'me_visits.manage', 'me_visits.delete',
+            'me_visits.view', 'me_visits.manage', 'me_visits.delete', 'profession_meetings.view', 'profession_meetings.manage', 'profession_meetings.delete',
         ],
     ];
 

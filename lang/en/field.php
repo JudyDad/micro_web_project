@@ -3,7 +3,7 @@
 return [
     'title' => 'Field operations', 'back' => 'Back to the project', 'saved' => 'Saved.', 'deleted' => 'Deleted.', 'restored' => 'Restored.', 'restore' => 'Restore', 'deleted_records' => 'Deleted records (administrators)', 'delete' => 'Delete', 'delete_confirm' => 'Confirm deletion', 'save' => 'Save',
     'links' => ['special-cases' => 'Special cases', 'visits' => 'Visits', 'me' => 'Monitoring and evaluation visits'],
-    'nav_schedule' => 'Visit schedule',
+    'nav_schedule' => 'Visit schedule', 'nav_meetings' => 'Profession meetings',
     'special' => [
         'title' => 'Special cases', 'case' => 'Review of', 'new' => 'New review', 'none' => 'This project has no special-case reviews.',
         'scope' => 'Reviews recorded for this project. The acting account is audited; deleting reviews is not available.',
@@ -96,6 +96,24 @@ return [
             1 => 'Initial visit', 2 => 'Reception', 3 => 'Photography', 4 => 'Purchasing officer',
             5 => 'Tiles and concrete', 6 => 'Plumbing', 7 => 'Electrical', 8 => 'Aluminium', 9 => 'Paint', 10 => 'Carpentry', 11 => 'Blacksmith', 12 => 'Air conditioning',
             13 => 'Answer', 14 => 'Answer', 15 => 'Answer',
+        ],
+    ],
+    'meeting' => [
+        'title' => 'Profession meetings', 'intro' => 'Surveys and minutes of meetings with the practitioners of a profession, in the cities you can read.',
+        'scope' => 'The survey questions come from the city\'s catalog. The attendance count drives the totals: every counted question must add up to it. Registrars are not recorded here; the acting account is audited.',
+        'new' => 'New meeting', 'empty' => 'No meetings found.', 'header' => 'Meeting', 'career' => 'Profession', 'date' => 'Meeting date', 'place' => 'Place', 'invited' => 'Number invited', 'attendance' => 'Number attending',
+        'totals_hint' => 'Absent = invited − attending. Counts in the counted questions, the season table, the competition levels and the challenges must each add up to the number attending.',
+        'details' => 'Details', 'reason' => 'Reason', 'count' => 'Count', 'from' => 'From', 'to' => 'To', 'spec' => 'Specialization', 'items' => 'Equipment', 'challenge' => 'Challenge', 'solution' => 'Suggested solutions',
+        'project' => 'Project number', 'name' => 'Name', 'speciality' => 'Speciality', 'brands_hint' => 'One brand per line', 'minutes' => 'Meeting minutes', 'attendees' => 'Attendees',
+        'attendees_hint' => 'One row per person attending; the number of rows must equal the number attending. A project number links the row to a project of this profession in the city.',
+        'errors' => [
+            'career' => 'Choose the profession.', 'date' => 'Enter a valid date.', 'place' => 'Enter the meeting place (up to 200 characters).', 'invited' => 'Enter the number invited.', 'attendance' => 'Enter the number attending.',
+            'attendance_over' => 'The number attending cannot exceed the number invited.', 'number' => 'Enter whole numbers only.', 'other_text' => 'Question :n: specify the details of the chosen option.',
+            'answer' => 'Please answer question :n.', 'total' => 'The counts in question :n must add up to the number attending.', 'competition_reason' => 'Enter the reason for every competition level with a count.',
+            'season_row' => 'A season with a count needs from, to and reason (question 8).', 'equipment_row' => 'Complete both specialization and equipment (question 12).',
+            'challenge_solution' => 'A challenge with a count needs suggested solutions (question 16).', 'attendees_total' => 'The number of attendee rows must equal the number attending.',
+            'minutes' => 'Fill in the minutes of every axis.', 'project_unknown' => 'Project :n was not found for this profession in this city.', 'long' => 'The text is too long.',
+            'imported' => 'Imported records are preserved and cannot be deleted.',
         ],
     ],
     'schedule' => [

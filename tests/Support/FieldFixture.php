@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 /** Invented field-operations data on top of the application fixture. */
 final class FieldFixture
 {
-    public const CAPABILITIES = ['special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage', 'special_cases.delete', 'visits.delete', 'me_visits.view', 'me_visits.manage', 'me_visits.delete'];
+    public const CAPABILITIES = ['special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage', 'special_cases.delete', 'visits.delete', 'me_visits.view', 'me_visits.manage', 'me_visits.delete', 'profession_meetings.view', 'profession_meetings.manage', 'profession_meetings.delete'];
 
     public static function grant(WebAccount $account, array $cities = [1, 2], array $capabilities = self::CAPABILITIES): void
     {
@@ -96,5 +96,39 @@ final class FieldFixture
         ApplicationFixture::row('meprofitmarks', $city, ['c_ID' => 3, 'c_IsActive' => 0, 'c_Min' => 0, 'c_Max' => 1000000, 'c_Mark' => 99]);
 
         return ['tasks' => $tasks, 'questions' => $questions, 'vehicle' => $vehicle];
+    }
+
+    /**
+     * A small profession-meeting survey catalog: two axes and nine questions covering every answer type.
+     *
+     * @return array{sections: array<int, int>, questions: array<string, int>, options: array<string, array<int, int>>}
+     */
+    public static function meetingCatalog(int $city): array
+    {
+        $sections = [1 => ApplicationFixture::row('profession_section', $city, ['c_ID' => 1, 'c_Name_Ar' => 'المحور الأول', 'c_Sort_Order' => 1]),
+            2 => ApplicationFixture::row('profession_section', $city, ['c_ID' => 2, 'c_Name_Ar' => 'المحور الثاني', 'c_Sort_Order' => 2])];
+        $question = function (string $number, int $section, string $type, string $text) use ($city, $sections) {
+            return ApplicationFixture::row('profession_question', $city, ['c_ID' => 100 + (int) $number, 'c_Number' => $number, 'c_Text_Ar' => $text, 'c_Answer_Type' => $type, 'c_Is_Active' => 1, 'c_Sort_Order' => (int) $number], ['Section_ID' => $sections[$section]]);
+        };
+        $questions = [
+            '1' => $question('1', 1, 'option_number', 'How did you learn the trade?'),
+            '4' => $question('4', 1, 'multi_option', 'Who are the customers?'),
+            '5' => $question('5', 1, 'text', 'Most requested services?'),
+            '6' => $question('6', 1, 'competition', 'Competition level?'),
+            '8' => $question('8', 1, 'season_table', 'Best seasons?'),
+            '10' => $question('10', 2, 'brand_table', 'Best brands?'),
+            '12' => $question('12', 2, 'equipment_table', 'Basic equipment?'),
+            '16' => $question('16', 2, 'challenge_table', 'Problems?'),
+            '19' => $question('19', 2, 'participant_table', 'Who has training content?'),
+        ];
+        $option = function (string $number, int $order, string $text, int $other = 0, int $details = 0) use ($city, $questions) {
+            return ApplicationFixture::row('profession_option', $city, ['c_ID' => (int) $number * 100 + $order, 'c_Text_Ar' => $text, 'c_Is_Other' => $other, 'c_Has_Details' => $details, 'c_Sort_Order' => $order], ['Question_ID' => $questions[$number]]);
+        };
+        $options = [
+            '1' => [1 => $option('1', 1, 'Courses'), 2 => $option('1', 2, 'Family trade'), 3 => $option('1', 3, 'Apprentice')],
+            '4' => [1 => $option('4', 1, 'Families'), 2 => $option('4', 2, 'Shops'), 3 => $option('4', 3, 'Other', 1, 1)],
+        ];
+
+        return ['sections' => $sections, 'questions' => $questions, 'options' => $options];
     }
 }
