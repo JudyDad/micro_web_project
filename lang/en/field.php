@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Field operations', 'back' => 'Back to the project', 'saved' => 'Saved.', 'save' => 'Save',
+    'title' => 'Field operations', 'back' => 'Back to the project', 'saved' => 'Saved.', 'deleted' => 'Deleted.', 'delete' => 'Delete', 'delete_confirm' => 'Confirm deletion', 'save' => 'Save',
     'links' => ['special-cases' => 'Special cases', 'visits' => 'Visits'],
     'nav_schedule' => 'Visit schedule',
     'special' => [
@@ -10,7 +10,7 @@ return [
         'date' => 'Date', 'type' => 'Review type', 'reason' => 'Reason for the review', 'description' => 'Description', 'action' => 'Action taken',
     ],
     'errors' => [
-        'date' => 'Enter a valid date.', 'type' => 'Choose the review type.', 'reason' => 'Write the reason for the review (up to 65,535 characters).', 'long' => 'The text is too long.',
+        'date' => 'Enter a valid date.', 'type' => 'Choose the review type.', 'reason' => 'Write the reason for the review (up to 65,535 characters).', 'long' => 'The text is too long.', 'imported' => 'Imported records are preserved and cannot be deleted.',
         'choice' => 'Choose one of the listed answers.', 'vehicle' => 'The vehicle number is missing. Enter it and try again.', 'vehicle_long' => 'The vehicle number is too long (50 characters at most).',
         'rehab' => 'Rehabilitation projects have no opening or closing visit on this screen.', 'kind' => 'This kind of visit does not apply to this project.',
         'exists' => 'A second visit of the same phase cannot be created: this project already has one.', 'street' => 'Choose an area from the list.', 'place_long' => 'The detailed address is too long (255 characters at most).',
@@ -76,6 +76,6 @@ return [
         'year' => 'Year', 'all_years' => 'All years', 'months' => 'Months', 'kind' => 'Project kind', 'all_kinds' => 'All', 'vehicles' => 'Vehicles', 'others' => 'Other projects',
         'number' => 'Visit number', 'any_number' => 'All', 'seen' => 'Seen', 'any' => 'All', 'seen_yes' => 'Seen', 'seen_no' => 'Not seen', 'filter' => 'Filter',
         'project' => 'Project', 'beneficiary' => 'Beneficiary', 'visit' => 'Visit', 'date' => 'Date', 'status' => 'Visit status', 'note' => 'Note', 'city' => 'City',
-        'done' => 'Done', 'na' => 'N/A', 'not_found' => '—', 'empty' => 'No matching visit notices.',
+        'done' => 'Done', 'na' => 'N/A', 'not_found' => 'Not yet', 'empty' => 'No matching visit notices.',
     ],
 ];

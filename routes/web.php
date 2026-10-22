@@ -61,6 +61,8 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
                 Route::post('/purchasing', [PurchasingController::class, 'save'])->block(10, 10)->name('purchasing.save');
                 Route::get('/special-cases', [SpecialCaseController::class, 'show'])->name('special-cases.show');
                 Route::post('/special-cases', [SpecialCaseController::class, 'save'])->block(10, 10)->name('special-cases.save');
+                Route::post('/special-cases/{case}/delete', [SpecialCaseController::class, 'delete'])->where('case', '[1-9][0-9]{0,18}')->block(10, 10)->name('special-cases.delete');
+                Route::post('/visits/{kind}/delete', [VisitController::class, 'delete'])->where('kind', '[OV]-(op|cl)')->block(10, 10)->name('visits.delete');
                 Route::get('/visits', [VisitController::class, 'hub'])->name('visits.hub');
                 Route::get('/visits/{kind}', [VisitController::class, 'show'])->where('kind', '[OV]-(op|cl)')->name('visits.show');
                 Route::post('/visits/{kind}', [VisitController::class, 'save'])->where('kind', '[OV]-(op|cl)')->block(10, 10)->name('visits.save');

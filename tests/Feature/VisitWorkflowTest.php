@@ -197,7 +197,7 @@ final class VisitWorkflowTest extends TestCase
         $this->post($base.'/O-op', $post)->assertRedirect();
         $this->post($base.'/O-op', $post)->assertStatus(409);
         $this->post($base.'/O-op', ['version' => $this->version(), 'q1_value' => 'x'] + $this->opening())->assertSessionHasErrors('q1_value');
-        $this->get($base.'/O-op')->assertOk()->assertSee('On time');
+        $this->get($base.'/O-op')->assertOk()->assertSee('On time')->assertSee('Confirm deletion');
         $this->get($base)->assertOk()->assertSee('2026-10-20')->assertSee('Closing visit (general project)');
 
         DB::table('account_city_capabilities')->where('capability', 'visits.manage')->update(['revoked_at' => now()]);
@@ -241,5 +241,25 @@ final class VisitWorkflowTest extends TestCase
         $this->actingAs($this->account);
         $this->get('/en/visit-schedule')->assertOk()->assertSee('Visit schedule')->assertSee('Visit Opening-O')->assertDontSee('Visit Opening-V');
         $this->get('/ar/visit-schedule?year=2026&months[]=11')->assertOk()->assertSee('dir="rtl"', false);
+    }
+
+    public function test_a_web_visit_is_deleted_with_its_office_row_and_task_reset_and_imported_ones_are_kept(): void
+    {
+        $this->visits->save($this->account, $this->project, 'O-op', $this->opening(), $this->version());
+        DB::table('account_city_capabilities')->where('capability', 'visits.delete')->update(['revoked_at' => now()]);
+        $this->assertHttpStatus(403, fn () => $this->visits->delete($this->account, $this->project, 'O-op', $this->version()));
+        DB::table('account_city_capabilities')->where('capability', 'visits.delete')->update(['revoked_at' => null]);
+        $this->assertHttpStatus(409, fn () => $this->visits->delete($this->account, $this->project, 'O-op', str_repeat('0', 64)));
+        $this->visits->delete($this->account, $this->project, 'O-op', $this->version());
+        self::assertSame(0, DB::table('op_visit')->count());
+        self::assertSame(0, DB::table('op_office_monitoring')->count());
+        self::assertSame(0, (int) DB::table('op_task_microproject')->where('ref_bbc62ceac64e_id', $this->catalog['tasks'][25])->value('c_State'));
+        self::assertSame(1, DB::table('account_audit_events')->where('event_type', 'visits.deleted')->count());
+        $this->assertHttpStatus(404, fn () => $this->visits->delete($this->account, $this->project, 'O-op', $this->version()));
+
+        $legacy = ApplicationFixture::row('visit', 1, ['c_Kind' => 'O-cl', 'c_Date' => '2020-01-01'], ['MicroProject_ID' => $this->project]);
+        FieldFixture::markImported($legacy, 'op_visit');
+        $this->rejected('delete', fn () => $this->visits->delete($this->account, $this->project, 'O-cl', $this->version()));
+        self::assertSame(1, DB::table('op_visit')->count());
     }
 }

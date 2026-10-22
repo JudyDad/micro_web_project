@@ -27,6 +27,14 @@ final class SpecialCaseController
         return redirect()->route('special-cases.show', ['locale' => $locale, 'application' => $application])->withFragment('case-'.$id)->with('status', __('field.saved'));
     }
 
+    public function delete(Request $request, string $locale, string $application, string $case, SpecialCaseService $cases): RedirectResponse
+    {
+        $data = $request->validate(['version' => ['required', 'string', 'size:64']]);
+        $cases->delete($request->user(), $this->id($application), $this->id($case), $data['version']);
+
+        return redirect()->route('special-cases.show', ['locale' => $locale, 'application' => $application])->with('status', __('field.deleted'));
+    }
+
     private function id(string $value): int
     {
         $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);

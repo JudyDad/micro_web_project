@@ -56,6 +56,15 @@ final class VisitController
         return redirect()->route('visits.show', ['locale' => $locale, 'application' => $application, 'kind' => $kind])->with('status', __('field.saved'));
     }
 
+    public function delete(Request $request, string $locale, string $application, string $kind, VisitService $visits): RedirectResponse
+    {
+        $data = $request->validate(['version' => ['required', 'string', 'size:64']]);
+        abort_unless(VisitKinds::has($kind), 404);
+        $visits->delete($request->user(), $this->id($application), $kind, $data['version']);
+
+        return redirect()->route('visits.hub', ['locale' => $locale, 'application' => $application])->with('status', __('field.deleted'));
+    }
+
     private function id(string $value): int
     {
         $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);

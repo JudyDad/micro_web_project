@@ -107,6 +107,20 @@ final class OperationalTables
         return (int) $id;
     }
 
+    /** Whether a row of this table was created by the web (imported legacy rows are preserved and never deleted here). */
+    public function isWeb(object $row): bool
+    {
+        return ($row->identity_kind ?? null) === 'web';
+    }
+
+    /** Deletes a web-created typed row and its entity identity. Callers delete dependent rows first and check {@see isWeb()}. */
+    public function deleteWeb(string $sourceTable, object $row): void
+    {
+        abort_unless($this->isWeb($row), 409, 'Imported records cannot be deleted.');
+        DB::table($this->table($sourceTable)['name'])->where('id', $row->id)->delete();
+        DB::table('operational_entities')->where('id', $row->id)->where('source_table_id', $this->tableId($sourceTable))->delete();
+    }
+
     /** Payload linking a resolved relationship. */
     public function link(string $sourceTable, string $key, ?int $id): array
     {

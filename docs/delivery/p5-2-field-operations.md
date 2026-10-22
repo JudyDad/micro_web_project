@@ -41,6 +41,16 @@ Source: `ChooseVisitKind_Form.cs`, `VOpening_Other_Form.cs`, `VOpening_Taxi_Form
 3. **Notifications:** the desktop marks the opening notice seen on save, and generates M1–M5 notices on the first loan (P5.3). Neither is done here, so the schedule shows only already stored notices. The desktop's project-state/donor/phone/residence columns, street and type filters and Excel export (P6.2) are not built; the desktop's "current state" join condition is not reproduced.
 4. **Role mapping** (desktop roles 1/8/2 may save; 3/4/7/9 refused) is not provisioned; capabilities are assigned per city.
 5. The "visit status" is blank when the matching visit is not found (as the desktop's SQL yields NULL); say if "Not yet" is preferred.
+## Owner decisions of 22 October 2026 and what they changed
+
+- **Visitors:** creator username only (kept).
+- **Permissions and deletion:** "make permissions for everything: read, edit, delete; a data-entry role with read/write/delete on applications, visits and special cases; record everything in activity logs."
+  - New capabilities `special_cases.delete` and `visits.delete` (each also needs the view capability and `applications.view`). Deleting removes a visit with its office-monitoring row and resets the phase task (25/31) as the desktop did; deleting a review removes the review. Both write `special_cases.deleted` / `visits.deleted` audit events, and every grant change is already audited (`capability.granted` / `capability.revoked`).
+  - **Imported (legacy) records are never deleted from the web.** Deleting an operational row of imported origin would break its link to the preserved source row, and the plan forbids discarding legacy data. Only records created in the web can be deleted; the page explains this. Say if imported records should also become deletable (it needs a soft-delete design).
+  - `AccessRoles` defines the `data-entry` role as a bundle of per-city capabilities (people, applications, special cases, visits: view/manage and, for special cases and visits, delete). An administrator assigns it per city; each capability is still granted and audited individually. There is no administration screen yet (P5.3).
+  - **Application deletion is not built.** The role does not include an applications delete capability because deleting a whole application/project cascades into people links, state history, finance and visits; it needs its own design and approval. Earlier slices (finance, people, assessments) also still have no delete capabilities.
+- **Special cases "recorded by":** audit only (kept).
+- **Schedule status:** "Not yet" is shown when the matching visit is not found (differs from the desktop's blank).
 ## Open decisions for the field owner
 
 1. **Registrar.** `specialcase.User_ID` is a historical source user, and a source user cannot stand in for a web account (Phase 3 actor rule). New reviews therefore leave the reference unset and the audit trail records the acting account; legacy values are preserved untouched but are not displayed. Say if a visible "recorded by" is wanted and how it should be modelled.

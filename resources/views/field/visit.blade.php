@@ -53,5 +53,10 @@
             @if($visit !== null)<p><small>{{ __('field.visit.created_by') }}: <bdi>{{ $visit->c_Created_By }}</bdi> · {{ __('field.visit.edited_by') }}: <bdi>{{ $visit->c_Edited_By }}</bdi></small></p>@endif
             @if($canManage)<x-ui.button type="submit">{{ __('field.save') }}</x-ui.button>@endif
         </form>
+        @if($canDelete)
+        <details><summary>{{ __('field.delete') }}</summary>
+            <form method="POST" action="{{ route('visits.delete', ['locale' => $locale, 'application' => $applicationId, 'kind' => $kind]) }}">@csrf<input type="hidden" name="version" value="{{ $version }}"><x-ui.button type="submit">{{ __('field.delete_confirm') }}</x-ui.button></form>
+        </details>
+        @endif
     </section>
 </x-layouts.app>

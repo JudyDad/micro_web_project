@@ -117,7 +117,12 @@ final class SpecialCaseTest extends TestCase
         $this->post($url, $post)->assertRedirect();
         $this->post($url, $post)->assertStatus(409);
         $this->post($url, ['version' => $this->version()] + $this->input(['reason' => '']))->assertSessionHasErrors('reason');
-        $this->get($url)->assertOk()->assertSee('Late instalment');
+        $this->get($url)->assertOk()->assertSee('Late instalment')->assertSee('Confirm deletion');
+        $caseId = (int) DB::table('op_specialcase')->value('id');
+        $this->post($url.'/'.$caseId.'/delete', ['version' => str_repeat('0', 64)])->assertStatus(409);
+        $this->post($url.'/'.$caseId.'/delete', ['version' => $this->version()])->assertRedirect();
+        self::assertSame(0, DB::table('op_specialcase')->count());
+        $this->post($url, ['version' => $this->version()] + $this->input())->assertRedirect();
 
         DB::table('account_city_capabilities')->where('capability', 'special_cases.manage')->update(['revoked_at' => now()]);
         $this->get($url)->assertOk()->assertSee('Late instalment')->assertDontSee('New review');
@@ -127,5 +132,36 @@ final class SpecialCaseTest extends TestCase
         $this->get('/en/applications/'.$this->project)->assertOk()->assertDontSee('Special cases');
         $this->get('/en/applications/0/special-cases')->assertNotFound();
         self::assertSame(1, DB::table('op_specialcase')->count());
+    }
+
+    public function test_web_reviews_can_be_deleted_with_the_grant_and_imported_ones_are_kept(): void
+    {
+        $id = $this->cases->save($this->account, $this->project, $this->input(), $this->version());
+        $legacy = ApplicationFixture::row('specialcase', 1, ['c_Reason' => 'legacy', 'c_Date' => '2020-01-01 00:00:00'], ['MicroProject_ID' => $this->project]);
+        FieldFixture::markImported($legacy, 'op_specialcase');
+        DB::table('account_city_capabilities')->where('capability', 'special_cases.delete')->update(['revoked_at' => now()]);
+        $this->assertHttpStatus(403, fn () => $this->cases->delete($this->account, $this->project, $id, $this->version()));
+        DB::table('account_city_capabilities')->where('capability', 'special_cases.delete')->update(['revoked_at' => null]);
+        $this->assertHttpStatus(409, fn () => $this->cases->delete($this->account, $this->project, $id, str_repeat('0', 64)));
+        try {
+            $this->cases->delete($this->account, $this->project, $legacy, $this->version());
+            self::fail('An imported review must be kept.');
+        } catch (ValidationException $e) {
+            self::assertArrayHasKey('delete', $e->errors());
+        }
+        $this->cases->delete($this->account, $this->project, $id, $this->version());
+        self::assertSame([$legacy], DB::table('op_specialcase')->pluck('id')->all());
+        self::assertSame(0, DB::table('operational_entities')->where('id', $id)->count());
+        self::assertSame(1, DB::table('account_audit_events')->where('event_type', 'special_cases.deleted')->count());
+    }
+
+    private function assertHttpStatus(int $expected, callable $call): void
+    {
+        try {
+            $call();
+            self::fail('Expected HTTP '.$expected);
+        } catch (HttpException $e) {
+            self::assertSame($expected, $e->getStatusCode());
+        }
     }
 }

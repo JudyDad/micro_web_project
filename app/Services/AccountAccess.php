@@ -10,7 +10,8 @@ final class AccountAccess
 {
     public const CAPABILITIES = ['projects.view', 'attachments.download', 'people.view', 'people.manage', 'applications.view', 'applications.manage', 'lifecycle.manage', 'lifecycle.accept', 'assessments.view', 'assessments.manage',
         'finance.view', 'finance.manage', 'executive_files.view', 'executive_files.manage', 'purchasing.view', 'purchasing.manage',
-        'special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage'];
+        'special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage',
+        'special_cases.delete', 'visits.delete'];
 
     public function active(WebAccount $account): bool
     {

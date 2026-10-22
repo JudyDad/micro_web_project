@@ -27,9 +27,9 @@ final class VisitService
 
     public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle) {}
 
-    private function authorize(WebAccount $account, int $city, bool $write = false): void
+    private function authorize(WebAccount $account, int $city, bool $write = false, ?string $extra = null): void
     {
-        foreach (['applications.view', 'visits.view', ...($write ? ['visits.manage'] : [])] as $capability) {
+        foreach (['applications.view', 'visits.view', ...($write ? ['visits.manage'] : []), ...($extra === null ? [] : [$extra])] as $capability) {
             if (! $this->access->check($account, $city, $capability)) {
                 $this->audit->record($account->id, 'access.denied', 'denied');
                 abort(403);
@@ -153,7 +153,7 @@ final class VisitService
 
         return [
             'project' => $project, 'kind' => $kind, 'definition' => $definition, 'wording' => VisitKinds::wording($kind), 'visit' => $visit,
-            'office' => $visit === null ? null : $offices->get((int) $visit->id), 'canManage' => $canManage, 'version' => $this->version($visits, $offices, $project),
+            'office' => $visit === null ? null : $offices->get((int) $visit->id), 'canManage' => $canManage, 'canDelete' => $visit !== null && $this->access->check($account, $city, 'visits.delete'), 'version' => $this->version($visits, $offices, $project),
             'streets' => $definition['place'] ? $this->tables->catalog('street', $city, (int) $project->source_id)->sortBy('c_Name', SORT_STRING)->values() : collect(),
             'streetId' => $project->{$street['state_column']} === 'resolved' ? (int) $project->{$street['resolved_column']} : null,
             'placeNote' => (string) ($project->c_MP_AddressAfterFund ?? ''),
@@ -217,6 +217,32 @@ final class VisitService
             $this->audit->record($account->id, 'visits.saved', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
 
             return $visitId;
+        });
+    }
+
+    /** Deletes a visit created in the web with its office-monitoring row and resets the phase task, as the desktop did. */
+    public function delete(WebAccount $account, int $projectId, string $kind, string $version): void
+    {
+        $definition = VisitKinds::definition($kind);
+        DB::transaction(function () use ($account, $projectId, $kind, $definition, $version) {
+            DB::table('op_microproject')->where('id', $projectId)->lockForUpdate()->first();
+            $project = $this->project($projectId);
+            $city = (int) $project->city_id;
+            $this->authorize($account, $city, false, 'visits.delete');
+            $visits = $this->visits($project);
+            $offices = $this->officeRows($visits);
+            abort_unless(hash_equals($this->version($visits, $offices, $project), $version), 409, 'Visits changed. Reload before deleting.');
+            $visit = $this->ofKind($visits, $kind);
+            abort_if($visit === null, 404);
+            $this->tables->isWeb($visit) || $this->fail('delete', 'imported');
+            $office = $offices->get((int) $visit->id);
+            if ($office !== null) {
+                $this->tables->isWeb($office) || $this->fail('delete', 'imported');
+                $this->tables->deleteWeb('office_monitoring', $office);
+            }
+            $this->tables->deleteWeb('visit', $visit);
+            $this->completeTask($project, $definition['task'], 0);
+            $this->audit->record($account->id, 'visits.deleted', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
         });
     }
 

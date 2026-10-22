@@ -13,6 +13,11 @@
         @else
             <dl class="project-details"><div><dt>{{ __('field.special.reason') }}</dt><dd>{{ $case->c_Reason }}</dd></div><div><dt>{{ __('field.special.description') }}</dt><dd>{{ $case->c_Description }}</dd></div><div><dt>{{ __('field.special.action') }}</dt><dd>{{ $case->c_Action }}</dd></div></dl>
         @endif
+        @if($canDelete)
+        <details><summary>{{ __('field.delete') }}</summary>
+            <form method="POST" action="{{ route('special-cases.delete', ['locale' => $locale, 'application' => $applicationId, 'case' => $case->id]) }}">@csrf<input type="hidden" name="version" value="{{ $version }}"><x-ui.button type="submit">{{ __('field.delete_confirm') }}</x-ui.button></form>
+        </details>
+        @endif
     </section>
     @endforeach
     @if($cases->isEmpty())<section class="card"><p>{{ __('field.special.none') }}</p></section>@endif

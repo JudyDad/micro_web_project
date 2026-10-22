@@ -22,9 +22,9 @@ final class SpecialCaseService
 {
     public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables) {}
 
-    private function authorize(WebAccount $account, int $city, bool $write = false): void
+    private function authorize(WebAccount $account, int $city, bool $write = false, ?string $extra = null): void
     {
-        foreach (['applications.view', 'special_cases.view', ...($write ? ['special_cases.manage'] : [])] as $capability) {
+        foreach (['applications.view', 'special_cases.view', ...($write ? ['special_cases.manage'] : []), ...($extra === null ? [] : [$extra])] as $capability) {
             if (! $this->access->check($account, $city, $capability)) {
                 $this->audit->record($account->id, 'access.denied', 'denied');
                 abort(403);
@@ -76,7 +76,7 @@ final class SpecialCaseService
         $this->audit->record($account->id, 'special_cases.view', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
 
         return [
-            'project' => $project, 'types' => $types, 'canManage' => $this->access->check($account, $city, 'special_cases.manage'), 'version' => $this->version($cases),
+            'project' => $project, 'types' => $types, 'canManage' => $this->access->check($account, $city, 'special_cases.manage'), 'canDelete' => $this->access->check($account, $city, 'special_cases.delete'), 'version' => $this->version($cases),
             'cases' => $cases->map(function ($row) use ($typeRef, $names) {
                 $row = clone $row;
                 $row->type_id = $row->{$typeRef['state_column']} === 'resolved' ? (int) $row->{$typeRef['resolved_column']} : null;
@@ -114,6 +114,24 @@ final class SpecialCaseService
             $this->audit->record($account->id, 'special_cases.saved', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
 
             return (int) $caseId;
+        });
+    }
+
+    /** Deletes a review created in the web. Imported reviews are preserved. */
+    public function delete(WebAccount $account, int $projectId, int $caseId, string $version): void
+    {
+        DB::transaction(function () use ($account, $projectId, $caseId, $version) {
+            DB::table('op_microproject')->where('id', $projectId)->lockForUpdate()->first();
+            $project = $this->project($projectId);
+            $city = (int) $project->city_id;
+            $this->authorize($account, $city, false, 'special_cases.delete');
+            $cases = $this->cases($project);
+            abort_unless(hash_equals($this->version($cases), $version), 409, 'Special cases changed. Reload before deleting.');
+            $case = $cases->firstWhere('id', $caseId);
+            abort_if($case === null, 404);
+            $this->tables->isWeb($case) || $this->fail('delete', 'imported');
+            $this->tables->deleteWeb('specialcase', $case);
+            $this->audit->record($account->id, 'special_cases.deleted', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
         });
     }
 
