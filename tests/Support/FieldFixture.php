@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 /** Invented field-operations data on top of the application fixture. */
 final class FieldFixture
 {
-    public const CAPABILITIES = ['special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage', 'special_cases.delete', 'visits.delete'];
+    public const CAPABILITIES = ['special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage', 'special_cases.delete', 'visits.delete', 'me_visits.view', 'me_visits.manage', 'me_visits.delete'];
 
     public static function grant(WebAccount $account, array $cities = [1, 2], array $capabilities = self::CAPABILITIES): void
     {
@@ -59,5 +59,36 @@ final class FieldFixture
         foreach ($catalog['tasks'] as $task) {
             ApplicationFixture::row('task_microproject', $city, ['c_State' => 0, 'c_Date' => '2026-10-19 00:00:00'], ['MicroProject_ID' => $project, 'Task_ID' => $task]);
         }
+    }
+
+    /**
+     * M&E catalog: tasks 26 and 27, two "other project" questions (marks 2/5 and 1/3), one vehicle question and two active profit ranges
+     * (0–100 → 1, 101–1,000,000 → 4).
+     *
+     * @return array{tasks: array<int, int>, questions: array<int, array{id: int, answers: array<string, int>}>, vehicle: array{id: int, answers: array<string, int>}}
+     */
+    public static function meCatalog(int $city): array
+    {
+        $tasks = [];
+        foreach ([26, 27] as $raw) {
+            $tasks[$raw] = ApplicationFixture::row('task', $city, ['c_T_ID' => $raw, 'c_T_Name' => 'M&E visit '.($raw - 25), 'c_T_State' => 0, 'c_T_Type' => 'f']);
+        }
+        $question = function (int $legacy, string $name, string $type, array $marks) use ($city) {
+            $id = ApplicationFixture::row('mequestion', $city, ['c_ID' => $legacy, 'c_Name' => $name, 'c_Type' => $type]);
+            $answers = [];
+            $n = 0;
+            foreach ($marks as $label => $mark) {
+                $answers[$label] = ApplicationFixture::row('meanswer', $city, ['c_ID' => $legacy * 10 + ++$n, 'c_Name' => $label, 'c_Mark' => $mark], ['Question_ID' => $id]);
+            }
+
+            return ['id' => $id, 'answers' => $answers];
+        };
+        $questions = [$question(19, 'Is the work regular?', 'o', ['No' => 2, 'Yes' => 5]), $question(20, 'Is the income enough?', 'o', ['No' => 1, 'Yes' => 3])];
+        $vehicle = $question(1, 'Is the vehicle in use?', 'v', ['No' => 0, 'Yes' => 6]);
+        ApplicationFixture::row('meprofitmarks', $city, ['c_ID' => 1, 'c_IsActive' => 1, 'c_Min' => 0, 'c_Max' => 100, 'c_Mark' => 1]);
+        ApplicationFixture::row('meprofitmarks', $city, ['c_ID' => 2, 'c_IsActive' => 1, 'c_Min' => 101, 'c_Max' => 1000000, 'c_Mark' => 4]);
+        ApplicationFixture::row('meprofitmarks', $city, ['c_ID' => 3, 'c_IsActive' => 0, 'c_Min' => 0, 'c_Max' => 1000000, 'c_Mark' => 99]);
+
+        return ['tasks' => $tasks, 'questions' => $questions, 'vehicle' => $vehicle];
     }
 }

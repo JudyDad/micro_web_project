@@ -2,7 +2,7 @@
 
 return [
     'title' => 'Field operations', 'back' => 'Back to the project', 'saved' => 'Saved.', 'deleted' => 'Deleted.', 'delete' => 'Delete', 'delete_confirm' => 'Confirm deletion', 'save' => 'Save',
-    'links' => ['special-cases' => 'Special cases', 'visits' => 'Visits'],
+    'links' => ['special-cases' => 'Special cases', 'visits' => 'Visits', 'me' => 'Monitoring and evaluation visits'],
     'nav_schedule' => 'Visit schedule',
     'special' => [
         'title' => 'Special cases', 'case' => 'Review of', 'new' => 'New review', 'none' => 'This project has no special-case reviews.',
@@ -11,6 +11,9 @@ return [
     ],
     'errors' => [
         'date' => 'Enter a valid date.', 'type' => 'Choose the review type.', 'reason' => 'Write the reason for the review (up to 65,535 characters).', 'long' => 'The text is too long.', 'imported' => 'Imported records are preserved and cannot be deleted.',
+        'me_number' => 'Enter a visit number from 1 to 99.', 'me_number_taken' => 'This person already has a visit with this number.', 'me_profit' => 'Enter the net profit (up to four decimals).',
+        'me_profit_range' => 'The net profit falls outside every active profit range, so the result cannot be calculated.', 'me_unanswered' => 'No question can be left without an answer. Answer every question and try again.',
+        'not_funded' => 'Monitoring visits are only available for funded projects.',
         'choice' => 'Choose one of the listed answers.', 'vehicle' => 'The vehicle number is missing. Enter it and try again.', 'vehicle_long' => 'The vehicle number is too long (50 characters at most).',
         'rehab' => 'Rehabilitation projects have no opening or closing visit on this screen.', 'kind' => 'This kind of visit does not apply to this project.',
         'exists' => 'A second visit of the same phase cannot be created: this project already has one.', 'street' => 'Choose an area from the list.', 'place_long' => 'The detailed address is too long (255 characters at most).',
@@ -70,6 +73,13 @@ return [
             'office' => [1 => 'Humility in dealing', 2 => 'Listening', 3 => 'Fairness', 4 => 'Responsibility in dealing'],
             'indicators' => '8) Do you have any comments on the Hope Center team?',
         ],
+    ],
+    'me' => [
+        'title' => 'Monitoring and evaluation visits', 'scope' => 'Visits to the beneficiary and partners of a funded project. Each visit has a number, the net profit and an answer to every question; the result is the sum of the answers\' marks and the profit mark. The visitors are not recorded here.',
+        'no_people' => 'This project has no linked people.', 'visits' => 'Visits', 'none' => 'No visits yet.', 'add' => 'Add visit :number', 'number' => 'Visit number', 'date' => 'Visit date',
+        'profit' => 'Net profit', 'ans1' => 'Visit summary', 'indicators' => 'Indicators', 'notes' => 'Notes', 'note' => 'Note', 'result' => 'Result', 'questions' => 'Questions', 'none_questions' => 'The catalog has no questions for this kind of project.',
+        'rehab' => 'Rehabilitation projects have no monitoring and evaluation visits.', 'not_funded' => 'Monitoring visits can be added only after the project is funded.', 'kind' => ['o' => 'Other projects', 'v' => 'Vehicles'],
+        'type' => ['مستفيد' => 'Beneficiary', 'شريك' => 'Partner'], 'person' => 'Person', 'open' => 'Open', 'back' => 'Back to the visits',
     ],
     'schedule' => [
         'title' => 'Visit schedule', 'intro' => 'Visit notices already stored in the cities you can read. This page neither generates notices nor changes their seen state.',

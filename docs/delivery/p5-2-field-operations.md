@@ -1,6 +1,6 @@
 # P5.2 field operations
 
-Started 22 October 2026 on the user's instruction "Yes, start P5.2 field operations". Status: **slices S1 (special cases) and S2 (opening/closing visits and the visit schedule) implemented locally; P5.2 is not complete and no acceptance is claimed.** No physical schema change: every payload maps to the approved `op_specialcase` / `op_specialcasetype` tables.
+Started 22 October 2026 on the user's instruction "Yes, start P5.2 field operations". Status: **slices S1 (special cases), S2 (opening/closing visits and the visit schedule) and S3 (M&E visits) implemented locally; P5.2 is not complete and no acceptance is claimed.** No physical schema change: every payload maps to the approved `op_specialcase` / `op_specialcasetype` tables.
 
 ## Scope and slicing
 
@@ -10,7 +10,7 @@ P5.2 covers about 11,000 lines of desktop code. It is delivered in independently
 |---|---|---|
 | S1 Special cases | `SpecialCase_Form.cs`, `Classes/SpecialCase.cs` | implemented locally (this record) |
 | S2 Opening/closing visits and visit schedule | `Visit Forms/ChooseVisitKind_Form`, `VOpening_*`, `VClosing_Form`, `Visits_Schedule_Form`, `Classes/Visit.cs`, `Classes/Office_Monitoring.cs` | implemented locally (see S2 below) |
-| S3 Monitoring and evaluation (M&E) | `V_ME_Taxi_Form`, `V_ME_Other_Form`, `Classes/M_and_E.cs` | todo |
+| S3 Monitoring and evaluation (M&E) | `V_ME_Taxi_Form`, `V_ME_Other_Form`, `Classes/M_and_E.cs` | implemented locally (see S3 below) |
 | S4 Rehabilitation follow-up | `VClosing_Rehab_Form`, `Classes/VisitRehab.cs` | todo |
 | S5 Profession meetings | `ProfessionMeetings_Form.cs` (3,448 lines), `ProfessionMeetings_Schema.sql` | todo |
 | S6 Visit results / statistics | `Visit_Results_Form`, `Visits_Statistics` | belongs with P6.1/P6.2 reporting |
@@ -41,6 +41,18 @@ Source: `ChooseVisitKind_Form.cs`, `VOpening_Other_Form.cs`, `VOpening_Taxi_Form
 3. **Notifications:** the desktop marks the opening notice seen on save, and generates M1–M5 notices on the first loan (P5.3). Neither is done here, so the schedule shows only already stored notices. The desktop's project-state/donor/phone/residence columns, street and type filters and Excel export (P6.2) are not built; the desktop's "current state" join condition is not reproduced.
 4. **Role mapping** (desktop roles 1/8/2 may save; 3/4/7/9 refused) is not provisioned; capabilities are assigned per city.
 5. The "visit status" is blank when the matching visit is not found (as the desktop's SQL yields NULL); say if "Not yet" is preferred.
+## S3 monitoring and evaluation visits — delivered
+
+Source: `V_ME_Other_Form.cs`, `V_ME_Taxi_Form.cs` (identical logic; kind `o` or `v`), `Classes/M_and_E.cs`, `Partners_MessageBox.cs`. No schema change: `op_mevisit`, `op_mevisit_answer`, and the catalogs `op_mequestion`, `op_meanswer`, `op_meprofitmarks`.
+
+- **Overview** `/applications/{id}/me-visits`: the people linked to the project (beneficiary first, then partners), each with their visits (number, kind, date, result) and a button for the next number. New visits are only offered for funded projects (the desktop chooser listed only Accepted, Financed, Finished, Canceled and Closed projects) and never for grant-funded rehabilitation projects (the chooser refused them).
+- **Visit form:** number (1–99, positive integer as the desktop textbox enforced; one visit per person, kind and number), date, net profit (up to four decimals), summary (`Ans1`), indicators, notes, and one answer (plus a note) for every catalog question of the kind. The questions come from the city's catalog (`mequestion.Type` containing `o` or `v`; the desktop hard-coded ids 19–42 and 1–18 in the form layout, so the catalog is the web's interpretation), and every question that has answers must be answered on every save, as the desktop required.
+- **Result:** sum of the chosen answers' marks plus the mark of the active profit range containing the profit (`Get_Mark_Of_Profit`). If no active range contains the profit the desktop failed after saving; the web refuses the save instead. The result is stored on the visit.
+- **Side effects:** a new visit marks the project's assignment of legacy task 26–30 (visit number 1–5) done when it exists. Editing writes only changed fields and changed answers; stored answers for questions outside the catalog are never removed (the result counts all stored answers, as the desktop did).
+- **Safety and permissions:** project row lock and version hash; stale or repeated saves refused with 409. Grants `me_visits.view` / `me_visits.manage` / `me_visits.delete` per city (plus `applications.view`); audit events `me_visits.view|saved|deleted`; included in the `data-entry` role. Web-created visits can be deleted (answers removed, task reset); imported ones cannot. The creator username is stored; visitors and their evaluation marks (`mevisit_user`) are not recorded.
+- **Partners:** the desktop offered the partner's visit after saving the beneficiary's. The web lists every linked person, so each gets visits from the same overview.
+- **Not built:** notification handling (seen flag on save), the visits results/statistics screens (Phase 6), the Excel export, and result-range evaluation text (`meresultranges`).
+- English questionnaire wording is whatever the city's catalog holds (Arabic desktop text); only the page chrome is translated.
 ## Owner decisions of 22 October 2026 and what they changed
 
 - **Visitors:** creator username only (kept).
@@ -62,4 +74,5 @@ Source: `ChooseVisitKind_Form.cs`, `VOpening_Other_Form.cs`, `VOpening_Taxi_Form
 
 - `SpecialCaseTest`: 5 cases / 48 assertions (create and edit with exact text, desktop validation, other-city type refused, stale and repeated submissions, legacy values preserved, grants and both languages over HTTP).
 - `VisitWorkflowTest`: 8 cases / 109 assertions (exact opening values and side effects once, validation and kind rules, taxi questionnaire and plate number, closing choices and Finished once, legacy values preserved, rehabilitation exclusion, pages in both languages with grants, schedule filters/status/city permissions).
-- SQLite only. Not done: actual-schema MySQL tests for S1/S2, rendered browser check, five-city data parity, staff acceptance, slices S3–S5.
+- `MonitoringVisitTest`: 6 cases / 87 assertions (answers, result and task, validation and eligibility, vehicle questions, legacy values and unrelated answers preserved, delete/imported kept, pages in both languages with grants).
+- SQLite only. Not done: actual-schema MySQL tests for S1–S3, rendered browser check, five-city data parity, staff acceptance, slices S4–S5.

@@ -105,6 +105,7 @@ final class ApplicationController
             'fieldLinks' => array_filter([
                 'special-cases.show' => $access->check($request->user(), $city, 'special_cases.view'),
                 'visits.hub' => $access->check($request->user(), $city, 'visits.view'),
+                'me.hub' => $access->check($request->user(), $city, 'me_visits.view'),
             ]),
             'applicantDetails' => $applicantDetails,
             'personReferenceColumn' => $personRelation['resolved_column'], 'headerReferenceColumn' => $headerRelation['resolved_column'],

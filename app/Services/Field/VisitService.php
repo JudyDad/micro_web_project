@@ -59,7 +59,7 @@ final class VisitService
     }
 
     /** @return array{rehab: bool, vehicle: bool} */
-    private function classify(object $project): array
+    public function classify(object $project): array
     {
         $type = (string) ($this->linked($project, 'MP_Type_ID', 'microprojecttype')->c_Name ?? '');
         $fund = (string) ($this->linked($project, 'MP_FundType_ID', 'fundtype')->c_Name ?? '');
