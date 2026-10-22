@@ -9,6 +9,8 @@ use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
 use App\Services\Lifecycle\LifecycleService;
 use App\Services\Operational\OperationalTables;
+use App\Services\Staff\NotificationService;
+use App\Services\Staff\ProjectNotices;
 use Database\Schema\OperationalManifest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +36,7 @@ final class FinanceService
     /** @var array<string, array{returned: string, payment: string, single: bool}> */
     private array $columns = [];
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle) {}
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle, private ProjectNotices $projectNotices, private NotificationService $notices) {}
 
     private function authorize(WebAccount $account, int $city, bool $write = false): void
     {
@@ -189,7 +191,7 @@ final class FinanceService
 
         return [
             'project' => $project, 'current' => $current, 'donor' => $donor, 'group' => $group, 'funded' => $funded,
-            'ineligible' => $this->ineligible($current, $donor), 'canManage' => $canManage, 'single' => $columns['single'],
+            'ineligible' => $this->ineligible($current, $donor), 'canManage' => $canManage, 'single' => $columns['single'], 'visitNoticesMissing' => $loans->isNotEmpty() && ! $this->projectNotices->hasVisitNotices($project),
             'version' => $this->version($project, $history, $loans, $payments),
             'loans' => $loans->map(fn ($loan) => $this->loanModel($loan, $payments, $columns)),
             'donors' => $canManage && $funded ? $this->tables->catalog('donor', $city, (int) $project->source_id) : collect(),
@@ -338,6 +340,7 @@ final class FinanceService
             if ($loan === null) {
                 $this->lifecycle->enterNamed($project, LifecycleService::FINANCED);
                 $this->completeLoanTask($project);
+                $this->projectNotices->generateVisitSchedule($project, (string) $payload['c_Loan_DateTaken'], $this->notices->senderFor($account, $source));
             }
             $this->audit->record($account->id, 'finance.loan_saved', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
 
@@ -476,6 +479,7 @@ final class FinanceService
             $loan = $loans->firstWhere('id', $loanId);
             abort_if($loan === null, 404);
             $existing = $payments->where('loan_id', $loanId)->keyBy('id');
+            $sender = $this->notices->senderFor($account, $source);
 
             foreach (array_values($rows) as $index => $row) {
                 $id = Fields::blank($row['id'] ?? null) ? null : (int) $row['id'];
@@ -484,14 +488,14 @@ final class FinanceService
                 }
                 $stored = $id === null ? null : $existing->get($id);
                 abort_if($id !== null && $stored === null, 422, 'Select instalments of this loan.');
-                $this->writePayment($project, $loan, $stored, $row, $index);
+                $this->writePayment($project, $loan, $stored, $row, $index, $sender);
             }
-            $this->finishWhenRepaid($project, $loan);
+            $this->finishWhenRepaid($project, $loan, $sender);
             $this->audit->record($account->id, 'finance.payments_saved', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
         });
     }
 
-    private function writePayment(object $project, object $loan, ?object $stored, array $row, int $index): void
+    private function writePayment(object $project, object $loan, ?object $stored, array $row, int $index, ?object $sender): void
     {
         $field = fn (string $key) => 'rows.'.$index.'.'.$key;
         $amount = Money::normalize(Fields::text($row['amount'] ?? ''));
@@ -522,20 +526,26 @@ final class FinanceService
             'c_Pay_RecievedOnDate' => $paid && $receivedInput !== '' ? $receivedInput : $due, 'c_Pay_Note' => $note,
         ];
         if ($stored === null) {
-            $this->tables->insert('payment', (int) $project->city_id, (int) $project->source_id, $payload + $this->tables->link('payment', 'Loan_ID', (int) $loan->id));
+            $id = $this->tables->insert('payment', (int) $project->city_id, (int) $project->source_id, $payload + $this->tables->link('payment', 'Loan_ID', (int) $loan->id));
+            if (! $paid) {
+                $this->projectNotices->paymentDue($project, (object) ['id' => $id, 'c_Pay_ID' => null], $payload['c_Pay_Amount'], $due, $sender);
+            }
         } else {
             DB::table('op_payment')->where('id', $stored->id)->update($payload);
+            $this->projectNotices->paymentChanged($project, $stored, $payload['c_Pay_Amount'], $due, $paid);
         }
     }
 
     /** SavePayments_button_Click:1125–1145: a paid last row with less than one and a half instalments left finishes the project. */
-    private function finishWhenRepaid(object $project, object $loan): void
+    private function finishWhenRepaid(object $project, object $loan, ?object $sender): void
     {
         $loans = $this->loanRows($project);
         $payments = $this->paymentRows($project, $loans);
         $model = $this->loanModel($loans->firstWhere('id', $loan->id), $payments, $this->amountColumns((int) $project->source_id));
         if ($model['last_paid'] && $model['summary']['near_end']) {
             $this->lifecycle->enterNamed($project, LifecycleService::FINISHED);
+            $last = $model['payments']->last();
+            $this->projectNotices->clearance($project, Fields::day($last->c_Pay_RecievedOnDate ?? null) ?: Fields::day($last->c_Pay_DueDate ?? null), $sender);
         }
     }
 }

@@ -7,12 +7,15 @@ use App\Models\WebPrincipal;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
-/** Controlled administrative service: never exposed through the read-only runtime. */
+/**
+ * Controlled administrative service. It writes accounts, reviewed links and city capabilities, so only the staff administration screens
+ * (`accounts.manage`, see AccountAdminService) and provisioning commands reach it; the read-only runtime never does.
+ */
 final class AccountProvisioner
 {
     public function __construct(private SourceIdentity $identity, private AccountAuditTrail $audit) {}
 
-    public function provision(string $username, int $credentialPrincipalId, array $reviewedPrincipalIds, array $cityCapabilities, string $decision): WebAccount
+    public function provision(string $username, int $credentialPrincipalId, array $reviewedPrincipalIds, array $cityCapabilities, string $decision, ?int $actor = null): WebAccount
     {
         if ($username === '' || strlen($username) > 800 || preg_match('//u', $username) !== 1 || mb_strlen($username) > 200
             || ! AccountAuditTrail::validDecision($decision) || $credentialPrincipalId < 1 || $reviewedPrincipalIds === []
@@ -26,7 +29,7 @@ final class AccountProvisioner
             }
         }
 
-        return DB::transaction(function () use ($username, $credentialPrincipalId, $reviewedPrincipalIds, $cityCapabilities, $decision) {
+        return DB::transaction(function () use ($username, $credentialPrincipalId, $reviewedPrincipalIds, $cityCapabilities, $decision, $actor) {
             sort($reviewedPrincipalIds);
             $principals = WebPrincipal::whereIn('id', $reviewedPrincipalIds)->orderBy('id')->lockForUpdate()->get();
             if ($principals->count() !== count($reviewedPrincipalIds)
@@ -55,20 +58,20 @@ final class AccountProvisioner
             $account->username = $username;
             $account->credential_principal_id = $credentialPrincipalId;
             $account->save();
-            $this->audit->record(null, 'account.provisioned', 'succeeded', subjectAccount: $account->id, subjectType: 'account', subjectId: $account->id, decision: $decision);
+            $this->audit->record($actor, 'account.provisioned', 'succeeded', subjectAccount: $account->id, subjectType: 'account', subjectId: $account->id, decision: $decision);
             foreach ($principals as $principal) {
                 $linkId = DB::table('account_legacy_links')->insertGetId([
                     'account_id' => $account->id, 'source_id' => $principal->source_id, 'principal_id' => $principal->id,
                     'decision_locator' => $decision, 'reviewed_at' => now('UTC')->format('Y-m-d H:i:s.u'), 'revoked_at' => null,
                 ]);
-                $this->audit->record(null, 'legacy.linked', 'succeeded', subjectAccount: $account->id, subjectType: 'legacy_link', subjectId: $linkId, decision: $decision);
+                $this->audit->record($actor, 'legacy.linked', 'succeeded', subjectAccount: $account->id, subjectType: 'legacy_link', subjectId: $linkId, decision: $decision);
             }
             foreach ($cityCapabilities as $city => $capabilities) {
                 if (! is_int($city) || ! is_array($capabilities)) {
                     throw new InvalidArgumentException('City capabilities must map integer city IDs to capability lists.');
                 }
                 foreach ($capabilities as $capability) {
-                    $this->grant($account, $city, $capability, $decision);
+                    $this->grant($account, $city, $capability, $decision, $actor);
                 }
             }
 
@@ -136,6 +139,62 @@ final class AccountProvisioner
             }
             $query->update(['revoked_at' => $revoked ? now('UTC')->format('Y-m-d H:i:s.u') : null]);
             $this->audit->record($actor, $revoked ? 'legacy.revoked' : 'legacy.restored', 'succeeded', subjectAccount: $account->id, subjectType: 'legacy_link', subjectId: $link->id, decision: $decision);
+        }, attempts: 3);
+    }
+
+    /** The identity pointer of a published source user record, created on first use (a principal carries no credential of its own). */
+    public function ensurePrincipal(int $source, int $recordId): WebPrincipal
+    {
+        $existing = WebPrincipal::where('source_id', $source)->where('source_table_id', 117)->where('source_record_id', $recordId)->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+        if ($recordId < 1 || ! in_array($source, app(SourceCatalog::class)->sourceIds(), true) || ! $this->identity->publishedUsers($source)->where('r.id', $recordId)->exists()) {
+            throw new InvalidArgumentException('The source user is not a published historical account.');
+        }
+        $time = now('UTC')->format('Y-m-d H:i:s.u');
+        $id = DB::table('web_principals')->insertGetId(['source_id' => $source, 'source_table_id' => 117, 'source_record_id' => $recordId, 'password_hash' => null, 'disabled_at' => null, 'created_at' => $time, 'updated_at' => $time]);
+
+        return WebPrincipal::findOrFail($id);
+    }
+
+    /** Adds one reviewed historical identity to an existing account. A principal already linked to any account is never moved. */
+    public function linkPrincipal(WebAccount $account, int $principalId, string $decision, ?int $actor = null): int
+    {
+        if (! AccountAuditTrail::validDecision($decision)) {
+            throw new InvalidArgumentException('A link review decision is required.');
+        }
+
+        return DB::transaction(function () use ($account, $principalId, $decision, $actor) {
+            WebAccount::whereKey($account->id)->lockForUpdate()->firstOrFail();
+            $principal = WebPrincipal::whereKey($principalId)->lockForUpdate()->first();
+            if ($principal === null || DB::table('account_legacy_links')->where('principal_id', $principalId)->exists()) {
+                throw new InvalidArgumentException('A reviewed principal is missing or already linked.');
+            }
+            if ($this->identity->activeUser($principal) === null) {
+                throw new InvalidArgumentException('Inactive legacy identity requires a separate staff decision.');
+            }
+            $linkId = DB::table('account_legacy_links')->insertGetId([
+                'account_id' => $account->id, 'source_id' => $principal->source_id, 'principal_id' => $principal->id,
+                'decision_locator' => $decision, 'reviewed_at' => now('UTC')->format('Y-m-d H:i:s.u'), 'revoked_at' => null,
+            ]);
+            $this->audit->record($actor, 'legacy.linked', 'succeeded', subjectAccount: $account->id, subjectType: 'legacy_link', subjectId: $linkId, decision: $decision);
+
+            return (int) $linkId;
+        }, attempts: 3);
+    }
+
+    /** Disables or re-enables the whole web account (every city); protected requests recheck it. */
+    public function setDisabled(WebAccount $account, bool $disabled, ?int $actor = null, ?string $decision = null): void
+    {
+        if ($decision !== null && ! AccountAuditTrail::validDecision($decision)) {
+            throw new InvalidArgumentException('Invalid decision reference.');
+        }
+        DB::transaction(function () use ($account, $disabled, $actor, $decision) {
+            WebAccount::whereKey($account->id)->lockForUpdate()->firstOrFail();
+            $time = now('UTC')->format('Y-m-d H:i:s.u');
+            DB::table('web_accounts')->where('id', $account->id)->update(['disabled_at' => $disabled ? $time : null, 'updated_at' => $time]);
+            $this->audit->record($actor, $disabled ? 'accounts.disabled' : 'accounts.enabled', 'succeeded', subjectAccount: $account->id, subjectType: 'account', subjectId: $account->id, decision: $decision);
         }, attempts: 3);
     }
 }

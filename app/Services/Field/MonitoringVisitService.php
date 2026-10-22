@@ -12,6 +12,7 @@ use App\Services\Finance\FinanceService;
 use App\Services\Finance\Money;
 use App\Services\Lifecycle\LifecycleService;
 use App\Services\Operational\OperationalTables;
+use App\Services\Staff\ProjectNotices;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +31,7 @@ final class MonitoringVisitService
     private const TASKS = [1 => 26, 2 => 27, 3 => 28, 4 => 29, 5 => 30];
 
     public function __construct(
-        private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle, private VisitService $visits,
+        private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle, private VisitService $visits, private ProjectNotices $projectNotices,
     ) {}
 
     private function authorize(WebAccount $account, int $city, bool $write = false, ?string $extra = null): void
@@ -224,6 +225,12 @@ final class MonitoringVisitService
                 $number = (int) $payload['c_Number'];
                 if (isset(self::TASKS[$number])) {
                     $this->completeTask($project, self::TASKS[$number], 1);
+                }
+                // The notice of this visit is done. Visit 4 stands for the schedule's MFinal (the desktop only cleared M4).
+                $letter = strtoupper($kind);
+                $name = (string) ($people->firstWhere('id', $personId)->name ?? '');
+                foreach ($number === 4 ? ['M4', 'MFinal'] : ['M'.$number] as $label) {
+                    $this->projectNotices->visitDone($project, 'Visit '.$label.'-'.$letter, $name);
                 }
             } else {
                 $visitId = (int) $visit->id;

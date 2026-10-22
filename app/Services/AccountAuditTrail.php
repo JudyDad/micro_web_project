@@ -24,7 +24,7 @@ final class AccountAuditTrail
         'profession_meetings.list' => [], 'profession_meetings.view' => ['meeting_entity'], 'profession_meetings.saved' => ['meeting_entity'], 'profession_meetings.deleted' => ['meeting_entity'], 'profession_meetings.restored' => ['meeting_entity'], 'visits.restored' => ['application_entity'], 'me_visits.restored' => ['application_entity'],
         'tasks.board' => [], 'tasks.toggled' => ['application_entity'],
         'notifications.list' => [], 'notifications.seen' => [], 'notifications.sent' => [], 'notifications.noted' => [],
-        'accounts.list' => [], 'accounts.view' => ['account'], 'accounts.city_assigned' => ['account'], 'accounts.disabled' => ['account'], 'accounts.enabled' => ['account'],
+        'accounts.list' => [], 'accounts.view' => ['account'], 'accounts.disabled' => ['account'], 'accounts.enabled' => ['account'],
         'application_draft.saved' => [], 'application_draft.viewed' => [], 'application_draft.discarded' => [],
         'people.list' => [], 'people.view' => ['person_entity'],
         'people.created' => ['person_entity', 'family_entity'], 'people.updated' => ['person_entity'],

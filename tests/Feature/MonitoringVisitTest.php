@@ -212,4 +212,23 @@ final class MonitoringVisitTest extends TestCase
         $this->get('/en/applications/'.$this->project)->assertOk()->assertDontSee('Monitoring and evaluation visits');
         self::assertSame(1, DB::table('op_mevisit')->count());
     }
+
+    public function test_saving_a_visit_marks_its_notice_seen_and_visit_four_clears_the_final_visit_notice(): void
+    {
+        $name = 'Synthetic Applicant ابن/ة';
+        $notice = fn (string $body, ?string $person = null) => ApplicationFixture::row('user_notification', 1, ['c_Pay_ID' => -21, 'c_Body' => $body, 'c_Date' => '2026-11-05', 'c_P_Name' => $person ?? $name, 'c_Seen' => 0, 'c_MicroProject_ID' => 1000], ['MicroProject_ID' => $this->project]);
+        $seen = fn (int $id) => (int) DB::table('op_user_notification')->where('id', $id)->value('c_Seen');
+        $m1 = $notice('Visit M1-O');
+        $m1Other = $notice('Visit M1-O', 'someone else');
+        $m1Vehicle = $notice('Visit M1-V');
+        $m4 = $notice('Visit M4-O');
+        $final = $notice('Visit MFinal-O');
+        $opening = $notice('Visit Opening-O');
+
+        $this->me->save($this->account, $this->project, $this->person, null, $this->input(), $this->version());
+        self::assertSame([1, 0, 0, 0, 0, 0], [$seen($m1), $seen($m1Other), $seen($m1Vehicle), $seen($m4), $seen($final), $seen($opening)], 'only that person\'s notice for that visit');
+
+        $this->me->save($this->account, $this->project, $this->person, null, $this->input(['number' => '4']), $this->version());
+        self::assertSame([1, 1, 0], [$seen($m4), $seen($final), $seen($opening)], 'visit 4 is the schedule\'s final visit');
+    }
 }

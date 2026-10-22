@@ -8,6 +8,8 @@ use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
 use App\Services\Operational\OperationalTables;
+use App\Services\Staff\NotificationService;
+use App\Services\Staff\ProjectNotices;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +32,10 @@ final class LifecycleService
 
     public const FINISHED = 'Finished';
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables) {}
+    /** States whose arrival marks every notice of the project seen (AdminPanel_From: Withdrew, Canceled, Finished, Closed). */
+    private const CLEARING = ['Withdrew', 'Canceled', 'Finished', 'Closed'];
+
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private ProjectNotices $projectNotices, private NotificationService $notices) {}
 
     private function authorize(WebAccount $account, int $city, ?string $capability = null): void
     {
@@ -155,6 +160,10 @@ final class LifecycleService
             if ($state->c_Name_en === self::WITHDREW) {
                 $this->clearDonor($project);
             }
+            if (in_array($state->c_Name_en, self::CLEARING, true)) {
+                $this->projectNotices->clearProject($project);
+            }
+            $this->projectNotices->stateChanged($project, $state, $this->notices->senderFor($account, (int) $project->source_id));
             $this->audit->record($account->id, 'lifecycle.transitioned', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
         });
     }

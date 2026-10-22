@@ -40,6 +40,7 @@
         @endif
     </section>
 
+    @if($visitNoticesMissing)<div class="form-message" role="note">{{ __('finance.visit_notices_missing') }}</div>@endif
     @foreach($loans as $loan)
     @php
         $row = $loan['row']; $values = $loan['values']; $summary = $loan['summary']; $scope = 'loan-'.$row->id; $mine = $form === $scope;

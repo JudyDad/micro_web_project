@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountAdminController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
@@ -62,6 +63,18 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/profession-meetings', [ProfessionMeetingController::class, 'save'])->block(10, 10)->name('meetings.save');
             Route::post('/profession-meetings/{meeting}/delete', [ProfessionMeetingController::class, 'delete'])->where('meeting', '[1-9][0-9]{0,18}')->block(10, 10)->name('meetings.delete');
             Route::post('/profession-meetings/{meeting}/restore', [ProfessionMeetingController::class, 'restore'])->where('meeting', '[1-9][0-9]{0,18}')->block(10, 10)->name('meetings.restore');
+            Route::get('/admin/accounts', [AccountAdminController::class, 'index'])->name('admin.accounts.index');
+            Route::get('/admin/accounts/new', [AccountAdminController::class, 'create'])->name('admin.accounts.new');
+            Route::post('/admin/accounts', [AccountAdminController::class, 'store'])->block(10, 10)->name('admin.accounts.store');
+            Route::get('/admin/staff', [AccountAdminController::class, 'staff'])->name('admin.staff');
+            Route::prefix('/admin/accounts/{account}')->where(['account' => '[1-9][0-9]{0,18}', 'link' => '[1-9][0-9]{0,18}'])->group(function () {
+                Route::get('/', [AccountAdminController::class, 'show'])->name('admin.accounts.show');
+                Route::post('/capabilities', [AccountAdminController::class, 'capabilities'])->block(10, 10)->name('admin.accounts.capabilities');
+                Route::post('/role', [AccountAdminController::class, 'role'])->block(10, 10)->name('admin.accounts.role');
+                Route::post('/links', [AccountAdminController::class, 'link'])->block(10, 10)->name('admin.accounts.link');
+                Route::post('/links/{link}', [AccountAdminController::class, 'linkState'])->block(10, 10)->name('admin.accounts.link-state');
+                Route::post('/disable', [AccountAdminController::class, 'disable'])->block(10, 10)->name('admin.accounts.disable');
+            });
             Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
             Route::post('/notifications/seen', [NotificationController::class, 'seen'])->block(10, 10)->name('notifications.seen');
             Route::get('/notifications/send', [NotificationController::class, 'create'])->name('notifications.create');

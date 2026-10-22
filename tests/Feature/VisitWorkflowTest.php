@@ -231,7 +231,8 @@ final class VisitWorkflowTest extends TestCase
         self::assertSame('na', $all['Some other text']->visit_status);
 
         self::assertSame(['Visit Opening-V'], $schedule->schedule($this->account, ['kind' => 'V'])['rows']->pluck('c_Body')->all());
-        self::assertSame(['Visit Closing-O'], $schedule->schedule($this->account, ['seen' => '1'])['rows']->pluck('c_Body')->all());
+        // Saving the opening visit marked its notice seen.
+        self::assertSame(['Visit Opening-O', 'Visit Closing-O'], $schedule->schedule($this->account, ['seen' => '1'])['rows']->pluck('c_Body')->all());
         self::assertSame(['Visit M1-O'], $schedule->schedule($this->account, ['number' => 'M1'])['rows']->pluck('c_Body')->all());
         self::assertSame(['Visit Closing-O'], $schedule->schedule($this->account, ['months' => [12]])['rows']->pluck('c_Body')->all());
         self::assertSame(['Visit M1-O'], $schedule->schedule($this->account, ['year' => 2027, 'months' => [1]])['rows']->pluck('c_Body')->all());
@@ -270,5 +271,26 @@ final class VisitWorkflowTest extends TestCase
         $this->visits->restore($this->account, $this->project, $legacy);
         self::assertCount(1, $this->visits->hub($this->account, $this->project)['visits']);
         self::assertSame(1, DB::table('account_audit_events')->where('event_type', 'visits.restored')->count());
+    }
+
+    public function test_saving_visits_marks_the_matching_notices_seen(): void
+    {
+        $notice = fn (string $body, int $pay = -21) => ApplicationFixture::row('user_notification', 1, ['c_Pay_ID' => $pay, 'c_Body' => $body, 'c_Date' => '2026-11-05', 'c_P_Name' => 'p', 'c_Seen' => 0, 'c_MicroProject_ID' => 1000], ['MicroProject_ID' => $this->project]);
+        $seen = fn (int $id) => (int) DB::table('op_user_notification')->where('id', $id)->value('c_Seen');
+        $opening = $notice('Visit Opening-O');
+        $vehicle = $notice('Visit Opening-V');
+        $first = $notice('Visit M1-O');
+        $payment = $notice('120', 55);
+
+        $this->visits->save($this->account, $this->project, 'O-op', $this->opening(), $this->version());
+        self::assertSame([1, 0, 0, 0], [$seen($opening), $seen($vehicle), $seen($first), $seen($payment)], 'only the opening notice of that kind is done');
+
+        DB::table('op_user_notification')->where('id', $opening)->update(['c_Seen' => 0]);
+        $this->visits->save($this->account, $this->project, 'O-op', $this->opening(['q1_text' => 'Changed']), $this->version());
+        self::assertSame(0, $seen($opening), 'editing an existing visit does not touch notices');
+
+        $closing = ['date' => '2026-12-01', 'q1_value' => '0', 'q2_value' => '3', 'q3_value' => '2', 'q4_text' => 'Indirect', 'q5_value' => '3', 'q6_text' => 'Hope', 'office1_value' => '1', 'office4_value' => '2', 'indicators' => 'Fine'];
+        $this->visits->save($this->account, $this->project, 'O-cl', $closing, $this->version());
+        self::assertSame([1, 1, 1, 1], [$seen($opening), $seen($vehicle), $seen($first), $seen($payment)], 'a closing visit clears every notice of the project');
     }
 }

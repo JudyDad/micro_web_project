@@ -99,6 +99,7 @@ final class ApplicationFixture
         foreach (PreservationManifest::tableIds(PreservationManifest::load()) as $name => $id) {
             DB::table('source_tables')->insert(['id' => $id, 'name' => $name]);
         }
+        StaffFixture::schema();
     }
 
     public static function account(): WebAccount

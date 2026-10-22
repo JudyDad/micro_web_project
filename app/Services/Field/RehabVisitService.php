@@ -10,6 +10,7 @@ use App\Services\AccountAuditTrail;
 use App\Services\Finance\Fields;
 use App\Services\Lifecycle\LifecycleService;
 use App\Services\Operational\OperationalTables;
+use App\Services\Staff\ProjectNotices;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -48,7 +49,7 @@ final class RehabVisitService
         self::YES_NO => [0 => 'yes', 1 => 'no'],
     ];
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle, private VisitService $visits) {}
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle, private VisitService $visits, private ProjectNotices $projectNotices) {}
 
     private function authorize(WebAccount $account, int $city, bool $write = false, ?string $extra = null): void
     {
@@ -172,6 +173,7 @@ final class RehabVisitService
             }
             $this->completeClosingTask($project);
             $this->lifecycle->enterNamed($project, LifecycleService::FINISHED);
+            $this->projectNotices->clearProject($project);
             $this->audit->record($account->id, 'visits.saved', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
 
             return $visitId;

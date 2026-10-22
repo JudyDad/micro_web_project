@@ -16,17 +16,24 @@ final class StaffFixture
 {
     public const CAPABILITIES = ['tasks.view', 'tasks.manage', 'notifications.view', 'notifications.send'];
 
-    private const PREFIX = [1 => 'a', 2 => 'd'];
+    /** The desktop PBKDF2 hash of `SyntheticFoundationFixture::PASSWORD`, so a linked identity can really log in. */
+    public const LEGACY_PASSWORD_HASH = 'AAECAwQFBgcICQoLDA0OD6rirHkgJUrCARvhwiO9AlEz7NUBCDqkiw29w+5zjOOk';
+
+    private const PREFIX = [1 => 'a', 2 => 'd', 3 => 'h', 4 => 'l', 5 => 'w'];
 
     /** The preservation `user` tables of the two test sources, principals and reviewed links (SQLite shape). */
     public static function schema(): void
     {
+        if (Schema::hasTable('web_principals')) {
+            return;
+        }
         foreach (self::PREFIX as $prefix) {
             Schema::create('legacy_'.$prefix.'_user', function (Blueprint $table) {
                 foreach (['record_id', 'origin_source_id', 'origin_table_id', 'UserID', 'UserRoleID', 'IsVisitor', 'IsME', 'IsCommunication', 'IsCashier'] as $column) {
                     $table->integer($column)->nullable();
                 }
                 $table->text('UserName')->nullable();
+                $table->text('Password')->nullable();
             });
         }
         Schema::create('web_principals', function (Blueprint $table) {
@@ -53,7 +60,9 @@ final class StaffFixture
     {
         foreach ($cities as $city) {
             foreach ($capabilities as $capability) {
-                DB::table('account_city_capabilities')->insert(['account_id' => $account->id, 'city_id' => $city, 'capability' => $capability, 'decision_locator' => 'synthetic:p53', 'granted_at' => now('UTC')]);
+                if (! DB::table('account_city_capabilities')->where('account_id', $account->id)->where('city_id', $city)->where('capability', $capability)->exists()) {
+                    DB::table('account_city_capabilities')->insert(['account_id' => $account->id, 'city_id' => $city, 'capability' => $capability, 'decision_locator' => 'synthetic:p53', 'granted_at' => now('UTC')]);
+                }
             }
         }
     }
@@ -68,7 +77,7 @@ final class StaffFixture
         $record = DB::table('source_records')->insertGetId(['source_id' => $source, 'table_id' => $tableId, 'snapshot_id' => 10]);
         DB::table('legacy_'.self::PREFIX[$source].'_user')->insert(array_replace([
             'record_id' => $record, 'origin_source_id' => $source, 'origin_table_id' => $tableId, 'UserID' => $userId, 'UserName' => $name,
-            'UserRoleID' => 2, 'IsVisitor' => 0, 'IsME' => 0, 'IsCommunication' => 0, 'IsCashier' => 0,
+            'UserRoleID' => 2, 'IsVisitor' => 0, 'IsME' => 0, 'IsCommunication' => 0, 'IsCashier' => 0, 'Password' => self::LEGACY_PASSWORD_HASH,
         ], $flags));
 
         return $record;

@@ -189,4 +189,14 @@ final class RehabVisitTest extends TestCase
         $this->get($base)->assertForbidden();
         self::assertSame(1, DB::table('op_visit')->count());
     }
+
+    public function test_the_rehabilitation_closing_visit_marks_every_notice_of_the_project_seen(): void
+    {
+        $this->makeRehab();
+        $notice = ApplicationFixture::row('user_notification', 1, ['c_Pay_ID' => -21, 'c_Body' => 'Visit Closing-R', 'c_Date' => '2026-11-05', 'c_P_Name' => 'p', 'c_Seen' => 0, 'c_MicroProject_ID' => 1000], ['MicroProject_ID' => $this->project]);
+        $other = ApplicationFixture::row('user_notification', 1, ['c_Pay_ID' => 55, 'c_Body' => '120', 'c_Date' => '2026-11-05', 'c_P_Name' => 'p', 'c_Seen' => 0, 'c_MicroProject_ID' => 1000]);
+        $this->rehab->save($this->account, $this->project, $this->input(), $this->version());
+        self::assertSame(1, (int) DB::table('op_user_notification')->where('id', $notice)->value('c_Seen'));
+        self::assertSame(0, (int) DB::table('op_user_notification')->where('id', $other)->value('c_Seen'), 'other projects are untouched');
+    }
 }

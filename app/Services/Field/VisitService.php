@@ -10,6 +10,7 @@ use App\Services\AccountAuditTrail;
 use App\Services\Finance\Fields;
 use App\Services\Lifecycle\LifecycleService;
 use App\Services\Operational\OperationalTables;
+use App\Services\Staff\ProjectNotices;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -27,7 +28,7 @@ final class VisitService
 
     public const QUESTION_SLOTS = 7;
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle) {}
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private LifecycleService $lifecycle, private ProjectNotices $projectNotices) {}
 
     private function authorize(WebAccount $account, int $city, bool $write = false, ?string $extra = null): void
     {
@@ -200,6 +201,9 @@ final class VisitService
                 $visitId = $this->tables->insert('visit', $city, $source, $payload + ['c_Kind' => $kind, 'c_Type' => '', 'c_Created_By' => $actor] + $this->tables->link('visit', 'MicroProject_ID', $projectId));
                 $this->tables->insert('office_monitoring', $city, $source, $officePayload + $this->tables->link('office_monitoring', 'Visit_ID', $visitId));
                 $this->completeTask($project, $definition['task'], 1);
+                if ($definition['phase'] === 'opening') {
+                    $this->projectNotices->visitDone($project, 'Visit Opening-'.substr($kind, 0, 1)); // the opening notice is done
+                }
             } else {
                 $visitId = (int) $visit->id;
                 if ($payload !== []) {
@@ -219,6 +223,7 @@ final class VisitService
             }
             if ($definition['finishes']) {
                 $this->lifecycle->enterNamed($project, LifecycleService::FINISHED);
+                $this->projectNotices->clearProject($project); // a closing visit clears every notice of the project
             }
             $this->audit->record($account->id, 'visits.saved', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
 

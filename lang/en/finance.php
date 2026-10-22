@@ -36,6 +36,7 @@ return [
         'name' => 'Item', 'brand' => 'Brand', 'category' => 'Category', 'quantity' => 'Quantity', 'price' => 'Price', 'invoice_date' => 'Invoice date', 'invoice_number' => 'Invoice number',
         'trader' => 'Trader', 'none' => 'No purchases recorded.',
     ],
+    'visit_notices_missing' => 'This project has no visit notices. They are created with its first loan, and only when the city has monitoring-and-evaluation staff.',
     'errors' => [
         'ineligible_state' => 'Finance applies to projects that are Accepted, Financed, Finished, Canceled or Closed.',
         'ineligible_donor' => 'Choose the project donor before recording the loan.',
