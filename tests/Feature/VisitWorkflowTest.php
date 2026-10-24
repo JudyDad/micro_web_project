@@ -14,6 +14,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ApplicationFixture;
 use Tests\Support\FieldFixture;
 use Tests\Support\FinanceFixture;
+use Tests\Support\StaffFixture;
 use Tests\TestCase;
 
 final class VisitWorkflowTest extends TestCase
@@ -213,32 +214,32 @@ final class VisitWorkflowTest extends TestCase
     public function test_the_schedule_lists_visit_notices_only_for_permitted_cities_and_reports_done_visits(): void
     {
         $other = FinanceFixture::acceptedProject($this->account, ApplicationFixture::intake(2), 2);
-        $notice = fn (int $city, int $project, string $body, string $date, array $fields = []) => ApplicationFixture::row('user_notification', $city, $fields + ['c_Pay_ID' => -21, 'c_Body' => $body, 'c_Date' => $date, 'c_P_Name' => 'Synthetic beneficiary', 'c_Seen' => 0, 'c_MicroProject_ID' => 1000], ['MicroProject_ID' => $project]);
+        $notice = fn (int $city, int $project, string $body, string $date, array $fields = []) => StaffFixture::notice($city, null, 'visit', $body, $date, $fields, $project);
         $notice(1, $this->project, 'Visit Opening-O', '2026-11-05');
-        $notice(1, $this->project, 'Visit Closing-O', '2026-12-05', ['c_Seen' => 1]);
+        $notice(1, $this->project, 'Visit Closing-O', '2026-12-05', ['seen' => 1]);
         $notice(1, $this->project, 'Visit M1-O', '2027-01-05');
         $notice(1, $this->project, 'Some other text', '2027-02-05');
-        $notice(1, $this->project, 'Payment due', '2026-11-06', ['c_Pay_ID' => 55]);
+        StaffFixture::notice(1, $this->account->id, 'payment', 'Payment due', '2026-11-06', ['pay_key' => 55], $this->project);
         $notice(2, $other, 'Visit Opening-V', '2026-11-07');
         $this->visits->save($this->account, $this->project, 'O-op', $this->opening(), $this->version());
 
         $schedule = app(VisitScheduleService::class);
-        $all = $schedule->schedule($this->account, [])['rows']->getCollection()->keyBy('c_Body');
+        $all = $schedule->schedule($this->account, [])['rows']->getCollection()->keyBy('body');
         self::assertEqualsCanonicalizing(['Visit Opening-O', 'Visit Closing-O', 'Visit M1-O', 'Some other text', 'Visit Opening-V'], $all->keys()->all());
         self::assertSame('done', $all['Visit Opening-O']->visit_status);
         self::assertNull($all['Visit Closing-O']->visit_status);
         self::assertNull($all['Visit M1-O']->visit_status);
         self::assertSame('na', $all['Some other text']->visit_status);
 
-        self::assertSame(['Visit Opening-V'], $schedule->schedule($this->account, ['kind' => 'V'])['rows']->pluck('c_Body')->all());
+        self::assertSame(['Visit Opening-V'], $schedule->schedule($this->account, ['kind' => 'V'])['rows']->pluck('body')->all());
         // Saving the opening visit marked its notice seen.
-        self::assertSame(['Visit Opening-O', 'Visit Closing-O'], $schedule->schedule($this->account, ['seen' => '1'])['rows']->pluck('c_Body')->all());
-        self::assertSame(['Visit M1-O'], $schedule->schedule($this->account, ['number' => 'M1'])['rows']->pluck('c_Body')->all());
-        self::assertSame(['Visit Closing-O'], $schedule->schedule($this->account, ['months' => [12]])['rows']->pluck('c_Body')->all());
-        self::assertSame(['Visit M1-O'], $schedule->schedule($this->account, ['year' => 2027, 'months' => [1]])['rows']->pluck('c_Body')->all());
+        self::assertSame(['Visit Opening-O', 'Visit Closing-O'], $schedule->schedule($this->account, ['seen' => '1'])['rows']->pluck('body')->all());
+        self::assertSame(['Visit M1-O'], $schedule->schedule($this->account, ['number' => 'M1'])['rows']->pluck('body')->all());
+        self::assertSame(['Visit Closing-O'], $schedule->schedule($this->account, ['months' => [12]])['rows']->pluck('body')->all());
+        self::assertSame(['Visit M1-O'], $schedule->schedule($this->account, ['year' => 2027, 'months' => [1]])['rows']->pluck('body')->all());
 
         DB::table('account_city_capabilities')->where('city_id', 2)->where('capability', 'visits.view')->update(['revoked_at' => now()]);
-        self::assertNotContains('Visit Opening-V', $schedule->schedule($this->account, ['cities' => [1, 2]])['rows']->pluck('c_Body')->all());
+        self::assertNotContains('Visit Opening-V', $schedule->schedule($this->account, ['cities' => [1, 2]])['rows']->pluck('body')->all());
         $this->actingAs($this->account);
         $this->get('/en/visit-schedule')->assertOk()->assertSee('Visit schedule')->assertSee('Visit Opening-O')->assertDontSee('Visit Opening-V');
         $this->get('/ar/visit-schedule?year=2026&months[]=11')->assertOk()->assertSee('dir="rtl"', false);
@@ -275,17 +276,17 @@ final class VisitWorkflowTest extends TestCase
 
     public function test_saving_visits_marks_the_matching_notices_seen(): void
     {
-        $notice = fn (string $body, int $pay = -21) => ApplicationFixture::row('user_notification', 1, ['c_Pay_ID' => $pay, 'c_Body' => $body, 'c_Date' => '2026-11-05', 'c_P_Name' => 'p', 'c_Seen' => 0, 'c_MicroProject_ID' => 1000], ['MicroProject_ID' => $this->project]);
-        $seen = fn (int $id) => (int) DB::table('op_user_notification')->where('id', $id)->value('c_Seen');
+        $notice = fn (string $body, string $kind = 'visit') => StaffFixture::notice(1, $kind === 'visit' ? null : $this->account->id, $kind, $body, '2026-11-05', [], $this->project);
+        $seen = fn (int $id) => (int) DB::table('web_notices')->where('id', $id)->value('seen');
         $opening = $notice('Visit Opening-O');
         $vehicle = $notice('Visit Opening-V');
         $first = $notice('Visit M1-O');
-        $payment = $notice('120', 55);
+        $payment = $notice('120', 'payment');
 
         $this->visits->save($this->account, $this->project, 'O-op', $this->opening(), $this->version());
         self::assertSame([1, 0, 0, 0], [$seen($opening), $seen($vehicle), $seen($first), $seen($payment)], 'only the opening notice of that kind is done');
 
-        DB::table('op_user_notification')->where('id', $opening)->update(['c_Seen' => 0]);
+        DB::table('web_notices')->where('id', $opening)->update(['seen' => 0]);
         $this->visits->save($this->account, $this->project, 'O-op', $this->opening(['q1_text' => 'Changed']), $this->version());
         self::assertSame(0, $seen($opening), 'editing an existing visit does not touch notices');
 

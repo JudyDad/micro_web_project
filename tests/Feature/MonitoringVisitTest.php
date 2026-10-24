@@ -13,6 +13,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\ApplicationFixture;
 use Tests\Support\FieldFixture;
 use Tests\Support\FinanceFixture;
+use Tests\Support\StaffFixture;
 use Tests\TestCase;
 
 final class MonitoringVisitTest extends TestCase
@@ -216,8 +217,8 @@ final class MonitoringVisitTest extends TestCase
     public function test_saving_a_visit_marks_its_notice_seen_and_visit_four_clears_the_final_visit_notice(): void
     {
         $name = 'Synthetic Applicant ابن/ة';
-        $notice = fn (string $body, ?string $person = null) => ApplicationFixture::row('user_notification', 1, ['c_Pay_ID' => -21, 'c_Body' => $body, 'c_Date' => '2026-11-05', 'c_P_Name' => $person ?? $name, 'c_Seen' => 0, 'c_MicroProject_ID' => 1000], ['MicroProject_ID' => $this->project]);
-        $seen = fn (int $id) => (int) DB::table('op_user_notification')->where('id', $id)->value('c_Seen');
+        $notice = fn (string $body, ?string $person = null) => StaffFixture::notice(1, null, 'visit', $body, '2026-11-05', ['title' => $person ?? $name], $this->project);
+        $seen = fn (int $id) => (int) DB::table('web_notices')->where('id', $id)->value('seen');
         $m1 = $notice('Visit M1-O');
         $m1Other = $notice('Visit M1-O', 'someone else');
         $m1Vehicle = $notice('Visit M1-V');

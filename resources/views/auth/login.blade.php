@@ -8,5 +8,6 @@
             <x-ui.input id="password" name="password" type="password" :label="__('projects.password')" autocomplete="current-password" required />
             <x-ui.button type="submit" class="login-submit">{{ __('projects.sign_in') }}</x-ui.button>
         </form>
+        <p><a href="{{ route('auth.forgot', ['locale' => app()->getLocale()]) }}">{{ __('account.forgot_link') }}</a></p>
     </section>
 </x-layouts.guest>

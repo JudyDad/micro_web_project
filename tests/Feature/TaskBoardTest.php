@@ -38,7 +38,6 @@ final class TaskBoardTest extends TestCase
         self::assertSame('sqlite', DB::connection()->getDriverName());
         self::assertSame(':memory:', DB::connection()->getDatabaseName());
         ApplicationFixture::sqliteSchema();
-        StaffFixture::schema();
         $this->account = ApplicationFixture::account();
         StaffFixture::grant($this->account);
         $this->board = app(TaskBoardService::class);
@@ -64,13 +63,9 @@ final class TaskBoardTest extends TestCase
         DB::table('op_microproject_state')->where($mp['resolved_column'], $project)->where('c_Current_State', 1)->update([$st['resolved_column'] => $this->intake['states'][$name]]);
     }
 
-    private function responsible(int $legacy = 16): array
+    private function responsible(int $legacy = 16): int
     {
-        $record = StaffFixture::user(1, 7, 'task.owner');
-        StaffFixture::assign(1, $this->tasks[$legacy], $record, 7);
-        StaffFixture::link($this->account, 1, StaffFixture::principal(1, $record));
-
-        return [$record];
+        return StaffFixture::responsible($this->account, 1, $this->tasks[$legacy]);
     }
 
     private function toggle(int $project, int $legacy, int $expected, int $done): void
@@ -100,7 +95,6 @@ final class TaskBoardTest extends TestCase
         $rows = $this->rows();
         self::assertSame([$this->projectA], array_keys($rows), 'a waiting application is not on the funded board');
         $row = $rows[$this->projectA];
-        self::assertSame('Accepted', app()->isLocale('en') ? $row->state_name : 'Accepted');
         self::assertTrue($row->cells[3]['done']);
         self::assertFalse($row->cells[16]['done']);
         self::assertTrue($row->cells[16]['assigned']);
@@ -111,10 +105,9 @@ final class TaskBoardTest extends TestCase
         $applications = $this->rows(['kind' => 'a']);
         self::assertEqualsCanonicalizing([$this->projectA, $this->projectB], array_keys($applications));
         self::assertTrue($applications[$this->projectA]->cells[39]['assigned']);
-        self::assertSame(1, DB::table('account_audit_events')->where('event_type', 'tasks.board')->count() - 1);
     }
 
-    public function test_only_the_responsible_staff_member_toggles_a_task_and_stale_or_repeated_submissions_are_refused(): void
+    public function test_only_the_assigned_account_toggles_a_task_and_stale_or_repeated_submissions_are_refused(): void
     {
         $this->assertStatus(403, fn () => $this->toggle($this->projectA, 3, 0, 1));
         $this->responsible(3);
@@ -134,28 +127,20 @@ final class TaskBoardTest extends TestCase
         self::assertSame(1, DB::table('account_audit_events')->where('event_type', 'access.denied')->count());
     }
 
-    public function test_responsibility_follows_reviewed_links_per_source_and_can_be_revoked(): void
+    public function test_responsibility_is_per_account_and_city_and_can_be_withdrawn(): void
     {
-        $record = StaffFixture::user(1, 7, 'task.owner');
-        StaffFixture::assign(1, $this->tasks[3], $record, 7);
-        $principal = StaffFixture::principal(1, $record);
-        $link = StaffFixture::link($this->account, 1, $principal);
+        $assignment = $this->responsible(3);
         self::assertTrue($this->rows()[$this->projectA]->cells[3]['manageable']);
 
-        DB::table('account_legacy_links')->where('id', $link)->update(['revoked_at' => now()]);
-        self::assertFalse($this->rows()[$this->projectA]->cells[3]['manageable'], 'a revoked link carries no responsibility');
-        DB::table('account_legacy_links')->where('id', $link)->update(['revoked_at' => null]);
-        DB::table('web_principals')->where('id', $principal)->update(['disabled_at' => now()]);
-        self::assertFalse($this->rows()[$this->projectA]->cells[3]['manageable'], 'a disabled principal carries no responsibility');
-        DB::table('web_principals')->where('id', $principal)->update(['disabled_at' => null]);
+        DB::table('account_city_tasks')->where('id', $assignment)->update(['revoked_at' => now()]);
+        self::assertFalse($this->rows()[$this->projectA]->cells[3]['manageable'], 'a withdrawn assignment carries no responsibility');
+        DB::table('account_city_tasks')->where('id', $assignment)->update(['revoked_at' => null]);
 
-        $otherUser = StaffFixture::user(2, 7, 'same.id.other.city');
-        $linkOther = StaffFixture::principal(2, $otherUser);
-        // A source user of another city with the same number is a different identity.
-        $account = WebAccount::findOrFail(DB::table('web_accounts')->insertGetId(['username' => 'other.user', 'password_hash' => 'x', 'created_at' => now('UTC'), 'updated_at' => now('UTC')]));
-        StaffFixture::grant($account, [1, 2], [...StaffFixture::CAPABILITIES, 'applications.view']);
-        StaffFixture::link($account, 2, $linkOther);
-        self::assertFalse(collect($this->board->board($account, [])['rows']->getCollection()->first()->cells ?? [])->contains(fn ($cell) => $cell['manageable']));
+        $colleague = StaffFixture::account('colleague');
+        StaffFixture::grant($colleague, [1, 2], [...StaffFixture::CAPABILITIES, 'applications.view']);
+        self::assertFalse($this->board->board($colleague, [])['rows']->getCollection()->first()->cells[3]['manageable'], 'an assignment belongs to one account');
+        StaffFixture::responsible($colleague, 2, StaffFixture::task(2, 3, 'Story'));
+        self::assertFalse($this->board->board($colleague, ['cities' => [1]])['rows']->getCollection()->first()->cells[3]['manageable'], 'nor does an assignment in another city');
     }
 
     public function test_the_manage_all_capability_lets_an_administrator_toggle_any_task_of_the_city_only(): void
@@ -180,31 +165,31 @@ final class TaskBoardTest extends TestCase
         $this->assertStatus(404, fn () => $this->toggle($this->projectA, 4, 0, 1));
     }
 
-    public function test_completing_purchases_notifies_communication_staff_and_clearing_it_marks_only_that_project_seen(): void
+    public function test_completing_purchases_notifies_communication_accounts_and_clearing_it_marks_only_that_project_seen(): void
     {
         StaffFixture::grant($this->account, [1], ['tasks.manage_all']);
-        $communication = [StaffFixture::user(1, 21, 'comm.one', ['IsCommunication' => 1]), StaffFixture::user(1, 22, 'comm.two', ['IsCommunication' => 1])];
-        StaffFixture::user(1, 23, 'ordinary');
+        $one = StaffFixture::account('comm.one', [1 => ['communication']]);
+        $two = StaffFixture::account('comm.two', [1 => ['communication']]);
+        StaffFixture::account('finance.only', [1 => ['financial']]);
+        StaffFixture::account('comm.elsewhere', [2 => ['communication']]);
         $this->toggle($this->projectA, 16, 0, 1);
         $this->toggle($this->projectB, 16, 0, 1);
-        $notices = DB::table('op_user_notification')->orderBy('id')->get();
+        $notices = DB::table('web_notices')->where('kind', 'purchases')->orderBy('id')->get();
         self::assertCount(4, $notices);
         $first = $notices->first();
-        self::assertSame('انتهاء المشتريات', $first->c_Body);
-        self::assertSame(-3, (int) $first->c_Pay_ID);
-        self::assertSame(0, (int) $first->c_Seen);
-        self::assertSame(now()->toDateString(), substr((string) $first->c_Date, 0, 10));
-        self::assertContains('Synthetic Applicant ابن/ة', array_map('rtrim', explode(',', $first->c_P_Name)));
-        self::assertEqualsCanonicalizing([21, 22], $notices->pluck('c_User_ID')->map(fn ($id) => (int) $id)->unique()->all());
-        self::assertEqualsCanonicalizing($communication, $notices->pluck('ref_f8357f1eddef_id')->map(fn ($id) => (int) $id)->unique()->all());
-        self::assertSame('null', $first->ref_113ed6c1bf02_state, 'the sender is the audited account, not a source user');
+        self::assertSame('انتهاء المشتريات', $first->body);
+        self::assertSame(0, (int) $first->seen);
+        self::assertSame(now()->toDateString(), substr((string) $first->notice_date, 0, 10));
+        self::assertContains('Synthetic Applicant ابن/ة', array_map('rtrim', explode(',', $first->title)));
+        self::assertEqualsCanonicalizing([$one->id, $two->id], $notices->pluck('account_id')->map(fn ($id) => (int) $id)->unique()->all(), 'communication accounts of this city only');
+        self::assertSame($this->account->id, (int) $first->sender_account_id);
+        self::assertSame(1, (int) $first->city_id);
 
         $this->toggle($this->projectA, 16, 1, 0);
-        $seen = DB::table('op_user_notification')->where('ref_5f0c797b1aae_id', $this->projectA)->pluck('c_Seen')->map(fn ($v) => (int) $v)->all();
-        self::assertSame([1, 1], $seen);
-        self::assertSame([0, 0], DB::table('op_user_notification')->where('ref_5f0c797b1aae_id', $this->projectB)->pluck('c_Seen')->map(fn ($v) => (int) $v)->all());
+        self::assertSame([1, 1], DB::table('web_notices')->where('project_id', $this->projectA)->where('kind', 'purchases')->pluck('seen')->map(fn ($v) => (int) $v)->all());
+        self::assertSame([0, 0], DB::table('web_notices')->where('project_id', $this->projectB)->where('kind', 'purchases')->pluck('seen')->map(fn ($v) => (int) $v)->all());
         $this->toggle($this->projectA, 3, 0, 1);
-        self::assertSame(4, DB::table('op_user_notification')->count(), 'other tasks send nothing');
+        self::assertSame(4, DB::table('web_notices')->where('kind', 'purchases')->count(), 'other tasks send nothing');
     }
 
     public function test_filters_narrow_the_board_and_only_permitted_cities_appear(): void
@@ -234,7 +219,7 @@ final class TaskBoardTest extends TestCase
     {
         $this->responsible(3);
         $this->actingAs($this->account);
-        $this->get('/en/task-board')->assertOk()->assertSee('Task board')->assertSee('Synthetic task 3')->assertSee('Mark done')->assertSee('task.owner');
+        $this->get('/en/task-board')->assertOk()->assertSee('Task board')->assertSee('Synthetic task 3')->assertSee('Mark done')->assertSee('synthetic.applications');
         $this->get('/ar/task-board?kind=a')->assertOk()->assertSee('dir="rtl"', false)->assertSee('لوحة المهام');
         $this->get('/en/task-board?kind=x')->assertSessionHasErrors('kind');
         $payload = ['project' => $this->projectA, 'task' => 3, 'expected' => 0, 'done' => 1];

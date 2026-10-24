@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountAdminController;
+use App\Http\Controllers\AccountPasswordController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
@@ -36,6 +37,10 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
     Route::middleware('guest')->group(function () {
         Route::get('/login', [AuthController::class, 'show'])->name('auth.login');
         Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('auth.attempt');
+        Route::get('/forgot-password', [AccountPasswordController::class, 'forgot'])->name('auth.forgot');
+        Route::post('/forgot-password', [AccountPasswordController::class, 'request'])->middleware('throttle:login')->name('auth.forgot.request');
+        Route::get('/reset-password/{token}', [AccountPasswordController::class, 'reset'])->where('token', '[A-Za-z0-9]{40}')->name('auth.reset');
+        Route::post('/reset-password/{token}', [AccountPasswordController::class, 'resetStore'])->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:login')->name('auth.reset.store');
     });
     Route::middleware('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
@@ -56,6 +61,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
             Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
             Route::post('/visit-schedule/{notice}/seen', [VisitController::class, 'scheduleSeen'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.seen');
+            Route::post('/visit-schedule/{notice}/reschedule', [VisitController::class, 'scheduleReschedule'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.reschedule');
             Route::post('/visit-schedule/{notice}/note', [VisitController::class, 'scheduleNote'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.note');
             Route::get('/profession-meetings', [ProfessionMeetingController::class, 'index'])->name('meetings.index');
             Route::get('/profession-meetings/new', [ProfessionMeetingController::class, 'create'])->name('meetings.create');
@@ -66,11 +72,16 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::get('/admin/accounts', [AccountAdminController::class, 'index'])->name('admin.accounts.index');
             Route::get('/admin/accounts/new', [AccountAdminController::class, 'create'])->name('admin.accounts.new');
             Route::post('/admin/accounts', [AccountAdminController::class, 'store'])->block(10, 10)->name('admin.accounts.store');
+            Route::post('/admin/accounts/plain', [AccountAdminController::class, 'storePlain'])->block(10, 10)->name('admin.accounts.store-plain');
             Route::get('/admin/staff', [AccountAdminController::class, 'staff'])->name('admin.staff');
+            Route::get('/admin/tasks', [AccountAdminController::class, 'tasks'])->name('admin.tasks');
+            Route::post('/admin/tasks', [AccountAdminController::class, 'saveTasks'])->block(10, 10)->name('admin.tasks.save');
             Route::prefix('/admin/accounts/{account}')->where(['account' => '[1-9][0-9]{0,18}', 'link' => '[1-9][0-9]{0,18}'])->group(function () {
                 Route::get('/', [AccountAdminController::class, 'show'])->name('admin.accounts.show');
                 Route::post('/capabilities', [AccountAdminController::class, 'capabilities'])->block(10, 10)->name('admin.accounts.capabilities');
                 Route::post('/role', [AccountAdminController::class, 'role'])->block(10, 10)->name('admin.accounts.role');
+                Route::post('/role/revoke', [AccountAdminController::class, 'roleRevoke'])->block(10, 10)->name('admin.accounts.role-revoke');
+                Route::post('/email', [AccountAdminController::class, 'email'])->block(10, 10)->name('admin.accounts.email');
                 Route::post('/links', [AccountAdminController::class, 'link'])->block(10, 10)->name('admin.accounts.link');
                 Route::post('/links/{link}', [AccountAdminController::class, 'linkState'])->block(10, 10)->name('admin.accounts.link-state');
                 Route::post('/disable', [AccountAdminController::class, 'disable'])->block(10, 10)->name('admin.accounts.disable');
@@ -79,6 +90,8 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/notifications/seen', [NotificationController::class, 'seen'])->block(10, 10)->name('notifications.seen');
             Route::get('/notifications/send', [NotificationController::class, 'create'])->name('notifications.create');
             Route::post('/notifications/send', [NotificationController::class, 'send'])->block(10, 10)->name('notifications.send');
+            Route::get('/account/password', [AccountPasswordController::class, 'edit'])->name('account.password');
+            Route::post('/account/password', [AccountPasswordController::class, 'update'])->block(10, 10)->name('account.password.update');
             Route::get('/task-board', [TaskBoardController::class, 'index'])->name('tasks.board');
             Route::post('/task-board/toggle', [TaskBoardController::class, 'toggle'])->block(10, 10)->name('tasks.toggle');
             Route::prefix('/applications/{application}')->where(['application' => '[1-9][0-9]{0,18}'])->group(function () {

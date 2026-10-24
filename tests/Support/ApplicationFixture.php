@@ -55,7 +55,11 @@ final class ApplicationFixture
     public static function sqliteSchema(): void
     {
         $support = [
-            'web_accounts' => ['username', 'password_hash', 'credential_principal_id', 'disabled_at', 'created_at', 'updated_at'],
+            'web_accounts' => ['username', 'email', 'password_hash', 'password_changed_at', 'credential_principal_id', 'disabled_at', 'created_at', 'updated_at'],
+            'account_city_roles' => ['account_id', 'city_id', 'role', 'decision_locator', 'assigned_at', 'revoked_at'],
+            'account_city_tasks' => ['account_id', 'city_id', 'source_id', 'task_id', 'assigned_at', 'revoked_at'],
+            'account_password_resets' => ['account_id', 'token_sha256', 'requested_at', 'expires_at', 'used_at'],
+            'web_notices' => ['city_id', 'source_id', 'account_id', 'sender_account_id', 'project_id', 'project_number', 'kind', 'pay_key', 'notice_date', 'original_date', 'title', 'body', 'note', 'change_reason', 'seen', 'created_at'],
             'cities' => ['name_en', 'name_ar'], 'sources' => ['city_id', 'name'], 'source_tables' => ['name'],
             'account_city_capabilities' => ['account_id', 'city_id', 'capability', 'revoked_at', 'decision_locator', 'granted_at'],
             'account_audit_events' => ['actor_account_id', 'subject_account_id', 'city_id', 'event_type', 'outcome', 'subject_type', 'subject_id', 'decision_locator', 'occurred_at'],
@@ -68,7 +72,7 @@ final class ApplicationFixture
             Schema::create($name, function (Blueprint $table) use ($columns) {
                 $table->id();
                 foreach ($columns as $column) {
-                    str_ends_with($column, '_id') || $column === 'next_number' ? $table->integer($column)->nullable() : $table->text($column)->nullable();
+                    str_ends_with($column, '_id') || in_array($column, ['next_number', 'seen', 'pay_key', 'project_number'], true) ? $table->integer($column)->nullable() : $table->text($column)->nullable();
                 }
             });
         }
@@ -104,7 +108,7 @@ final class ApplicationFixture
 
     public static function account(): WebAccount
     {
-        $id = DB::table('web_accounts')->insertGetId(['username' => 'synthetic.applications', 'password_hash' => Hash::make('Synthetic-P42-Only!'), 'created_at' => now('UTC'), 'updated_at' => now('UTC')]);
+        $id = DB::table('web_accounts')->insertGetId(['username' => 'synthetic.applications', 'password_hash' => Hash::make('Synthetic-P42-Only!'), 'password_changed_at' => now('UTC'), 'created_at' => now('UTC'), 'updated_at' => now('UTC')]);
         foreach ([1, 2] as $city) {
             foreach (['people.view', 'people.manage', 'applications.view', 'applications.manage', 'lifecycle.manage', 'lifecycle.accept', 'assessments.view', 'assessments.manage'] as $capability) {
                 DB::table('account_city_capabilities')->insert(['account_id' => $id, 'city_id' => $city, 'capability' => $capability, 'decision_locator' => 'synthetic:p42', 'granted_at' => now('UTC')]);

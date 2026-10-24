@@ -8,7 +8,7 @@ use InvalidArgumentException;
 final class AccountAuditTrail
 {
     private const SUBJECTS = [
-        'applications.list' => [], 'applications.view' => ['application_entity'],
+        'applications.list' => [], 'reports.statistics' => [], 'applications.view' => ['application_entity'],
         'applications.created' => ['application_entity'], 'applications.updated' => ['application_entity'],
         'lifecycle.transitioned' => ['application_entity'], 'lifecycle.reason_updated' => ['application_entity'],
         'assessments.view' => ['application_entity'], 'assessments.saved' => ['application_entity'],
@@ -23,8 +23,9 @@ final class AccountAuditTrail
         'special_cases.restored' => ['application_entity'],
         'profession_meetings.list' => [], 'profession_meetings.view' => ['meeting_entity'], 'profession_meetings.saved' => ['meeting_entity'], 'profession_meetings.deleted' => ['meeting_entity'], 'profession_meetings.restored' => ['meeting_entity'], 'visits.restored' => ['application_entity'], 'me_visits.restored' => ['application_entity'],
         'tasks.board' => [], 'tasks.toggled' => ['application_entity'],
-        'notifications.list' => [], 'notifications.seen' => [], 'notifications.sent' => [], 'notifications.noted' => [],
-        'accounts.list' => [], 'accounts.view' => ['account'], 'accounts.disabled' => ['account'], 'accounts.enabled' => ['account'],
+        'notifications.list' => [], 'notifications.seen' => [], 'notifications.sent' => [], 'notifications.noted' => [], 'notifications.rescheduled' => [],
+        'accounts.list' => [], 'accounts.role_assigned' => ['account'], 'accounts.role_revoked' => ['account'], 'accounts.email_set' => ['account'], 'accounts.tasks_saved' => [],
+        'password.changed' => ['account'], 'password.reset_requested' => ['account'], 'password.reset_denied' => [], 'password.reset' => ['account'], 'accounts.view' => ['account'], 'accounts.disabled' => ['account'], 'accounts.enabled' => ['account'],
         'application_draft.saved' => [], 'application_draft.viewed' => [], 'application_draft.discarded' => [],
         'people.list' => [], 'people.view' => ['person_entity'],
         'people.created' => ['person_entity', 'family_entity'], 'people.updated' => ['person_entity'],

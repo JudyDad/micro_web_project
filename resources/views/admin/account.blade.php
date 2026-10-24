@@ -11,6 +11,11 @@
         <p class="page-description">{{ $account->disabled_at ? __('admin.disabled') : __('admin.active') }} · {{ __('admin.created') }} {{ substr((string) $account->created_at, 0, 10) }}</p></div></div>
     @include('people.messages')
     @if($self)<div class="form-message" role="note">{{ __('admin.self') }}</div>@endif
+    @if(session('one_time_password'))<div class="form-message" role="alert"><strong>{{ __('admin.one_time_password') }}:</strong> <bdi dir="ltr"><code>{{ session('one_time_password') }}</code></bdi><br><small>{{ __('admin.one_time_note') }}</small></div>@endif
+    <section class="card" id="email-section"><h2>{{ __('admin.email') }}</h2>
+        @if($canEmail)<form method="POST" action="{{ route('admin.accounts.email', $base) }}">@csrf<div class="field"><label for="email">{{ __('admin.email') }}</label><input class="input" id="email" name="email" type="email" maxlength="190" value="{{ old('email', $account->email) }}"><small>{{ __('admin.email_hint') }}</small></div><x-ui.button type="submit">{{ __('admin.save') }}</x-ui.button></form>
+        @else<p>{{ $account->email ?: __('admin.none_held') }}</p><small>{{ __('admin.email_locked') }}</small>@endif
+    </section>
 
     @foreach($panels as $panel)
     @php($city = $panel['city'])
@@ -23,6 +28,9 @@
             @if($panel['fixed'])<p><small>{{ __('admin.fixed') }}: {{ collect($panel['fixed'])->map($cap)->implode('، ') }}</small></p>@endif
             @unless($self)<x-ui.button type="submit">{{ __('admin.save') }}</x-ui.button>@endunless
         </form>
+        <h3>{{ __('admin.roles_title') }}</h3>
+        <p>@forelse($panel['held'] as $held)<span class="city-filter-option">{{ __('admin.bundles.'.$held) }}@unless($self)
+            <form method="POST" action="{{ route('admin.accounts.role-revoke', $base) }}" style="display:inline">@csrf<input type="hidden" name="city" value="{{ $city->id }}"><input type="hidden" name="role" value="{{ $held }}"><button class="button button-secondary" type="submit" aria-label="{{ __('admin.revoke_role') }}: {{ __('admin.bundles.'.$held) }}">×</button></form>@endunless</span> @empty<small>{{ __('admin.no_roles') }}</small>@endforelse</p>
         @if($panel['roles'] && ! $self)
         <form method="POST" action="{{ route('admin.accounts.role', $base) }}">@csrf
             <input type="hidden" name="city" value="{{ $city->id }}">

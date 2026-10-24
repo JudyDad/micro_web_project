@@ -1,5 +1,13 @@
 # Delivery task board
 
+## Phase 6 — reporting, exports and printing
+
+| Task | State | Evidence / remaining acceptance |
+|---|---|---|
+| P6.1 Search/statistics | implemented locally for applications; acceptance review open | Started 24 Oct 2026 on the user's instruction "start p6.1"; deliberately independent of Phase 5. [Delivery](p6-1-search-statistics.md). Stage, lifecycle-status and request-date filters on the application list, plus a permitted cross-city statistics page with coverage indicators. 239 unit/feature tests (7,667 assertions) pass. Not run on MySQL; money/visit statistics, projects-page filters, browser check and staff acceptance remain open |
+| P6.2 Exports and print | todo | |
+| P6.3 Report oracle | todo | |
+
 ## Phase 9 — full import from the latest databases (final phase)
 
 Added 22 October 2026 on the user's instruction; see [plan](../planning/team-execution-plan.md). Until it runs, testing uses a 100-application sample from more than one city.
@@ -21,7 +29,7 @@ Started 21 October 2026 on the user's instruction “start executing phase 5 tas
 |---|---|---|
 | P5.1 Finance | implemented locally; acceptance review open | [Delivery](p5-1-finance.md), [source contract](p5-1-workflow-contract.md). Donor rules, loans, instalment schedules and a per-currency schedule list, executive files and the opt-in purchasing editor; six new per-city grants; version-checked transactional writes. 141 unit/feature tests (6,250 assertions), the actual-schema MySQL workflow (37 assertions) and a two-process race (97 assertions) pass 21 Oct. Deletions, notifications (P5.2/P5.3), exports (P6.2), role-to-grant mapping, five-city data parity and staff acceptance remain open; five owner decisions are listed in the delivery record |
 | P5.2 Field operations | all five slices implemented locally (special cases, visits and schedule, M&E, rehabilitation closing visit, profession meetings); acceptance review open | [Delivery](p5-2-field-operations.md). Scoped view/manage/delete grants, `data-entry` role bundle, administrator-only `imported.delete` with the approved `operational_deletions` table ([record](../planning/phase-5/imported-record-deletion-proposal.md)), audit, stale/retry protection. MySQL actual-schema tests for P5.1 and P5.2 pass (see the delivery record). Open: visitors and notifications (P5.3), browser check, five-city parity, staff acceptance |
-| P5.3 Staff operations | all four slices implemented locally (task board, notification inbox and messages, generated notices, account administration); acceptance review open | [Delivery](p5-3-staff-operations.md). Task board with responsibility through reviewed legacy links; inbox, messages and visit-schedule actions; visit schedule, instalment, clearance, executive-file, state-change and visit notices; per-city account administration, reviewed account creation from duplicate identities and a staff directory. 222 unit/feature tests (7,310 assertions) and the actual-schema MySQL test (40 assertions) pass 22 Oct. Open: owner decisions in the delivery record (task responsibility and staff flags in the web, recipients for web-only accounts, finance/legal inbox rule, the web write path for accounts), browser check, five-city parity, staff acceptance |
+| P5.3 Staff operations | implemented locally, revised 24 Oct for the single-database decisions; acceptance review open | [Delivery](p5-3-staff-operations.md), [staff model](../planning/phase-5/staff-model-proposal.md). Task board with per-city task responsibilities set by administrators; roles (Administrator, Data entry, Financial, Legal, Media, Guest and the Monitoring, Communication and Cashier duties) with notices routed by role; inbox, messages, visit schedule with rescheduling; generated visit, instalment, clearance, executive-file, state and visit notices; per-city account administration, accounts from duplicate desktop identities or with a one-time password, staff directory; change and forgot-password flows; `staff:adopt-legacy` for cutover. Migration 000009 approved 24 Oct. Actual-schema MySQL test passes (50 assertions). Open: production database privileges for the account tables, browser check, five-city parity, staff acceptance |
 | P5.4 Integration review | todo | End-to-end project → finance → visits → state history |
 
 ## Phase 4 — project intake and lifecycle

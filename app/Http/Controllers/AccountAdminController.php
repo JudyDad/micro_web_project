@@ -29,7 +29,7 @@ final class AccountAdminController
     {
         $data = $request->validate([
             'identities' => ['required', 'array', 'min:1', 'max:20'], 'identities.*' => ['string', 'max:40'], 'credential' => ['required', 'string', 'max:40'],
-            'username' => ['nullable', 'string', 'max:200'], 'confirm' => ['nullable', 'in:1'], 'roles' => ['nullable', 'array', 'max:20'], 'roles.*' => ['nullable', 'string', 'max:40'],
+            'username' => ['nullable', 'string', 'max:200'], 'email' => ['nullable', 'string', 'max:190'], 'confirm' => ['nullable', 'in:1'], 'roles' => ['nullable', 'array', 'max:20'], 'roles.*' => ['nullable', 'string', 'max:40'],
         ]);
         $id = $accounts->create($request->user(), $data);
 
@@ -80,6 +80,47 @@ final class AccountAdminController
         $accounts->setDisabled($request->user(), $this->id($account), $data['disabled'] === '1');
 
         return $this->back($locale, $account)->with('status', $data['disabled'] === '1' ? __('admin.disabled_msg') : __('admin.enabled_msg'));
+    }
+
+    public function storePlain(Request $request, string $locale, AccountAdminService $accounts): RedirectResponse
+    {
+        $data = $request->validate(['username' => ['required', 'string', 'max:200'], 'email' => ['required', 'string', 'max:190'], 'roles' => ['nullable', 'array', 'max:20'], 'roles.*' => ['nullable', 'string', 'max:40']]);
+        $created = $accounts->createPlain($request->user(), $data);
+
+        return redirect()->route('admin.accounts.show', ['locale' => $locale, 'account' => $created['id']])->with('status', __('admin.created_msg'))->with('one_time_password', $created['password']);
+    }
+
+    public function roleRevoke(Request $request, string $locale, string $account, AccountAdminService $accounts): RedirectResponse
+    {
+        $data = $request->validate(['city' => ['required', 'integer', 'min:1'], 'role' => ['required', 'string', 'max:40']]);
+        $count = $accounts->revokeRole($request->user(), $this->id($account), (int) $data['city'], $data['role']);
+
+        return $this->back($locale, $account)->with('status', __('admin.role_revoked', ['count' => $count]));
+    }
+
+    public function email(Request $request, string $locale, string $account, AccountAdminService $accounts): RedirectResponse
+    {
+        $data = $request->validate(['email' => ['nullable', 'string', 'max:190']]);
+        $accounts->setEmail($request->user(), $this->id($account), $data['email'] ?? null);
+
+        return $this->back($locale, $account)->with('status', __('admin.saved'));
+    }
+
+    public function tasks(Request $request, string $locale, AccountAdminService $accounts): View
+    {
+        $cities = $accounts->cities($request->user());
+        abort_if($cities->isEmpty(), 403);
+        $city = (int) $request->integer('city', (int) $cities->first()->id);
+
+        return view('admin.tasks', $accounts->taskMatrix($request->user(), $city));
+    }
+
+    public function saveTasks(Request $request, string $locale, AccountAdminService $accounts): RedirectResponse
+    {
+        $data = $request->validate(['city' => ['required', 'integer', 'min:1'], 'assign' => ['nullable', 'array', 'max:200'], 'assign.*' => ['nullable', 'array', 'max:500'], 'assign.*.*' => ['integer', 'min:1']]);
+        $result = $accounts->saveTasks($request->user(), (int) $data['city'], $data['assign'] ?? []);
+
+        return redirect()->route('admin.tasks', ['locale' => $locale, 'city' => $data['city']])->with('status', __('admin.tasks_saved', $result));
     }
 
     public function staff(Request $request, string $locale, AccountAdminService $accounts): View

@@ -8,12 +8,15 @@ use App\Models\WebAccount;
 use App\Services\AccessRoles;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
+use App\Services\AccountPasswords;
 use App\Services\AccountProvisioner;
+use App\Services\Operational\OperationalTables;
 use App\Services\SourceIdentity;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -32,7 +35,8 @@ final class AccountAdminService
     public const OUT_OF_SERVICE = 6;
 
     public function __construct(
-        private AccountAccess $access, private AccountAuditTrail $audit, private AccountProvisioner $provisioner, private SourceIdentity $identity,
+        private AccountAccess $access, private AccountAuditTrail $audit, private AccountProvisioner $provisioner, private SourceIdentity $identity, private AccessRoles $roles,
+        private OperationalTables $tables,
     ) {}
 
     /** Cities the administrator manages. */
@@ -86,7 +90,7 @@ final class AccountAdminService
 
     private function account(WebAccount $admin, int $id, array $managed): object
     {
-        $account = $this->visible($managed)->where('a.id', $id)->first(['a.id', 'a.username', 'a.password_hash', 'a.credential_principal_id', 'a.disabled_at', 'a.created_at']);
+        $account = $this->visible($managed)->where('a.id', $id)->first(['a.id', 'a.username', 'a.email', 'a.password_hash', 'a.credential_principal_id', 'a.disabled_at', 'a.created_at']);
         abort_if($account === null, 404);
 
         return $account;
@@ -141,7 +145,7 @@ final class AccountAdminService
         return ['rows' => $rows, 'cities' => $cities, 'grantedCities' => $granted];
     }
 
-    /** The account with what the administrator may change: per-city capabilities, reviewed identities and candidates to link. */
+    /** The account with what the administrator may change: per-city roles and capabilities, e-mail, reviewed identities and candidates to link. */
     public function show(WebAccount $admin, int $accountId): array
     {
         $managed = $this->managed($admin);
@@ -150,6 +154,7 @@ final class AccountAdminService
         $cities = $this->cities($admin)->keyBy('id');
         $self = $accountId === $admin->id;
         $active = DB::table('account_city_capabilities')->where('account_id', $accountId)->whereIn('city_id', $managed)->whereNull('revoked_at')->get()->groupBy('city_id');
+        $heldRoles = DB::table('account_city_roles')->where('account_id', $accountId)->whereIn('city_id', $managed)->whereNull('revoked_at')->orderBy('role')->get()->groupBy('city_id');
         $panels = [];
         foreach ($managed as $city) {
             $grantable = $this->grantable($admin, $city);
@@ -157,6 +162,7 @@ final class AccountAdminService
             $panels[] = [
                 'city' => $cities->get($city), 'grantable' => $grantable, 'active' => $have, 'fixed' => array_values(array_diff($have, $grantable)),
                 'roles' => collect(AccessRoles::ROLES)->filter(fn ($caps) => array_diff($caps, $grantable) === [])->keys()->all(),
+                'held' => ($heldRoles->get($city) ?? collect())->pluck('role')->all(),
             ];
         }
         $links = DB::table('account_legacy_links as l')->join('web_principals as wp', 'wp.id', '=', 'l.principal_id')->join('sources as s', 's.id', '=', 'l.source_id')
@@ -181,7 +187,7 @@ final class AccountAdminService
         unset($account->password_hash);
 
         return [
-            'account' => $account, 'self' => $self, 'panels' => $panels, 'links' => $links, 'otherLinks' => $otherLinks,
+            'account' => $account, 'self' => $self, 'panels' => $panels, 'links' => $links, 'otherLinks' => $otherLinks, 'canEmail' => ! $self && $this->outranks($admin, $accountId, $managed),
             'candidates' => $self ? collect() : $this->unlinked($managed, $cities)->map(function ($user) use ($names) {
                 $user->same = in_array($user->username, $names, true);
 
@@ -227,7 +233,7 @@ final class AccountAdminService
         });
     }
 
-    /** Grants every capability of a named role in one city (each stays individually audited and revocable). */
+    /** Assigns a named role in one city: its capabilities are granted (each still audited) and the assignment routes the city's notices to the account. */
     public function assignRole(WebAccount $admin, int $accountId, int $city, string $role): int
     {
         $managed = $this->managed($admin);
@@ -238,15 +244,33 @@ final class AccountAdminService
         if (array_diff($capabilities, $this->grantable($admin, $city)) !== []) {
             throw ValidationException::withMessages(['role' => __('admin.errors.role_beyond')]);
         }
-        $account = WebAccount::findOrFail($accountId);
         $decision = $this->decision($admin);
-        DB::transaction(function () use ($admin, $account, $city, $capabilities, $decision) {
-            foreach ($capabilities as $capability) {
-                $this->provisioner->grant($account, $city, $capability, $decision, $admin->id);
-            }
-        });
+        $this->roles->assign(WebAccount::findOrFail($accountId), $city, $role, $decision, $admin->id);
+        $this->audit->record($admin->id, 'accounts.role_assigned', 'succeeded', $city, $accountId, 'account', $accountId, $decision);
 
         return count($capabilities);
+    }
+
+    /** Ends a role in one city and revokes the capabilities no other role of the account there still includes. Returns how many were revoked. */
+    public function revokeRole(WebAccount $admin, int $accountId, int $city, string $role): int
+    {
+        $managed = $this->managed($admin);
+        in_array($city, $managed, true) || $this->deny($admin);
+        $this->account($admin, $accountId, $managed);
+        $accountId !== $admin->id || $this->deny($admin);
+        $capabilities = AccessRoles::ROLES[$role] ?? throw ValidationException::withMessages(['role' => __('admin.errors.role')]);
+        if (array_diff($capabilities, $this->grantable($admin, $city)) !== []) {
+            throw ValidationException::withMessages(['role' => __('admin.errors.role_beyond')]);
+        }
+        $decision = $this->decision($admin);
+        try {
+            $revoked = $this->roles->revoke(WebAccount::findOrFail($accountId), $city, $role, $decision, $admin->id);
+        } catch (InvalidArgumentException) {
+            throw ValidationException::withMessages(['role' => __('admin.errors.role_not_held')]);
+        }
+        $this->audit->record($admin->id, 'accounts.role_revoked', 'succeeded', $city, $accountId, 'account', $accountId, $decision);
+
+        return $revoked;
     }
 
     /** Links one more reviewed historical identity of a managed city to an existing account. */
@@ -364,9 +388,10 @@ final class AccountAdminService
 
     /**
      * Creates an account from reviewed historical identities of the managed cities. `identities`: "source:record" strings the administrator
-     * confirmed to be one person; `credential`: the identity whose password the account inherits; `roles`: optional role per city.
+     * confirmed to be one person; `credential`: the identity whose password the account inherits; `roles`: optional role per city; `email`:
+     * optional (otherwise the credential identity's e-mail when it is valid and unused).
      *
-     * @param  array{identities?: list<string>, credential?: ?string, username?: ?string, confirm?: mixed, roles?: array<int|string, ?string>}  $input
+     * @param  array{identities?: list<string>, credential?: ?string, username?: ?string, email?: ?string, confirm?: mixed, roles?: array<int|string, ?string>}  $input
      */
     public function create(WebAccount $admin, array $input): int
     {
@@ -383,18 +408,28 @@ final class AccountAdminService
         isset($pairs[$credential]) || $fail('credential', 'credential');
         $cityOf = [];
         $names = [];
+        $emails = [];
         foreach ($pairs as $key => [$source, $record]) {
             $cityOf[$key] = $this->cityOfSource($admin, $source, $managed);
-            $user = $this->identity->publishedUsers($source)->where('r.id', $record)->first(['r.id', 'u.UserName', 'u.UserRoleID']);
+            $user = $this->identity->publishedUsers($source)->where('r.id', $record)->first(['r.id', 'u.UserName', 'u.UserRoleID', 'u.Email']);
             ($user !== null && (int) $user->UserRoleID !== self::OUT_OF_SERVICE) || $fail('identities', 'identity');
             DB::table('account_legacy_links as l')->join('web_principals as wp', 'wp.id', '=', 'l.principal_id')->where('wp.source_id', $source)->where('wp.source_record_id', $record)->doesntExist() || $fail('identities', 'identity');
             $names[$key] = (string) $user->UserName;
+            $emails[$key] = (string) ($user->Email ?? '');
         }
         $username = (string) ($input['username'] ?? '');
         $username = $username === '' ? $names[$credential] : $username;
         (mb_strlen($username) <= 200 && strlen($username) <= 800 && $username === trim($username) && preg_match('//u', $username) === 1) || $fail('username', 'username');
         DB::table('web_accounts')->where('username', $username)->doesntExist() || $fail('username', 'username_taken');
-        $capabilities = [];
+        $typed = trim((string) ($input['email'] ?? ''));
+        if ($typed !== '') {
+            $email = $this->normalizeEmail($typed) ?? $fail('email', 'email');
+            DB::table('web_accounts')->where('email', $email)->doesntExist() || $fail('email', 'email_taken');
+        } else {
+            $email = $this->normalizeEmail($emails[$credential]);
+            $email !== null && DB::table('web_accounts')->where('email', $email)->exists() && $email = null;
+        }
+        $assign = [];
         foreach (array_unique($cityOf) as $city) {
             $role = (string) (((array) ($input['roles'] ?? []))[$city] ?? '');
             if ($role === '') {
@@ -402,17 +437,23 @@ final class AccountAdminService
             }
             $caps = AccessRoles::ROLES[$role] ?? $fail('roles', 'role');
             array_diff($caps, $this->grantable($admin, $city)) === [] || $fail('roles', 'role_beyond');
-            $capabilities[$city] = $caps;
+            $assign[$city] = $role;
         }
         $decision = $this->decision($admin);
 
         try {
-            return (int) DB::transaction(function () use ($admin, $pairs, $credential, $username, $capabilities, $decision) {
+            return (int) DB::transaction(function () use ($admin, $pairs, $credential, $username, $email, $assign, $decision) {
                 $principals = [];
                 foreach ($pairs as $key => [$source, $record]) {
                     $principals[$key] = (int) $this->provisioner->ensurePrincipal($source, $record)->id;
                 }
-                $account = $this->provisioner->provision($username, $principals[$credential], array_values($principals), $capabilities, $decision, $admin->id);
+                $account = $this->provisioner->provision($username, $principals[$credential], array_values($principals), [], $decision, $admin->id);
+                if ($email !== null) {
+                    DB::table('web_accounts')->where('id', $account->id)->update(['email' => $email]);
+                }
+                foreach ($assign as $city => $role) {
+                    $this->roles->assign($account, $city, $role, $decision, $admin->id);
+                }
 
                 return $account->id;
             });
@@ -422,11 +463,83 @@ final class AccountAdminService
     }
 
     /**
-     * The historical staff of the managed cities with their roles and flags, and the web account linked to each: who receives which notices.
+     * Creates an account that has no desktop identity: the administrator gives a user name, an e-mail (used by "forgot password") and a role
+     * for at least one managed city, and hands over the generated one-time password, shown once; the user must replace it at first login.
      *
-     * @param  array{city?: ?int}  $filters
-     * @return array{cities: Collection, groups: list<array{city: object, users: Collection}>}
+     * @param  array{username?: ?string, email?: ?string, roles?: array<int|string, ?string>}  $input
+     * @return array{id: int, password: string}
      */
+    public function createPlain(WebAccount $admin, array $input): array
+    {
+        $managed = $this->managed($admin);
+        $fail = fn (string $field, string $key): never => throw ValidationException::withMessages([$field => __('admin.errors.'.$key)]);
+        $username = (string) ($input['username'] ?? '');
+        ($username !== '' && mb_strlen($username) <= 200 && strlen($username) <= 800 && $username === trim($username) && preg_match('//u', $username) === 1) || $fail('username', 'username');
+        DB::table('web_accounts')->where('username', $username)->doesntExist() || $fail('username', 'username_taken');
+        $email = $this->normalizeEmail((string) ($input['email'] ?? '')) ?? $fail('email', 'email');
+        DB::table('web_accounts')->where('email', $email)->doesntExist() || $fail('email', 'email_taken');
+        $assign = [];
+        foreach ((array) ($input['roles'] ?? []) as $city => $role) {
+            $role = (string) $role;
+            if ($role === '') {
+                continue;
+            }
+            in_array((int) $city, $managed, true) || $this->deny($admin);
+            $caps = AccessRoles::ROLES[$role] ?? $fail('roles', 'role');
+            array_diff($caps, $this->grantable($admin, (int) $city)) === [] || $fail('roles', 'role_beyond');
+            $assign[(int) $city] = $role;
+        }
+        $assign !== [] || $fail('roles', 'role_needed');
+        $password = AccountPasswords::generate();
+        $decision = $this->decision($admin);
+
+        return DB::transaction(function () use ($admin, $username, $email, $password, $assign, $decision) {
+            $account = $this->provisioner->createPlain($username, $email, Hash::make($password), $decision, $admin->id);
+            foreach ($assign as $city => $role) {
+                $this->roles->assign($account, $city, $role, $decision, $admin->id);
+            }
+
+            return ['id' => (int) $account->id, 'password' => $password];
+        });
+    }
+
+    /** Sets or clears the e-mail "forgot password" checks. Only for accounts whose every capability the administrator also holds. */
+    public function setEmail(WebAccount $admin, int $accountId, ?string $email): void
+    {
+        $managed = $this->managed($admin);
+        $this->account($admin, $accountId, $managed);
+        if ($accountId === $admin->id || ! $this->outranks($admin, $accountId, $managed)) {
+            $this->deny($admin);
+        }
+        $value = trim((string) $email) === '' ? null : ($this->normalizeEmail((string) $email) ?? throw ValidationException::withMessages(['email' => __('admin.errors.email')]));
+        if ($value !== null && DB::table('web_accounts')->where('email', $value)->where('id', '<>', $accountId)->exists()) {
+            throw ValidationException::withMessages(['email' => __('admin.errors.email_taken')]);
+        }
+        DB::table('web_accounts')->where('id', $accountId)->update(['email' => $value, 'updated_at' => now('UTC')->format('Y-m-d H:i:s.u')]);
+        $this->audit->record($admin->id, 'accounts.email_set', 'succeeded', subjectAccount: $accountId, subjectType: 'account', subjectId: $accountId);
+    }
+
+    /** A lower-cased valid e-mail address of at most 190 characters, or null. */
+    private function normalizeEmail(string $value): ?string
+    {
+        $value = mb_strtolower(trim($value));
+
+        return $value !== '' && mb_strlen($value) <= 190 && filter_var($value, FILTER_VALIDATE_EMAIL) !== false ? $value : null;
+    }
+
+    /** Whether every capability the account holds, in every city, is one the administrator holds there too (so it cannot take the account over). */
+    private function outranks(WebAccount $admin, int $accountId, array $managed): bool
+    {
+        $held = DB::table('account_city_capabilities')->where('account_id', $accountId)->whereNull('revoked_at')->get()->groupBy('city_id');
+        foreach ($held as $city => $rows) {
+            if (! in_array((int) $city, $managed, true) || array_diff($rows->pluck('capability')->all(), $this->grantable($admin, (int) $city)) !== []) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function staff(WebAccount $admin, array $filters): array
     {
         $managed = $this->managed($admin);
@@ -434,23 +547,113 @@ final class AccountAdminService
         $selected = ! empty($filters['city']) && in_array((int) $filters['city'], $managed, true) ? [(int) $filters['city']] : $managed;
         $groups = [];
         foreach ($selected as $city) {
-            $users = collect();
-            foreach (DB::table('sources')->where('city_id', $city)->pluck('id') as $source) {
-                $rows = $this->identity->publishedUsers((int) $source)->orderBy('u.UserName')->orderBy('u.UserID')->get(['r.id', 'u.UserID', 'u.UserName', 'u.UserRoleID', 'u.IsVisitor', 'u.IsME', 'u.IsCommunication', 'u.IsCashier']);
-                $links = $rows->isEmpty() ? collect() : DB::table('web_principals as wp')->join('account_legacy_links as l', 'l.principal_id', '=', 'wp.id')->join('web_accounts as a', 'a.id', '=', 'l.account_id')
-                    ->where('wp.source_id', (int) $source)->whereIn('wp.source_record_id', $rows->pluck('id')->all())->get(['wp.source_record_id', 'a.id as account_id', 'a.username', 'l.revoked_at'])->keyBy('source_record_id');
-                foreach ($rows as $row) {
-                    $link = $links->get((int) $row->id);
-                    $users->push((object) [
-                        'UserID' => (int) $row->UserID, 'username' => (string) $row->UserName, 'role' => (int) $row->UserRoleID, 'flags' => $this->flags($row),
-                        'account_id' => $link === null ? null : (int) $link->account_id, 'account' => $link === null ? null : (string) $link->username, 'revoked' => $link !== null && $link->revoked_at !== null,
-                    ]);
-                }
-            }
-            $groups[] = ['city' => $cities->firstWhere('id', $city), 'users' => $users];
+            $accounts = DB::table('web_accounts as a')->where(function (Builder $q) use ($city) {
+                $q->whereExists(fn (Builder $r) => $r->selectRaw('1')->from('account_city_roles as r')->whereColumn('r.account_id', 'a.id')->where('r.city_id', $city)->whereNull('r.revoked_at'))
+                    ->orWhereExists(fn (Builder $g) => $g->selectRaw('1')->from('account_city_capabilities as g')->whereColumn('g.account_id', 'a.id')->where('g.city_id', $city)->whereNull('g.revoked_at'));
+            })->orderBy('a.username')->get(['a.id', 'a.username', 'a.email', 'a.disabled_at']);
+            $roles = DB::table('account_city_roles')->where('city_id', $city)->whereNull('revoked_at')->whereIn('account_id', $accounts->pluck('id')->all())->orderBy('role')->get()->groupBy('account_id');
+            $tasks = DB::table('account_city_tasks')->where('city_id', $city)->whereNull('revoked_at')->whereIn('account_id', $accounts->pluck('id')->all())->selectRaw('account_id, COUNT(*) as n')->groupBy('account_id')->pluck('n', 'account_id');
+            $groups[] = ['city' => $cities->firstWhere('id', $city), 'users' => $accounts->map(fn ($row) => (object) [
+                'id' => (int) $row->id, 'username' => (string) $row->username, 'email' => $row->email, 'disabled' => $row->disabled_at !== null,
+                'roles' => ($roles->get($row->id) ?? collect())->pluck('role')->all(), 'tasks' => (int) ($tasks[$row->id] ?? 0),
+            ])];
         }
         $this->audit->record($admin->id, 'accounts.list', 'succeeded');
 
         return ['cities' => $cities, 'groups' => $groups];
+    }
+
+    /**
+     * The task responsibility matrix of one city: the board's tasks, the enabled accounts that may manage tasks there and who is
+     * responsible for each task now.
+     *
+     * @return array{city: object, cities: Collection, tasks: list<object>, accounts: Collection}
+     */
+    public function taskMatrix(WebAccount $admin, int $city): array
+    {
+        $managed = $this->managed($admin);
+        in_array($city, $managed, true) || $this->deny($admin);
+        $cities = $this->cities($admin);
+        $current = DB::table('account_city_tasks')->where('city_id', $city)->whereNull('revoked_at')->get()->groupBy('task_id');
+        $tasks = $this->boardTasks($city)->map(function ($task) use ($current) {
+            $task->accounts = ($current->get($task->id) ?? collect())->pluck('account_id')->map(fn ($id) => (int) $id)->all();
+
+            return $task;
+        })->values()->all();
+        $this->audit->record($admin->id, 'accounts.list', 'succeeded');
+
+        return ['city' => $cities->firstWhere('id', $city), 'cities' => $cities, 'tasks' => $tasks, 'accounts' => $this->taskAccounts($city)];
+    }
+
+    /**
+     * Sets who is responsible for each task of the city to exactly the submitted lists (task id → account ids). Returns how many
+     * assignments were added and withdrawn.
+     *
+     * @param  array<int|string, list<int|string>>  $assign
+     * @return array{added: int, withdrawn: int}
+     */
+    public function saveTasks(WebAccount $admin, int $city, array $assign): array
+    {
+        $managed = $this->managed($admin);
+        in_array($city, $managed, true) || $this->deny($admin);
+        $tasks = $this->boardTasks($city)->keyBy('id');
+        $accounts = $this->taskAccounts($city)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $source = (int) $this->tables->source($city);
+        $desired = [];
+        foreach ($tasks->keys() as $taskId) {
+            $desired[(int) $taskId] = array_values(array_unique(array_map('intval', (array) ($assign[$taskId] ?? []))));
+        }
+        foreach ($assign as $taskId => $list) {
+            $tasks->has((int) $taskId) || throw ValidationException::withMessages(['tasks' => __('admin.errors.task')]);
+            array_diff(array_map('intval', (array) $list), $accounts) === [] || throw ValidationException::withMessages(['tasks' => __('admin.errors.task_account')]);
+        }
+
+        return DB::transaction(function () use ($admin, $city, $source, $desired) {
+            $time = now('UTC')->format('Y-m-d H:i:s.u');
+            $added = 0;
+            $withdrawn = 0;
+            foreach ($desired as $taskId => $accountIds) {
+                $rows = DB::table('account_city_tasks')->where('city_id', $city)->where('task_id', $taskId)->lockForUpdate()->get()->keyBy('account_id');
+                foreach ($accountIds as $accountId) {
+                    $row = $rows->get($accountId);
+                    if ($row === null) {
+                        DB::table('account_city_tasks')->insert(['account_id' => $accountId, 'city_id' => $city, 'source_id' => $source, 'task_id' => $taskId, 'assigned_at' => $time, 'revoked_at' => null]);
+                        $added++;
+                    } elseif ($row->revoked_at !== null) {
+                        DB::table('account_city_tasks')->where('id', $row->id)->update(['assigned_at' => $time, 'revoked_at' => null]);
+                        $added++;
+                    }
+                }
+                foreach ($rows as $accountId => $row) {
+                    if ($row->revoked_at === null && ! in_array((int) $accountId, $accountIds, true)) {
+                        DB::table('account_city_tasks')->where('id', $row->id)->update(['revoked_at' => $time]);
+                        $withdrawn++;
+                    }
+                }
+            }
+            $this->audit->record($admin->id, 'accounts.tasks_saved', 'succeeded', $city);
+
+            return ['added' => $added, 'withdrawn' => $withdrawn];
+        });
+    }
+
+    /** The board's tasks in the city's catalog, by name. */
+    private function boardTasks(int $city): Collection
+    {
+        $source = (int) $this->tables->source($city);
+        $legacy = array_keys(TaskBoardColumns::FUNDED + TaskBoardColumns::APPLICATION);
+
+        return $this->tables->catalog('task', $city, $source)->filter(fn ($task) => in_array((int) ($task->c_T_ID ?? 0), $legacy, true))
+            ->sortBy(fn ($task) => ($task->c_T_Type ?? '').sprintf('%05d', (int) $task->c_T_ID))->map(fn ($task) => (object) [
+                'id' => (int) $task->id, 'legacy' => (int) $task->c_T_ID, 'name' => (string) ($task->c_T_Name ?? ''), 'type' => (string) ($task->c_T_Type ?? ''),
+            ])->values();
+    }
+
+    /** Enabled accounts that hold `tasks.manage` in the city: the only ones a task can be assigned to. */
+    private function taskAccounts(int $city): Collection
+    {
+        return DB::table('web_accounts as a')->join('account_city_capabilities as g', 'g.account_id', '=', 'a.id')->where('g.city_id', $city)->where('g.capability', 'tasks.manage')
+            ->whereNull('g.revoked_at')->whereNull('a.disabled_at')->orderBy('a.username')->get(['a.id', 'a.username'])
+            ->map(fn ($row) => (object) ['id' => (int) $row->id, 'username' => (string) $row->username])->values();
     }
 }

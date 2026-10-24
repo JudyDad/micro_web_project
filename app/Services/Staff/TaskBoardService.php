@@ -8,7 +8,6 @@ use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
 use App\Services\Operational\OperationalTables;
-use App\Services\SourceIdentity;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +22,7 @@ final class TaskBoardService
 {
     public const PER_PAGE = 50;
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private SourceIdentity $identity, private NotificationService $notices) {}
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private NoticeService $notices) {}
 
     /** Cities where the account may read the task board. */
     public function cities(WebAccount $account): Collection
@@ -152,12 +151,9 @@ final class TaskBoardService
             if ($legacyTask === TaskBoardColumns::PURCHASES) {
                 if ($done === 1) {
                     $name = $this->names([$projectId])[$projectId] ?? '';
-                    $sender = $this->notices->senderFor($account, $source);
-                    foreach ($this->notices->recipients($source, 'communication') as $recipient) {
-                        $this->notices->add($city, $source, $project, now()->toDateString(), 'انتهاء المشتريات', $name, NotificationService::PURCHASES_DONE, $recipient, $sender);
-                    }
+                    $this->notices->broadcast($city, $source, $project, 'communication', NoticeService::PURCHASES, now()->toDateString(), $name, 'انتهاء المشتريات', $account->id);
                 } else {
-                    $this->notices->setSeenForProject($project, NotificationService::PURCHASES_DONE, 1);
+                    $this->notices->setSeenForProject($project, NoticeService::PURCHASES, 1);
                 }
             }
             $this->audit->record($account->id, 'tasks.toggled', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
@@ -276,43 +272,30 @@ final class TaskBoardService
     }
 
     /**
-     * Ids of the given task rows the account is responsible for: assigned (`task_user`) to a source user that the account is linked to.
+     * Ids of the given task rows the account is responsible for: assigned to it by an administrator for this city (`account_city_tasks`).
      *
      * @param  list<int>  $taskIds
      * @return Collection<int, int>
      */
     private function assigned(WebAccount $account, int $city, int $source, array $taskIds): Collection
     {
-        $taskRef = $this->tables->relation('task_user', 'Task_ID');
-        $userRef = $this->tables->relation('task_user', 'User_ID');
-
-        return DB::table('op_task_user as tu')->where('tu.city_id', $city)->where('tu.source_id', $source)
-            ->whereIn('tu.'.$taskRef['resolved_column'], $taskIds === [] ? [0] : $taskIds)->where('tu.'.$taskRef['state_column'], 'resolved')->where('tu.'.$userRef['state_column'], 'resolved')
-            ->whereIn('tu.'.$userRef['resolved_column'], function (Builder $q) use ($account, $source) {
-                $q->select('wp.source_record_id')->from('account_legacy_links as l')->join('web_principals as wp', 'wp.id', '=', 'l.principal_id')
-                    ->where('l.account_id', $account->id)->whereNull('l.revoked_at')->whereNull('wp.disabled_at')->where('l.source_id', $source)->where('wp.source_id', $source);
-            })->pluck('tu.'.$taskRef['resolved_column'])->map(fn ($id) => (int) $id)->unique()->values();
+        return DB::table('account_city_tasks')->where('account_id', $account->id)->where('city_id', $city)->where('source_id', $source)->whereNull('revoked_at')
+            ->whereIn('task_id', $taskIds === [] ? [0] : $taskIds)->pluck('task_id')->map(fn ($id) => (int) $id)->unique()->values();
     }
 
-    /** City → legacy task → names of the historical source users responsible for it. */
+    /** City → legacy task → user names of the accounts responsible for it. */
     private function responsible(array $context, array $columns): array
     {
-        $taskRef = $this->tables->relation('task_user', 'Task_ID');
-        $userRef = $this->tables->relation('task_user', 'User_ID');
         $result = [];
         foreach ($context as $city => $ctx) {
             $legacyByRow = array_flip(array_intersect_key($ctx['tasks'], $columns));
             if ($legacyByRow === []) {
                 continue;
             }
-            $links = $this->tables->query('task_user')->where('p.city_id', $city)->where('p.source_id', $ctx['source'])
-                ->whereIn('p.'.$taskRef['resolved_column'], array_keys($legacyByRow))->where('p.'.$taskRef['state_column'], 'resolved')->where('p.'.$userRef['state_column'], 'resolved')->orderBy('p.id')->get();
-            $names = $links->isEmpty() ? collect() : $this->identity->publishedUsers($ctx['source'])->whereIn('r.id', $links->pluck($userRef['resolved_column'])->unique()->all())->pluck('u.UserName', 'r.id');
-            foreach ($links as $link) {
-                $name = $names->get((int) $link->{$userRef['resolved_column']});
-                if ($name !== null) {
-                    $result[$city][$legacyByRow[(int) $link->{$taskRef['resolved_column']}]][] = (string) $name;
-                }
+            $rows = DB::table('account_city_tasks as t')->join('web_accounts as a', 'a.id', '=', 't.account_id')->where('t.city_id', $city)->where('t.source_id', $ctx['source'])
+                ->whereNull('t.revoked_at')->whereNull('a.disabled_at')->whereIn('t.task_id', array_keys($legacyByRow))->orderBy('a.username')->get(['t.task_id', 'a.username']);
+            foreach ($rows as $row) {
+                $result[$city][$legacyByRow[(int) $row->task_id]][] = (string) $row->username;
             }
         }
 

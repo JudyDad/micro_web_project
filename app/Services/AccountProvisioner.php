@@ -197,4 +197,23 @@ final class AccountProvisioner
             $this->audit->record($actor, $disabled ? 'accounts.disabled' : 'accounts.enabled', 'succeeded', subjectAccount: $account->id, subjectType: 'account', subjectId: $account->id, decision: $decision);
         }, attempts: 3);
     }
+
+    /**
+     * Creates an account that has no desktop identity (after the old databases are retired): it carries its own password hash, which its user
+     * must replace at first login (`credential_principal_id` NULL and `password_changed_at` NULL mark it).
+     */
+    public function createPlain(string $username, ?string $email, string $passwordHash, string $decision, ?int $actor = null): WebAccount
+    {
+        if ($username === '' || strlen($username) > 800 || mb_strlen($username) > 200 || preg_match('//u', $username) !== 1 || ! AccountAuditTrail::validDecision($decision) || $passwordHash === '') {
+            throw new InvalidArgumentException('A valid user name, password hash and decision are required.');
+        }
+
+        return DB::transaction(function () use ($username, $email, $passwordHash, $decision, $actor) {
+            $time = now('UTC')->format('Y-m-d H:i:s.u');
+            $id = DB::table('web_accounts')->insertGetId(['username' => $username, 'email' => $email, 'password_hash' => $passwordHash, 'password_changed_at' => null, 'credential_principal_id' => null, 'disabled_at' => null, 'created_at' => $time, 'updated_at' => $time]);
+            $this->audit->record($actor, 'account.provisioned', 'succeeded', subjectAccount: $id, subjectType: 'account', subjectId: $id, decision: $decision);
+
+            return WebAccount::findOrFail($id);
+        }, attempts: 3);
+    }
 }

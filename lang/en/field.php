@@ -122,5 +122,7 @@ return [
         'number' => 'Visit number', 'any_number' => 'All', 'seen' => 'Seen', 'any' => 'All', 'seen_yes' => 'Seen', 'seen_no' => 'Not seen', 'filter' => 'Filter',
         'project' => 'Project', 'beneficiary' => 'Beneficiary', 'visit' => 'Visit', 'date' => 'Date', 'status' => 'Visit status', 'note' => 'Note', 'city' => 'City',
         'done' => 'Done', 'na' => 'N/A', 'not_found' => 'Not yet', 'empty' => 'No matching visit notices.', 'actions' => 'Actions', 'hide' => 'Hide', 'restore' => 'Restore',
+        'reschedule' => 'Reschedule', 'new_date' => 'New date', 'reason' => 'Reason', 'shift_later' => 'Also move this project\'s later unseen visits by the same number of days', 'original' => 'Original date', 'rescheduled' => ':count visit(s) rescheduled.',
+        'errors' => ['kind' => 'Only visits can be rescheduled.', 'seen' => 'A visit that is already seen cannot be moved.', 'date' => 'Enter a valid new date.', 'same' => 'Choose a different date.', 'reason' => 'Write the reason for the change.'],
     ],
 ];

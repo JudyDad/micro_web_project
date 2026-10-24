@@ -34,6 +34,7 @@ final class StaffFixture
                 }
                 $table->text('UserName')->nullable();
                 $table->text('Password')->nullable();
+                $table->text('Email')->nullable();
             });
         }
         Schema::create('web_principals', function (Blueprint $table) {
@@ -77,7 +78,7 @@ final class StaffFixture
         $record = DB::table('source_records')->insertGetId(['source_id' => $source, 'table_id' => $tableId, 'snapshot_id' => 10]);
         DB::table('legacy_'.self::PREFIX[$source].'_user')->insert(array_replace([
             'record_id' => $record, 'origin_source_id' => $source, 'origin_table_id' => $tableId, 'UserID' => $userId, 'UserName' => $name,
-            'UserRoleID' => 2, 'IsVisitor' => 0, 'IsME' => 0, 'IsCommunication' => 0, 'IsCashier' => 0, 'Password' => self::LEGACY_PASSWORD_HASH,
+            'UserRoleID' => 2, 'IsVisitor' => 0, 'IsME' => 0, 'IsCommunication' => 0, 'IsCashier' => 0, 'Password' => self::LEGACY_PASSWORD_HASH, 'Email' => '',
         ], $flags));
 
         return $record;
@@ -117,11 +118,11 @@ final class StaffFixture
     }
 
     /**
-     * An unseen notice addressed to a historical source user (`$record` = its source_records id, `$userId` = its desktop number).
+     * An unseen desktop notice (`op_user_notification`) addressed to a historical source user (`$record` = its source_records id, `$userId` = its desktop number).
      *
      * @param  array<string, mixed>  $fields  overrides of the payload columns
      */
-    public static function notice(int $city, int $record, int $userId, string $body, string $date, array $fields = [], ?int $project = null, ?int $sender = null): int
+    public static function legacyNotice(int $city, int $record, int $userId, string $body, string $date, array $fields = [], ?int $project = null, ?int $sender = null): int
     {
         $id = ApplicationFixture::row('user_notification', $city, $fields + [
             'c_Body' => $body, 'c_Date' => $date, 'c_P_Name' => 'Synthetic beneficiary', 'c_Pay_ID' => 0, 'c_Seen' => 0, 'c_User_ID' => $userId,
@@ -137,5 +138,45 @@ final class StaffFixture
         DB::table('op_user_notification')->where('id', $id)->update($values);
 
         return $id;
+    }
+
+    /** A web account with the given roles per city (`[city => [role, …]]`); only the role assignment is recorded, no capabilities. */
+    public static function account(string $name, array $roles = [], ?string $email = null): WebAccount
+    {
+        $id = DB::table('web_accounts')->insertGetId(['username' => $name, 'email' => $email === null ? null : mb_strtolower($email), 'password_hash' => 'x', 'password_changed_at' => now('UTC'), 'created_at' => now('UTC'), 'updated_at' => now('UTC')]);
+        $account = WebAccount::findOrFail($id);
+        foreach ($roles as $city => $list) {
+            foreach ($list as $role) {
+                self::holds($account, $city, $role);
+            }
+        }
+
+        return $account;
+    }
+
+    /** Records that an account holds a role in a city (routing only). */
+    public static function holds(WebAccount $account, int $city, string $role): void
+    {
+        DB::table('account_city_roles')->insert(['account_id' => $account->id, 'city_id' => $city, 'role' => $role, 'decision_locator' => 'synthetic:p53', 'assigned_at' => now('UTC')]);
+    }
+
+    /** Makes an account responsible for a task of a city's catalog. */
+    public static function responsible(WebAccount $account, int $city, int $taskRow): int
+    {
+        return DB::table('account_city_tasks')->insertGetId(['account_id' => $account->id, 'city_id' => $city, 'source_id' => $city, 'task_id' => $taskRow, 'assigned_at' => now('UTC')]);
+    }
+
+    /**
+     * A web notice. `$account` null makes it a shared copy.
+     *
+     * @param  array<string, mixed>  $fields  overrides of the columns
+     */
+    public static function notice(int $city, ?int $account, string $kind, string $body, string $date, array $fields = [], ?int $project = null): int
+    {
+        return DB::table('web_notices')->insertGetId($fields + [
+            'city_id' => $city, 'source_id' => $city, 'account_id' => $account, 'sender_account_id' => null, 'project_id' => $project,
+            'project_number' => $project === null ? null : DB::table('op_microproject')->where('id', $project)->value('c_MP_ID'),
+            'kind' => $kind, 'pay_key' => null, 'notice_date' => $date, 'title' => 'Synthetic beneficiary', 'body' => $body, 'seen' => 0, 'created_at' => now('UTC'),
+        ]);
     }
 }

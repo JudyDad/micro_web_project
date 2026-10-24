@@ -15,7 +15,7 @@
         <form method="POST" action="{{ route('notifications.send', ['locale' => $locale]) }}">@csrf
             <input type="hidden" name="city" value="{{ $city }}">
             <div class="field"><label for="to">{{ __('staff.notifications.to') }}</label><select class="input" id="to" name="to"><option value="all" @selected(old('to', 'all') === 'all')>{{ __('staff.notifications.everyone') }}</option>
-                @foreach($recipients as $user)<option value="{{ $user->record_id }}" @selected((string) old('to') === (string) $user->record_id)>{{ $user->UserName }}</option>@endforeach</select></div>
+                @foreach($recipients as $user)<option value="{{ $user->id }}" @selected((string) old('to') === (string) $user->id)>{{ $user->username }}</option>@endforeach</select></div>
             <div class="field"><label for="date">{{ __('staff.notifications.date') }}</label><input class="input" id="date" name="date" type="date" value="{{ old('date', now()->toDateString()) }}"></div>
             <div class="field"><label for="title">{{ __('staff.notifications.about') }}</label><input class="input" id="title" name="title" maxlength="255" value="{{ old('title') }}"></div>
             <div class="field"><label for="body">{{ __('staff.notifications.body') }}</label><textarea class="input" id="body" name="body" rows="6" required>{{ old('body') }}</textarea></div>

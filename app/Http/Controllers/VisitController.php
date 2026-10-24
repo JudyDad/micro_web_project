@@ -88,6 +88,14 @@ final class VisitController
         return back()->with('status', __('field.saved'));
     }
 
+    public function scheduleReschedule(Request $request, string $locale, string $notice, VisitScheduleService $schedule): RedirectResponse
+    {
+        $data = $request->validate(['date' => ['required', 'string', 'max:10'], 'reason' => ['required', 'string', 'max:1000'], 'shift' => ['nullable', 'in:1']]);
+        $count = $schedule->reschedule($request->user(), $this->id($notice), $data['date'], $data['reason'], ($data['shift'] ?? null) === '1');
+
+        return back()->with('status', __('field.schedule.rescheduled', ['count' => $count]));
+    }
+
     private function id(string $value): int
     {
         $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);

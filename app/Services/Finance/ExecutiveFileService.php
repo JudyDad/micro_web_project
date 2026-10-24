@@ -8,7 +8,6 @@ use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
 use App\Services\Operational\OperationalTables;
-use App\Services\Staff\NotificationService;
 use App\Services\Staff\ProjectNotices;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -20,7 +19,7 @@ final class ExecutiveFileService
 {
     public const MAX_MONTHS = 100;
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private ProjectNotices $projectNotices, private NotificationService $notices) {}
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private OperationalTables $tables, private ProjectNotices $projectNotices) {}
 
     private function authorize(WebAccount $account, int $city, bool $write = false): void
     {
@@ -107,7 +106,7 @@ final class ExecutiveFileService
                 DB::table('op_exefile')->where('id', $file->id)->update($payload);
             }
             $stored = $this->files($project)->firstWhere('id', $fileId);
-            $this->projectNotices->executiveFile($project, self::expiry($stored->c_ExeF_CurrentDate ?? null, $stored->c_ExeF_NumOfMonths ?? null), $file === null, $this->notices->senderFor($account, (int) $project->source_id));
+            $this->projectNotices->executiveFile($project, self::expiry($stored->c_ExeF_CurrentDate ?? null, $stored->c_ExeF_NumOfMonths ?? null), $file === null, $account->id);
             $this->audit->record($account->id, 'executive_files.saved', 'succeeded', $city, subjectType: 'application_entity', subjectId: $projectId);
 
             return (int) $fileId;

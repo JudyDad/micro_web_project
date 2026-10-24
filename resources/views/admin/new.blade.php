@@ -8,6 +8,17 @@
     <a class="back-link" href="{{ route('admin.accounts.index', ['locale' => $locale]) }}">{{ __('admin.back') }}</a>
     <div class="page-heading"><div><p class="eyebrow">{{ __('projects.workspace') }}</p><h1>{{ __('admin.new_title') }}</h1><p class="page-description">{{ __('admin.new_intro') }}</p></div></div>
     @include('people.messages')
+    <section class="card" id="plain"><h2>{{ __('admin.plain_title') }}</h2><p><small>{{ __('admin.plain_intro') }}</small></p>
+        <form method="POST" action="{{ route('admin.accounts.store-plain', ['locale' => $locale]) }}">@csrf
+            <div class="field"><label for="plain-username">{{ __('admin.username') }}</label><input class="input" id="plain-username" name="username" maxlength="200" required value="{{ old('username') }}"></div>
+            <div class="field"><label for="plain-email">{{ __('admin.email') }}</label><input class="input" id="plain-email" name="email" type="email" maxlength="190" required value="{{ old('email') }}"></div>
+            @foreach($cities as $city)
+            <div class="field"><label for="plain-role-{{ $city->id }}">{{ __('admin.role') }} — {{ $ar ? $city->name_ar : $city->name_en }}</label><select class="input" id="plain-role-{{ $city->id }}" name="roles[{{ $city->id }}]"><option value="">{{ __('admin.role_none') }}</option>
+                @foreach($roles as $role)<option value="{{ $role }}">{{ __('admin.bundles.'.$role) }}</option>@endforeach</select></div>
+            @endforeach
+            <x-ui.button type="submit">{{ __('admin.create_plain') }}</x-ui.button>
+        </form>
+    </section>
     @if($groups->isEmpty())
     <section class="card"><p>{{ __('admin.no_candidates') }}</p></section>
     @else
@@ -25,6 +36,7 @@
             </fieldset>
             @endforeach
             <div class="field"><label for="username">{{ __('admin.account_username') }}</label><input class="input" id="username" name="username" maxlength="200" value="{{ old('username') }}"></div>
+            <div class="field"><label for="email">{{ __('admin.email') }}</label><input class="input" id="email" name="email" type="email" maxlength="190" value="{{ old('email') }}"><small>{{ __('admin.email_from_identity') }}</small></div>
             @foreach($cities as $city)
             @if($involved->contains((int) $city->id))
             <div class="field"><label for="role-{{ $city->id }}">{{ __('admin.role') }} — {{ $ar ? $city->name_ar : $city->name_en }}</label><select class="input" id="role-{{ $city->id }}" name="roles[{{ $city->id }}]"><option value="">{{ __('admin.role_none') }}</option>

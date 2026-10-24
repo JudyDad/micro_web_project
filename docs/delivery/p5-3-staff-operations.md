@@ -1,78 +1,93 @@
 # P5.3 staff operations
 
-Started 22 October 2026 on the user's instruction "start P5.3". Status: **all four slices implemented locally (task board, notification inbox and messages, generated notices, account administration); acceptance review open and no acceptance is claimed.** No physical schema change: every payload maps to the approved `op_task`, `op_task_microproject`, `op_task_user` and `op_user_notification` tables and to the four approved account tables.
+Started 22 October 2026 on the user's instruction "start P5.3"; revised 24 October 2026 for the owner's decisions on the single database. Status: **implemented locally (task board, notification inbox and messages, generated notices, account administration, roles, task responsibilities, password reset, visit rescheduling, legacy adoption); acceptance review open and no acceptance is claimed.**
 
-## Scope and slicing
+The first delivery (22 October) carried desktop users into the web through reviewed links and used only the approved schema. The owner then decided that the final system is **one database with the old city databases ignored once their data is migrated**, so staff identity, roles, duties, e-mail, task responsibilities and notices became web data. The physical schema for that was proposed and approved on 24 October ([proposal and role table](../planning/phase-5/staff-model-proposal.md)): migration `2026_10_24_000009_create_staff_model_tables` adds `account_city_roles`, `account_city_tasks`, `web_notices`, `account_password_resets` and `email` / `password_changed_at` on `web_accounts`.
+
+## Slices
 
 | Slice | Desktop source | State |
 |---|---|---|
 | S1 Task board | `TaskBoard_Form.cs`, `Classes/TasksOfProjects.cs` | implemented locally |
-| S2 Notification inbox, messages, schedule actions | `Notification_Box.cs`, `SendMessage_Box.cs`, `Classes/UserNotification.cs`, `MainForm.Check_Notifications`, `Visits_Schedule_Form.cs` | implemented locally |
-| S3 Generated notices (deferred by P4.3, P5.1, P5.2) | `Loans_Form.cs`, `ExecutiveFiles_Form.cs`, `AdminPanel_From.cs`, `VOpening_*`, `V_ME_*`, `VClosing_Form.cs` | implemented locally |
-| S4 Account administration and staff directory | unified-account design, `User_Form.cs` (partly) | implemented locally |
+| S2 Notification inbox, messages, schedule actions | `Notification_Box.cs`, `SendMessage_Box.cs`, `Classes/UserNotification.cs`, `Visits_Schedule_Form.cs` | implemented locally |
+| S3 Generated notices | `Loans_Form.cs`, `ExecutiveFiles_Form.cs`, `AdminPanel_From.cs`, visit forms | implemented locally |
+| S4 Account administration, staff directory | `User_Form.cs` (partly) | implemented locally |
+| S5 Staff model (24 Oct): roles, task responsibilities, notices by role, passwords, rescheduling, legacy adoption | owner decisions 1, 2, 4–7 | implemented locally |
 
 Not in scope by design: `Chat_Form.cs` (a LAN TCP chat; notices replace it) and real delivery. The web has no e-mail, push or other external channel, so a test environment cannot deliver anything.
 
-## How a notice reaches a web account
+## Roles
 
-A notice (`user_notification`) addresses a **historical source user** (`User_ID`). A web account reads the notices of the source users it is explicitly linked to through reviewed legacy links (non-revoked link, principal not disabled). Names are never matched. Consequences: an account without a link has an empty box; a web-only account cannot receive notices (see open decision 2).
+A role is a named bundle of per-city capabilities that an administrator assigns to an account in one city. Assigning grants the capabilities (each still audited and revocable individually) and records the assignment in `account_city_roles`; removing a role revokes only the capabilities no other role of the account in that city still includes. Nobody configures notices per user: the roles decide who receives what. The bundles follow the owner-approved table: **Administrator** (every capability), **Data entry**, **Financial** (finance, executive files, purchasing, attachments and the instalment schedule), **Legal**, **Media** (read plus task board), **Guest** (read only, no task board), and the duties **Monitoring & evaluation**, **Communication** and **Cashier**.
 
-## S1 task board — delivered
+| Notice | Goes to (accounts holding the role in the city) |
+|---|---|
+| Payment due | Financial, Cashier |
+| "Purchases finished", clearance trophy | Communication |
+| Executive-file expiry | Legal |
+| State change | every role except Guest |
+| Message | the accounts chosen (everyone who may read notifications, or one) |
+| Visit and clearance notices | shared copy, no recipient |
 
-Source: `TaskBoard_Form.bind_f_tasks` / `bind_a_tasks`, `MP_dataGridView_CellDoubleClick`, `TasksOfProjects.Update_Task_MicroProject`.
+## S1 task board
 
-- **Page** `/task-board`: one row per project and a done / not done cell per task, across the permitted cities, 50 rows per page, newest project number first. Two boards as on the desktop: *funded projects* (current state Accepted, Financed, Finished, Canceled or Closed; 21 task columns) and *applications* (every current state; 8 task columns). Columns are the desktop's legacy task ids (`TaskBoardColumns`); headers come from the city's task catalog with the desktop's header as fallback.
-- **Row data:** project number (link), city, linked people ("first last ابن/ة father", distinct), the beneficiary's phone, project name, current state, funder, type and (funded board) the first loan date. A cell is "–" when the project has no assignment of that task; the web never creates assignments here.
-- **Filters:** board, city, state, funder, type, free text (project number, name, person name, phone) and done / not done per task.
-- **Toggling:** a form button per cell writes `State` 1/0 and today's date on every assignment row of that project and task. The page sends the state it showed, so a stale or repeated submission is refused with 409. Done means any non-zero state.
-- **Who may toggle** (desktop: only users listed in `task_user` for the task): `tasks.view`, `tasks.manage` and `applications.view` for the city **and** responsibility for the task. Responsibility comes through the reviewed legacy link: a `task_user` row names a source user, and an account holding a non-revoked link to that user's principal (same source) is responsible. A source user number of another city is a different identity. `tasks.manage_all` (per city) lets a web-only account manage every task of that city. The page lists the historical staff responsible for each task.
-- **Side effect kept:** completing "مشتريات" (legacy task 16) adds the notice "انتهاء المشتريات" (`Pay_ID` -3) for every communication user (`IsCommunication`) of the city. **Deliberate difference:** clearing it marks only that project's -3 notices seen; the desktop's update had no project condition and cleared every project's.
-- Checks run before the transaction (a refusal is audited) and again under the project lock; a project outside the task kind's board gives 404.
+- `/task-board`: one row per project and a done / not done cell per task across the permitted cities (funded board: states Accepted, Financed, Finished, Canceled, Closed with 21 tasks; application board: every current state with 8). Filters: board, city, state, funder, type, text, done / not done per task. Cells are toggled with a form button that sends the state shown, so stale or repeated submissions get 409.
+- **Who may toggle:** `tasks.view`, `tasks.manage` and `applications.view` in the city **and** responsibility for the task. Responsibility is what administrators set on the **task responsibilities** page (`/admin/tasks`): for each task of a city's board, the accounts responsible. Only accounts that may manage tasks in the city can be chosen. `tasks.manage_all` lets an administrator toggle any task of its city. The board lists the responsible accounts per task.
+- Completing "مشتريات" sends "انتهاء المشتريات" to the Communication accounts of the city; clearing it marks only that project's notices seen (the desktop cleared every project's).
 
-## S2 notification inbox, messages and schedule actions — delivered
+## S2 notifications
 
-- **Inbox** `/notifications` (bell item with the unseen count in the navigation): the unseen notices of the account's linked source users in the cities where it has `notifications.view`, newest first, 50 per page, city filter. As in the desktop box, an account linked to a **financial user (role 3)** reads the notices of all financial users of that source instead, dated up to today; every other account reads its own notices dated up to three days ahead. The count shown is the size of the same list (the desktop's count used a horizon a day longer than its list). Links open the project and, where the account has the grant, its finance or visits page. Sender names come from the preserved sender user.
-- **Marking seen:** tick notices and save. Only notices that are in the account's box are touched. All copies of the same notice (same project, date, text, title and kind, whoever they address) are cleared, as the desktop's `Update_MicroUsers_Notification` did. For a financial user's notice of a payment (positive `Pay_ID`) every notice of that payment is cleared (`Update_NotificationWithPaymentID`); sentinel kinds such as -100 are never cleared by number.
-- **Messages** `/notifications/send` (`notifications.send`): to one active source user or to everyone of a city (`IsVisitor` ≠ -1, the desktop's `select_users`), with a date (default today), a subject (up to 255 bytes) and a required text. Administrators (`accounts.manage`) may attach a project number, as the desktop restricted that box to roles 1/8. `Pay_ID` -100. The sender is the source user the account is linked to in that city when it has exactly one such link, otherwise none (the audit trail always names the account).
-- **Visit schedule actions** (`/visit-schedule`, `visits.manage`): edit a notice's note (`Update_Notification_Note`) and hide / restore a notice (its seen flag; every copy changes).
-- Capabilities `notifications.view`, `notifications.send`; audit events `notifications.list|seen|sent|noted`.
+- **Inbox** `/notifications` (bell with the unseen count in the navigation): the account's own unseen notices in the cities where it has `notifications.view`. A Financial account reads up to today, every other account up to three days ahead, and the count is the size of that list (confirmed rule). Marking seen clears every copy of the notice; a payment notice clears all notices of that payment.
+- **Messages** `/notifications/send` (`notifications.send`): to one account or to everyone who reads notifications in the city; date, subject (255 bytes) and text. Administrators (`accounts.manage`) may attach a project number. The sender is the acting account.
+- **Visit schedule** (`/visit-schedule`, `visits.manage`): edit a note, hide / restore a notice, and **reschedule**.
 
-## S3 generated notices — delivered
+## Visit rescheduling and generation
 
-Each generator runs inside the transaction of the work that causes it (`ProjectNotices`).
+- **Generation guard:** a project's visit schedule is created once, with its first loan, never when it already has any visit or clearance notice, and only when the city has an enabled Monitoring & evaluation account. Editing a loan never regenerates it. The finance page says when a loan project has no visit notices.
+- **Reschedule** (owner decision 4): on the schedule page a not-yet-seen visit can be given a new date and a required reason; the original date is kept (and shown with the reason). With "also move this project's later unseen visits" the later unseen visits move by the same number of days (earlier or later). Seen visits never move; only visits can be moved (not the clearance notice); the action needs `visits.manage` and is audited (`notifications.rescheduled`).
+- Visit dates: opening five days after the loan date, then six-monthly visits each counted from the previous one with .NET month-end clamping (standard: M1, M2, M3, MFinal; solar: M1, M2 marked "(Solar)"; agricultural: M1–M5 in April or November, seven and five months apart; grant-funded rehabilitation: a single closing visit). The letter is V for vehicle sub-categories 1 and 2, otherwise O.
 
-- **Visit schedule on the first loan** (`Loans_Form.generate_me_*_visits_notifications`): when a project's first loan is created and the project has no visit notice yet, shared notices without a recipient (`Pay_ID` -21) are created: opening five days after the loan date, then six-monthly visits each counted from the previous one with .NET month-end clamping — standard: M1, M2, M3, MFinal; solar projects ("طاقة شمسية"): M1, M2 with the suffix " (Solar)"; agricultural projects ("زراع"): M1–M5 in the April or November nearest two months after the opening, alternating seven and five months, with the day capped at 30; a grant-funded rehabilitation project: a single "Visit Closing-R". The letter is V for vehicle sub-categories 1 and 2, otherwise O. Like the desktop, **nothing is created when the city has no monitoring-and-evaluation (`IsME`) staff**; the finance page then says the project has no visit notices. Editing a loan never regenerates them.
-- **Instalment notices** (`SavePayments`): a new unpaid instalment creates one notice per financial user (role 3 or cashier), dated its due date, with the amount as text. Changing an instalment updates its notices (amount, due date) and marks them seen exactly when it is paid. **Difference:** the desktop re-applied this to every instalment on every save, resetting notices a financial user had marked seen; the web only touches instalments that changed.
-- **Clearance** (`Send_Trophy_Notifications`): when the last instalment is paid near the end of the loan (the existing rule that finishes the project) a shared "براءة الذمة (Clearance)" notice is created for the day after the last payment, plus one "Visit (Trophy)" notice (`Pay_ID` -10) per communication user; saving again adds nothing. The desktop asked for confirmation first; the web creates them automatically.
-- **Executive file** (`ExecutiveFiles_Form`): creating a file adds the expiry notice "الملف التنفيذي" (`Pay_ID` -1199) dated the expiry date for each lawful user (role 7); editing the file moves the date. **Difference:** the desktop's edit matched `Pay_ID` against the file number while creation stored -1199, so its edit never changed anything.
-- **State changes** (`AdminPanel_From`, via `LifecycleService::transition`): moving a project to Withdrew, Canceled, Finished or Closed marks every notice of the project seen; any move except Rejected and Waiting then sends "تم تبديل حالة المشروع إلى: <state>" to every user except Guest and Out of Service, with `Pay_ID` -998 minus the recipient's position.
-- **Visits:** saving a new opening visit marks that kind's opening notice seen; saving a new M&E visit marks the notice of that visit number for that person seen (visit 4 also clears "MFinal": the desktop's saved visit 4 mapped to the MFinal task but only cleared an "M4" notice); a closing visit, including the rehabilitation closing visit, marks every notice of the project seen.
-- **Payment notice key:** the desktop keys payment notices by the payment's own number. Imported instalments keep it (`c_Pay_ID`); instalments created in the web have no such number, so their notices carry the instalment's internal identifier, which is always far larger than any desktop number.
+## S3 other generated notices
 
-## S4 account administration and staff directory — delivered
+- **Instalments:** a new unpaid instalment notifies each Financial and Cashier account (due date, amount); changing an instalment updates its notices and marks them seen exactly when it is paid; unchanged instalments leave notices alone (the desktop reset them on every save). Imported instalments keep their desktop payment number; web instalments use their own identifier.
+- **Clearance:** when the last instalment is paid near the end of the loan, a shared "براءة الذمة (Clearance)" notice for the next day and a trophy notice per Communication account; saving again adds nothing.
+- **Executive file:** expiry notice per Legal account; an edit moves the date (the desktop's edit never changed anything).
+- **State changes:** Withdrew, Canceled, Finished and Closed mark every notice of the project seen; any move except Rejected and Waiting is announced to the staff roles.
+- **Visits:** a new opening visit marks its opening notice seen; a new M&E visit marks that person's notice (visit 4 also clears "MFinal"); a closing visit, including the rehabilitation one, marks every notice of the project seen.
 
-- **Scope of an administrator:** `accounts.manage`, per city. The administrator sees accounts that hold active grants or reviewed links in its cities, plus accounts that have neither (so they can be assigned). It grants and revokes **only capabilities it holds itself** in that city, never edits its own grants and never disables its own account, and can disable an account only when it administers every city the account is active in (a global disable would otherwise lock out another city's staff).
-- **Pages:** `/admin/accounts` (list with user name, status and city filters), `/admin/accounts/{id}` (per-city capability checkboxes, role bundle "data-entry", linked identities with revoke / restore, link another identity, disable / enable), `/admin/accounts/new` and `/admin/staff` (read-only directory of the cities' historical users with role, flags and the linked web account).
-- **Creating an account:** from reviewed historical identities only. The page lists the unlinked, in-service published users of the administrator's cities grouped by exact user name (the duplicate review: matching names or passwords are not proof). The administrator ticks the identities that are one person, picks the identity whose password the account will use, optionally a role per city, and confirms the review. The account inherits that identity's desktop password (verified and rehashed at first login, as `AuthenticateAccount` already does); no password is typed or reset in the web. Identities of cities the administrator does not administer cannot be linked by it.
-- **Linking and revoking:** a link creates the identity pointer (`web_principals`, no credential) on first use and refuses a user already linked to any account or out of service. Revoking the identity that supplies an account's password is refused while the account has no password of its own.
-- **Audit:** every change is written by `AccountProvisioner` with the acting account (`account.provisioned`, `legacy.linked|revoked|restored`, `capability.granted|revoked`) plus `accounts.list|view|disabled|enabled`; the decision reference is generated (`web:admin:<account>:<time>`). A disabled account loses all access at its next request.
-- Capabilities added: `tasks.view|manage|manage_all`, `notifications.view|send`, `accounts.manage`.
+## S4 / S5 account administration
 
-## Owner decisions and open points
+- **Administrator scope:** `accounts.manage`, per city. It sees accounts with grants or reviewed links in its cities and accounts with neither; assigns and removes roles and capabilities it holds itself; never edits its own grants; disables an account only when it administers every city the account is active in; sets an account's e-mail only when it holds every capability that account has (it cannot take over a stronger account through "forgot password").
+- **Pages:** `/admin/accounts` (list, filters), `/admin/accounts/{id}` (roles and capabilities per city, e-mail, linked desktop identities, disable), `/admin/accounts/new` (new account from reviewed duplicate desktop identities, or **without a desktop identity**), `/admin/tasks` (responsibility matrix per city), `/admin/staff` (accounts of each city with roles, task count and e-mail).
+- **Accounts without a desktop identity** (after the old databases are retired): the administrator gives a user name, an e-mail and a role; a generated one-time password is shown once; the account must choose its own password before anything else (`credential_principal_id` NULL and `password_changed_at` NULL mark it).
+- **Accounts from desktop identities** inherit that identity's desktop password (verified and rehashed at first login) and its e-mail when valid and unused.
 
-1. **Task responsibility.** `task_user` points at preserved source users, so the web cannot give a web-only account a responsibility. Responsibility is carried by reviewed links; `tasks.manage_all` is the interim path for administrators. Say if responsibilities and the staff flags (monitoring-and-evaluation, communication, cashier, visitor), which the desktop's `User_Form` edited, should be managed in the web: it needs new tables (the preserved `user` table is read-only), so it needs your approval.
-2. **Recipients of notices.** Notices can only address a historical source user; a web-only account cannot receive them. The same new table would solve this.
-3. **Finance and legal roles.** The scope contract asked to resolve "the intended notification rule". The web follows the desktop's *list* (financial users share one box up to today; others see their own up to three days ahead) and uses its size for the count. Confirm or change.
-4. **Visit schedule generation** happens once, with the first loan, and only when monitoring staff exist. The desktop offered it again on every loan save; the web has no "regenerate" action. Say if one is wanted.
-5. **Web write path for accounts.** The unified-account design said a web administration interface "must use a separately reviewed capability and write path" and kept the runtime database user read-only for these tables. The screens use the new per-city capability `accounts.manage` and the same connection as every other write path, so the production database user must be allowed INSERT/UPDATE on `web_accounts`, `account_legacy_links` and `account_city_capabilities` (and INSERT on `web_principals`). A separate administrator connection is possible if you prefer; confirm before deployment. Real staff grants are still not provisioned.
-6. **Roles.** Only the `data-entry` bundle exists. Bundles for finance, monitoring, communication and legal staff, and the mapping from desktop roles, are yours to define (D07).
-7. **Web-only accounts and password reset** are not offered: accounts inherit a reviewed identity's desktop password (P0.4).
-8. **Notice kinds not generated:** the "content updated" notice (the field is not editable in the web), the "add notes" e-mail action and any external delivery.
-9. **Not built:** Excel export of the notification box and the task board (P6.2), column visibility of the task grid, editing the notes of non-visit notices, application deletion.
+## Passwords
 
-## Verification (22 October 2026)
+- **Change password** (menu "Change password"): a logged-in user sets a new password twice, **without giving the old one** (owner decision). Consider the trade-off: anyone who finds an unlocked session can change the password.
+- **Forgot password** (link on the login page): the user enters the user name and the e-mail stored for the account; if both match an enabled account the reset page opens at once with a single-use link (valid 15 minutes, stored only as a SHA-256 hash; a newer request cancels earlier ones). Nothing is e-mailed. A mismatch shows a generic error; attempts are throttled and audited (`password.reset_requested|reset_denied|reset|changed`). An account without an e-mail cannot use this route.
+- Policy: at least 10 characters, not equal to the user name, Argon2id.
 
-- SQLite: `TaskBoardTest` 8 cases / 94 assertions, `NotificationInboxTest` 8 / 113, `ProjectNoticesTest` 9 / 77, `AccountAdministrationTest` 11 / 165, plus new cases in `VisitWorkflowTest`, `MonitoringVisitTest` and `RehabVisitTest`. The full unit/feature suite: 222 tests / 7,310 assertions pass (one host-dependent case skipped); Pint passes.
-- Actual approved schema on a fresh isolated MySQL 8.4.8 (own data directory outside Git, loopback port 33092, empty `micro_projects_test`, stopped afterwards): `StaffOperationalWorkflowTest` passes 1 case / 40 assertions: all migrations, task board filters and the responsibility query, the purchases notice with the sender link and the foreign keys to the preserved users, the inbox and mark-seen, messages, the first-loan visit schedule dates, instalment, clearance and executive-file notices, account creation from duplicate identities with a real desktop-password login, per-city grants, global disable, the staff directory, and the unique constraints on usernames and linked identities.
-- Existing tests that exercise visits, finance, lifecycle and executive files were updated only where the new, intended notice behavior changes their expectations (an opening visit now marks its notice seen).
-- Not done: rendered browser check, five-city data parity, concurrent-writer tests for the new writes, staff acceptance.
+## Legacy adoption (cutover)
+
+`php artisan staff:adopt-legacy [--city=ID] [--dry-run] [--decision=REF]` copies, for every account with a reviewed link to a desktop user: roles and duties (desktop role 1/8 → Administrator, 2 Data entry, 3 Financial, 7 Legal, 9 Media, 4 Guest, 6 nothing; flags IsME / IsCommunication / IsCashier → the three duties), the e-mail (valid and unused only), `task_user` responsibilities and the user's notices (personal ones to the account, shared visit and clearance notices once). It is repeatable (nothing duplicated), audited like any grant, and an operator tool: it is not reachable from the web, and mapping role 1/8 to Administrator grants all capabilities, so review the dry run first. After it the web no longer reads the old databases or the preserved `user` tables for staff, roles, notices or task responsibility; the legacy bridge (linking an identity, first-login password upgrade) stays only as a migration aid.
+
+## Decisions taken (owner, 24 October) and what remains
+
+1. Approved: responsibilities and staff duties live in the web; administrators set them per city.
+2. Approved: roles with automatic notice routing.
+3. Kept: finance/legal inbox rule.
+4. Approved: generation guard and rescheduling.
+5. Approved: single database; old databases ignored after migration.
+6. Approved with changes (Media gets the task board, Financial gets every finance part); more bundles can be added.
+7. Approved: change and forgot-password flows, verified with the user name and e-mail.
+8. Left out: the "content updated" notice, the "add notes" e-mail action, any external delivery.
+9. Confirmed deferred: Excel exports, column hiding on the task grid, notes of non-visit notices, application deletion.
+
+Still open: the production database user must be allowed to write the account and staff tables (no separate administrator connection is used); real staff grants are still not provisioned; **payment notices are one row per recipient, so an account given the Financial or Cashier role later sees only notices created afterwards** (it does not backfill unpaid instalments).
+
+## Verification (24 October 2026)
+
+- SQLite: `TaskBoardTest` 8 cases, `NotificationInboxTest` 9 (including rescheduling), `ProjectNoticesTest` 9, `AccountAdministrationTest` 14, `AccountPasswordTest` 4, `LegacyStaffAdoptionTest` 2, `AccessRolesTest` 3, plus the visit tests. The full suite passes except two HTTP cases that load `/en/applications`, which a concurrent reports change in the working tree (`$filters` undefined in `applications/index`) breaks; they are re-run when that lands.
+- Actual approved schema on a fresh isolated MySQL 8.4.8 (own data directory outside Git, loopback port 33092): `StaffOperationalWorkflowTest` passes 1 case / 50 assertions (all migrations including 000009; plain accounts and one-time passwords; roles; task responsibility; purchases notice; inbox, messages, reschedule with the `MONTH()` filter; first-loan schedule needing a monitoring account; instalment, clearance and executive-file notices; the real `BINARY(32)` reset token; account creation from duplicate identities with a desktop-password login; adoption; and the database's own rejections: shared notices only for visit and clearance, kind and seen checks, project foreign key, unique task and role assignments, unique e-mail, reset expiry).
+- Not done: rendered browser check, five-city data parity, concurrent-writer tests, staff acceptance.

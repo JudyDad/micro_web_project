@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\Support\ApplicationFixture;
 use Tests\Support\FieldFixture;
 use Tests\Support\FinanceFixture;
+use Tests\Support\StaffFixture;
 use Tests\TestCase;
 
 /** Opt-in field-operations writes (P5.2) and the deletion table against the actual approved schema on an empty disposable MySQL target. */
@@ -150,7 +151,7 @@ final class FieldOperationalWorkflowTest extends TestCase
             self::assertSame(1, $cases->show($account, $project)['cases']->count());
 
             // The schedule's raw SQL (MONTH(), joins) runs on MySQL.
-            ApplicationFixture::row('user_notification', 1, ['c_Pay_ID' => -21, 'c_Body' => 'Visit Opening-O', 'c_Date' => '2026-11-05', 'c_P_Name' => 'x', 'c_Seen' => 0, 'c_MicroProject_ID' => 1000], ['MicroProject_ID' => $project]);
+            StaffFixture::notice(1, null, 'visit', 'Visit Opening-O', '2026-11-05', [], $project);
             self::assertSame(1, app(VisitScheduleService::class)->schedule($account, ['months' => [11], 'year' => 2026])['rows']->total());
 
             // Rehabilitation closing visit.
@@ -170,7 +171,7 @@ final class FieldOperationalWorkflowTest extends TestCase
             while (DB::transactionLevel() > 0) {
                 DB::rollBack();
             }
-            self::assertSame(0, Artisan::call('migrate:rollback', ['--force' => true]), Artisan::output());
+            self::assertSame(0, Artisan::call('migrate:reset', ['--force' => true]), Artisan::output()); // all batches: the guard helper re-ran one
         }
         self::assertSame(0, DB::table('migrations')->count());
     }
@@ -187,7 +188,9 @@ final class FieldOperationalWorkflowTest extends TestCase
             'deleted_by_account_id' => $account->id, 'deleted_at' => now('UTC')->format('Y-m-d H:i:s.u'),
         ]);
         try {
-            Artisan::call('migrate:rollback', ['--force' => true, '--step' => 1]);
+            // The staff-model migration (000009) sits on top; its own guard must pass first, then 000008 refuses.
+            DB::table('web_accounts')->update(['password_changed_at' => null]);
+            Artisan::call('migrate:rollback', ['--force' => true, '--step' => 2]);
             self::fail('The rollback must be refused while deletion records exist.');
         } catch (\RuntimeException $exception) {
             self::assertStringContainsString('Deletion records', $exception->getMessage());
@@ -198,6 +201,7 @@ final class FieldOperationalWorkflowTest extends TestCase
             DB::table('account_city_capabilities')->where('account_id', $account->id)->delete();
             DB::table('web_accounts')->where('id', $account->id)->delete();
             DB::table('project_number_sequences')->delete();
+            Artisan::call('migrate', ['--force' => true]); // restore the staff-model migration the attempted rollback removed
         }
         self::assertSame(1, DB::table('information_schema.TABLES')->where('TABLE_SCHEMA', DB::selectOne('SELECT DATABASE() AS db')->db)->where('TABLE_NAME', 'operational_deletions')->count());
     }
