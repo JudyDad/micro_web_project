@@ -5,6 +5,10 @@
     if (request()->routeIs('projects.index', 'people.index', 'applications.index')) {
         $languageFilters = ['search' => $search ?? '', 'cities' => array_values($selectedCities ?? [])];
     }
+    if (request()->routeIs('applications.index', 'reports.statistics')) {
+        $languageFilters += array_filter(request()->only(['stage', 'state', 'date_from', 'date_to']), fn ($value) => is_string($value) && $value !== '');
+        $languageFilters['cities'] ??= array_values(array_filter((array) request('cities'), 'is_scalar'));
+    }
     if (request()->routeIs('applications.create', 'applications.drafts')) {
         $languageFilters['city_id'] = request('city_id');
     }
@@ -52,6 +56,7 @@
         <nav aria-label="{{ __('ui.navigation') }}">
             @if($operational)
                 <a @class(['nav-link', 'is-current' => request()->routeIs('applications.*')]) href="{{ route('applications.index', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">▧</span><span class="nav-text">{{ __('applications.title') }}</span></a>
+                @if(auth()->check() && app(\App\Services\AccountAccess::class)->cities(auth()->user(), 'applications.view')->isNotEmpty())<a @class(['nav-link', 'is-current' => request()->routeIs('reports.*')]) href="{{ route('reports.statistics', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">▥</span><span class="nav-text">{{ __('reports.nav') }}</span></a>@endif
                 <a @class(['nav-link', 'is-current' => request()->routeIs('people.*')]) href="{{ route('people.index', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">♧</span><span class="nav-text">{{ __('people.title') }}</span></a>
                 @if(auth()->check() && app(\App\Services\Field\ProfessionMeetingService::class)->cities(auth()->user())->isNotEmpty())<a @class(['nav-link', 'is-current' => request()->routeIs('meetings.*')]) href="{{ route('meetings.index', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">◍</span><span class="nav-text">{{ __('field.nav_meetings') }}</span></a>@endif
                 @if(auth()->check() && app(\App\Services\Field\VisitScheduleService::class)->cities(auth()->user())->isNotEmpty())<a @class(['nav-link', 'is-current' => request()->routeIs('visits.schedule')]) href="{{ route('visits.schedule', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">◔</span><span class="nav-text">{{ __('field.nav_schedule') }}</span></a>@endif

@@ -9,6 +9,7 @@ use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
 use App\Services\Lifecycle\LifecycleService;
 use App\Services\ProjectNumberAllocator;
+use App\Services\Reports\ApplicationReport;
 use App\Services\Sharing\SharedPayloadProjection;
 use Database\Schema\OperationalManifest;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -132,13 +133,14 @@ final class ApplicationService
         return [$r['resolved_column'] => $id, $r['state_column'] => 'resolved'];
     }
 
-    public function search(WebAccount $account, array $cities, string $search): LengthAwarePaginator
+    public function search(WebAccount $account, array $cities, string $search, array $filters = []): LengthAwarePaginator
     {
         abort_unless($this->access->active($account), 403);
         $allowed = $this->access->cities($account, 'applications.view')->pluck('id')->map(fn ($id) => (int) $id)->all();
         $cities = array_values(array_unique(array_map('intval', $cities)));
         abort_if(array_diff($cities, $allowed) !== [], 403);
         $query = $this->queryTable('microproject')->whereIn('p.city_id', $cities ?: $allowed);
+        app(ApplicationReport::class)->applyFilters($query, $cities ?: $allowed, $filters);
         if ($search !== '') {
             $literal = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_substr($search, 0, 200)).'%';
             $query->where(function (Builder $q) use ($literal, $search) {
@@ -150,7 +152,7 @@ final class ApplicationService
         }
         $this->audit->record($account->id, 'applications.list', 'succeeded');
 
-        return $query->orderBy('p.id')->paginate(20)->appends(['cities' => $cities, 'search' => $search]);
+        return $query->orderBy('p.id')->paginate(20)->appends(array_filter(['cities' => $cities, 'search' => $search] + $filters, fn ($value) => $value !== '' && $value !== []));
     }
 
     private function aggregate(WebAccount $account, object $application): array

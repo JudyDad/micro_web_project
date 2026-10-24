@@ -16,6 +16,7 @@ use App\Http\Controllers\ProfessionMeetingController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchasingController;
 use App\Http\Controllers\RehabVisitController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SpecialCaseController;
 use App\Http\Controllers\TaskBoardController;
 use App\Http\Controllers\VisitController;
@@ -58,6 +59,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/applications/{application}/lifecycle/reason', [LifecycleController::class, 'reason'])->where('application', '[1-9][0-9]{0,18}')->block(10, 10)->name('lifecycle.reason');
             Route::get('/applications/{application}/checklist/{person}', [ChecklistController::class, 'show'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->name('checklists.show');
             Route::post('/applications/{application}/checklist/{person}', [ChecklistController::class, 'save'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->block(10, 10)->name('checklists.save');
+            Route::get('/statistics', [ReportController::class, 'statistics'])->name('reports.statistics');
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
             Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
             Route::post('/visit-schedule/{notice}/seen', [VisitController::class, 'scheduleSeen'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.seen');

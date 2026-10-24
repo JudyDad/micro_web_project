@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ApplicationFilterRequest;
 use App\Http\Requests\ApplicationWriteRequest;
-use App\Http\Requests\ProjectSearchRequest;
 use App\Services\AccountAccess;
 use App\Services\Applications\ApplicationService;
 use App\Services\Assessments\ChecklistService;
 use App\Services\Drafts\ApplicationDraftStore;
 use App\Services\Lifecycle\LifecycleService;
+use App\Services\Reports\ApplicationReport;
 use Database\Schema\OperationalManifest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,13 +20,17 @@ use Illuminate\View\View;
 
 final class ApplicationController
 {
-    public function index(ProjectSearchRequest $request, ApplicationService $applications, AccountAccess $access): View
+    public function index(ApplicationFilterRequest $request, ApplicationService $applications, AccountAccess $access, ApplicationReport $report): View
     {
         $search = $request->validated('search') ?? '';
         $selectedCities = array_map('intval', $request->validated('cities') ?? []);
+        $filters = $request->filters();
+        $viewable = $access->cities($request->user(), 'applications.view');
 
         return view('applications.index', [
-            'applications' => $applications->search($request->user(), $selectedCities, $search),
+            'applications' => $applications->search($request->user(), $selectedCities, $search, $filters),
+            'filters' => $filters,
+            'stateOptions' => $report->stateOptions($viewable->pluck('id')->map(fn ($id) => (int) $id)->all()),
             'cities' => $access->cities($request->user(), 'applications.view'),
             'manageCities' => $access->cities($request->user(), 'applications.manage'),
             'search' => $search, 'selectedCities' => $selectedCities,
