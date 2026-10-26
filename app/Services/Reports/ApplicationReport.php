@@ -145,4 +145,35 @@ final class ApplicationReport
             ]),
         ];
     }
+
+    /**
+     * The statistics as one flat table (section, category, city, records), including which cities were and were not covered,
+     * so a workbook carries the same coverage statement as the page. Counts only, as on the page.
+     *
+     * @param  array<string, mixed>  $statistics  the result of statistics()
+     * @return list<list<string|int>>
+     */
+    public function exportRows(array $statistics): array
+    {
+        $cityNames = $statistics['coverage']->keyBy('id');
+        $rows = [['Total', 'All matching applications', '', $statistics['total']]];
+        foreach ($statistics['coverage'] as $city) {
+            $status = ! $city->included ? 'Not included' : ($city->count === 0 ? 'Included, no matching records' : 'Included');
+            $rows[] = ['Coverage', $status, $city->name_en, $city->count];
+        }
+        foreach ($statistics['matrix'] as $state => $perCity) {
+            foreach ($statistics['cities'] as $cityId) {
+                $rows[] = ['Lifecycle status', $state === '' ? 'No status recorded' : (string) $state, $cityNames[$cityId]->name_en ?? (string) $cityId, $perCity[$cityId] ?? 0];
+            }
+        }
+        foreach (['zero' => 'Preliminary', 'project' => 'Full', 'other' => 'Other'] as $stage => $label) {
+            $rows[] = ['Application stage', $label, '', $statistics['byStage'][$stage]];
+        }
+        foreach ($statistics['byYear'] as $year => $count) {
+            $rows[] = ['Request year', (string) $year, '', $count];
+        }
+        $rows[] = ['Request year', 'No request date', '', $statistics['undated']];
+
+        return $rows;
+    }
 }

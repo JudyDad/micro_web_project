@@ -8,7 +8,8 @@ The desktop has about twenty export buttons (Excel) and one print (the checklist
 
 1. **Applications export** (`/{locale}/applications/export?format=xlsx|csv`; Excel is the default): every application matching the list's current search, city, stage, status and date filters, not one page. Columns: City, Project number, Name, Stage, Request date, Lifecycle status. Linked from the applications page with the filters carried over.
 2. **Instalments export** (`/{locale}/payments/export`): every instalment matching the payments schedule's filters (pending/paid, year, months, group, cities). Columns: City, Project number, Beneficiary, Partner, Group, Currency, Amount, Due date, Paid, Received date. Amounts are exact decimal strings; currencies are never combined. "Received date" is filled only for paid rows (imported unpaid rows carry the due date there, which would mislead).
-3. **Checklist print** (`/{locale}/applications/{id}/checklist/{person}/print`): a clean A4 page with print styles, right-to-left for Arabic, showing the saved checklist (visits, professional test and training, reviews, key people, team and committee members). It prints what is stored; the desktop saved before printing, the web does not write on print. Without a saved checklist it says so.
+3. **Statistics export** (`/{locale}/statistics/export?format=xlsx|csv`): the statistics page's own numbers under the same filters and city scope, as one flat sheet (Section, Category, City, Records): total, coverage per permitted city (Included, Included with no matching records, Not included), lifecycle status by city, application stage and request year. Counts only, as on the page; the coverage rows carry the "which cities were left out" statement that the desktop put on a coverage sheet.
+4. **Checklist print** (`/{locale}/applications/{id}/checklist/{person}/print`): a clean A4 page with print styles, right-to-left for Arabic, showing the saved checklist (visits, professional test and training, reviews, key people, team and committee members). It prints what is stored; the desktop saved before printing, the web does not write on print. Without a saved checklist it says so.
 
 ## Behaviour
 
@@ -34,9 +35,15 @@ The desktop has about twenty export buttons (Excel) and one print (the checklist
 
 ## Not done / not verified
 
-- **Coverage block:** the desktop adds a coverage sheet to its workbooks. The CSV has City on every row; which cities were included or left out is on screen only.
-- **Other exports** (lookups, logs, notifications, task board, statistics, visits, details, the 22 search modes) are not built. The statistics page has no export yet.
+- **Coverage in the other two exports:** the application and instalment exports carry City on every row but no statement of which cities were included or left out (the statistics export does).
+- **Other exports** (lookups, logs, notifications, task board, visits, details, the 22 search modes) are not built.
 - **Role rule for payments:** the desktop rejected payment export for the Lawful role. The web requires finance and application view grants; a separate export grant is an owner decision.
 - **Large and queued exports:** the gate asks for queued exports when needed and a re-check at download; the streamed export is authorized once per request. No selection over 500 rows was tried beyond the 24-row test; the real sample has 523 rows.
 - **Print parity:** the desktop merged a Word template (`cl.docx`). The web page is not a pixel copy of it, so the print comparison, Arabic printing on paper or PDF, and page breaks across several pages remain to be checked by staff. Template licensing and font packaging (D09) are unchanged.
 - Not run on MySQL beyond the sample site: the sample database is MySQL 8.4, and these exports ran there through the browser, but no automated MySQL test covers them.
+
+## Statistics export and dependency update (26 Oct 2026)
+
+- Livewire updated 4.4.7 → 4.4.8 (`composer update livewire/livewire --with-dependencies`; only `composer.lock` changed) to clear advisory PKSA-xhv3-nr94-h8db; `composer audit` now reports no advisories. Full suite, build and Pint pass after the update.
+- Statistics export: `ExportTest` 12 tests / 166 assertions (page numbers, filters, coverage rows, numeric counts in the workbook, 403 for an ungranted city or no viewable city, audit, bad format). Real sample: the workbook equals the page (Financed 44 + 40, Accepted 3, Under Review 5, Rejected 3, Withdrew 2 + 2, Delayed 1, years 72/18/10, stage Full 100); with `cities[]=4&date_from=2026-01-01` the file has Latakia 10 and AlWadi "Not included".
+- Full suite: 256 tests / 7,903 assertions (1 skipped as before).

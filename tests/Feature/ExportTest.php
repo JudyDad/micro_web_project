@@ -8,6 +8,7 @@ use App\Models\WebAccount;
 use App\Services\Applications\ApplicationService;
 use App\Services\Assessments\ChecklistService;
 use App\Services\Finance\FinanceService;
+use App\Services\Reports\ApplicationReport;
 use App\Services\Reports\CsvExport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -224,6 +225,47 @@ final class ExportTest extends TestCase
         self::assertSame(['100', '200', '300'], array_column(array_slice($csv, 1), 6));
         self::assertSame(array_column(array_slice($csv, 1), 7), array_column(array_slice($xlsx, 1), 7));
         self::assertSame(['USD', 'Not paid', ''], [$xlsx[1][5], $xlsx[1][8], $xlsx[1][9]]);
+    }
+
+    public function test_statistics_export_carries_the_page_numbers_filters_and_coverage(): void
+    {
+        $this->application(1, 'One');
+        $this->application(1, 'Two');
+        $this->application(2, 'Three');
+        $page = app(ApplicationReport::class)->statistics($this->account, [], ['stage' => '', 'state' => '', 'date_from' => '', 'date_to' => '']);
+        [, $rows] = $this->csv('/en/statistics/export');
+        self::assertSame(['Section', 'Category', 'City', 'Records'], $rows[0]);
+        $table = array_map(fn ($r) => implode('|', $r), array_slice($rows, 1));
+        self::assertContains('Total|All matching applications||3', $table);
+        self::assertContains('Coverage|Included|'.$page['coverage'][0]->name_en.'|2', $table);
+        self::assertContains('Lifecycle status|On Hold|'.$page['coverage'][0]->name_en.'|2', $table);
+        self::assertContains('Application stage|Preliminary||3', $table);
+        self::assertSame(3, array_sum(array_map(fn ($r) => $r[0] === 'Lifecycle status' ? (int) $r[3] : 0, array_slice($rows, 1))));
+
+        [, $city2] = $this->csv('/en/statistics/export?cities[]=2');
+        $coverage = array_values(array_filter(array_slice($city2, 1), fn ($r) => $r[0] === 'Coverage'));
+        self::assertSame(['Not included', 'Included'], array_column($coverage, 1));
+        self::assertContains('Total|All matching applications||1', array_map(fn ($r) => implode('|', $r), array_slice($city2, 1)));
+        [, $none] = $this->csv('/en/statistics/export?state=No+such+state');
+        self::assertContains('Total|All matching applications||0', array_map(fn ($r) => implode('|', $r), array_slice($none, 1)));
+
+        $xlsx = $this->workbook($this->get('/en/statistics/export')->assertOk()->streamedContent());
+        self::assertSame(3, $xlsx[1][3], 'counts are numbers in the workbook');
+        $this->get('/en/statistics?cities[]=2&stage=zero')->assertOk()->assertSee('/en/statistics/export?cities%5B0%5D=2&amp;stage=zero&amp;format=xlsx', false)->assertSee('Export these statistics (Excel)');
+        $this->get('/ar/statistics')->assertOk()->assertSee('تصدير هذه الإحصاءات');
+    }
+
+    public function test_statistics_export_is_refused_for_ungranted_cities_and_audited(): void
+    {
+        $this->application(1, 'Mine');
+        $before = DB::table('account_audit_events')->where('event_type', 'reports.exported')->count();
+        $this->csv('/en/statistics/export');
+        self::assertSame($before + 1, DB::table('account_audit_events')->where('event_type', 'reports.exported')->count());
+        DB::table('account_city_capabilities')->where('city_id', 2)->update(['revoked_at' => now()]);
+        $this->get('/en/statistics/export?cities[]=2')->assertForbidden();
+        $this->get('/en/statistics/export?format=nope')->assertSessionHasErrors('format');
+        DB::table('account_city_capabilities')->where('capability', 'applications.view')->update(['revoked_at' => now()]);
+        $this->get('/en/statistics/export')->assertForbidden();
     }
 
     private function application(int $city, string $name): int

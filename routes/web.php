@@ -62,6 +62,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::get('/applications/{application}/checklist/{person}/print', [ChecklistController::class, 'print'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->name('checklists.print');
             Route::post('/applications/{application}/checklist/{person}', [ChecklistController::class, 'save'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->block(10, 10)->name('checklists.save');
             Route::get('/statistics', [ReportController::class, 'statistics'])->name('reports.statistics');
+            Route::get('/statistics/export', [ReportController::class, 'export'])->name('reports.statistics.export');
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
             Route::get('/payments/export', [FinanceController::class, 'paymentsExport'])->name('finance.payments.export');
             Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
