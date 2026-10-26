@@ -734,6 +734,9 @@ final class ApplicationService
         $row->references = [];
         $row->referenceDescriptions = [];
         foreach ($this->relationships($kind) as $r) {
+            if ($r['parent_source_table'] === 'user') {
+                continue; // desktop staff table: no operational payload, the web uses accounts instead
+            }
             $id = $row->{$r['resolved_column']} ?? null;
             $parent = $id === null ? null : $this->queryTable($r['parent_source_table'])
                 ->where('p.city_id', $row->city_id)->where('p.source_id', $row->source_id)->where('p.id', $id)->first();
