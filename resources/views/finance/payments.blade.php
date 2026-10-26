@@ -25,7 +25,7 @@
             <x-ui.button type="submit">{{ __('projects.apply_filters') }}</x-ui.button>
             <a class="button button-secondary" href="{{ route('finance.payments', ['locale' => $locale]) }}">{{ __('projects.clear_filters') }}</a>
         </form>
-        <p><a class="record-link" href="{{ route('finance.payments.export', ['locale' => $locale] + request()->query()) }}">{{ __('reports.export_csv') }}</a></p>
+        <p><a class="record-link" href="{{ route('finance.payments.export', ['locale' => $locale, 'format' => 'xlsx'] + request()->except('format')) }}">{{ __('reports.export_xlsx') }}</a> · <a class="record-link" href="{{ route('finance.payments.export', ['locale' => $locale, 'format' => 'csv'] + request()->except('format')) }}">{{ __('reports.export_csv') }}</a></p>
         <p><small>{{ __('finance.payments.currency_note') }}</small></p>
         <ul class="finance-totals" aria-label="{{ __('finance.payments.totals') }}">
             @forelse($totals as $total)<li><strong>{{ $total->currency ?? '—' }}</strong>: <bdi>{{ $total->total }}</bdi> ({{ __('finance.payments.count', ['count' => $total->payments]) }})</li>@empty<li>{{ __('projects.no_results') }}</li>@endforelse

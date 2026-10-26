@@ -11,12 +11,13 @@ use App\Services\Finance\FinanceService;
 use App\Services\Reports\CsvExport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use OpenSpout\Reader\XLSX\Reader;
 use Symfony\Component\HttpFoundation\HeaderBag;
 use Tests\Support\ApplicationFixture;
 use Tests\Support\FinanceFixture;
 use Tests\TestCase;
 
-/** P6.2: CSV exports return every matching row inside the caller's own authorization, with Arabic text and no formula injection. */
+/** P6.2: CSV and Excel exports return every matching row inside the caller's own authorization, with Arabic text and no formula injection. */
 final class ExportTest extends TestCase
 {
     private WebAccount $account;
@@ -137,8 +138,8 @@ final class ExportTest extends TestCase
     public function test_export_links_carry_the_current_filters_on_both_pages(): void
     {
         $this->application(1, 'Linked');
-        $this->get('/en/applications?cities[]=1&state=Accepted')->assertOk()->assertSee('/en/applications/export?cities%5B0%5D=1&amp;state=Accepted', false)->assertSee('Export all matching rows (CSV)');
-        $this->get('/ar/payments?year=2026')->assertOk()->assertSee('/ar/payments/export?year=2026', false)->assertSee('تصدير كل الصفوف المطابقة');
+        $this->get('/en/applications?cities[]=1&state=Accepted')->assertOk()->assertSee('/en/applications/export?cities%5B0%5D=1&amp;state=Accepted&amp;format=xlsx', false)->assertSee('/en/applications/export?cities%5B0%5D=1&amp;state=Accepted&amp;format=csv', false)->assertSee('Export all matching rows (Excel)');
+        $this->get('/ar/payments?year=2026')->assertOk()->assertSee('/ar/payments/export?format=xlsx&amp;year=2026', false)->assertSee('/ar/payments/export?format=csv&amp;year=2026', false)->assertSee('تصدير كل الصفوف المطابقة');
     }
 
     public function test_checklist_print_shows_the_saved_checklist_in_both_languages_and_needs_the_manage_grant(): void
@@ -174,15 +175,87 @@ final class ExportTest extends TestCase
         $this->get('/en/applications/'.$project.'/checklist/'.$this->intake[1]['person'].'/print')->assertOk()->assertSee('No checklist has been saved');
     }
 
+    public function test_excel_export_is_a_real_workbook_with_numbers_text_and_right_to_left_arabic_sheets(): void
+    {
+        $a = $this->application(1, 'مشروع بالعربية');
+        $this->application(1, '=1+1');
+        DB::table('op_microproject')->where('id', $a)->update(['c_MP_ID' => 1042]);
+        $response = $this->get('/en/applications/export')->assertOk();
+        self::assertSame('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $response->baseResponse->headers->get('content-type'));
+        self::assertMatchesRegularExpression('/filename="applications-\d{8}-\d{6}\.xlsx"/', $response->baseResponse->headers->get('content-disposition'));
+        $rows = $this->workbook($response->streamedContent());
+        self::assertSame(['City', 'Project number', 'Name', 'Stage', 'Request date', 'Lifecycle status'], $rows[0]);
+        self::assertCount(3, $rows);
+        $byName = array_column(array_slice($rows, 1), null, 2);
+        self::assertSame(1042, $byName['مشروع بالعربية'][1], 'project numbers are numbers');
+        self::assertSame('=1+1', $byName['=1+1'][2], 'text that looks like a formula stays plain text');
+        self::assertSame('On Hold', $byName['مشروع بالعربية'][5]);
+        $sheet = fn (string $content) => (function () use ($content) {
+            $path = tempnam(sys_get_temp_dir(), 'xlsx');
+            file_put_contents($path, $content);
+            $zip = new \ZipArchive;
+            $zip->open($path);
+            $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
+            $zip->close();
+            unlink($path);
+
+            return $xml;
+        })();
+        self::assertStringContainsString('rightToLeft="false"', $sheet($response->streamedContent()));
+        self::assertStringContainsString('rightToLeft="true"', $sheet($this->get('/ar/applications/export?format=xlsx')->assertOk()->streamedContent()));
+        $this->get('/en/applications/export?format=bogus')->assertSessionHasErrors('format');
+        $this->get('/en/applications/export?cities[]=2')->assertOk();
+    }
+
+    public function test_excel_instalments_have_numeric_amounts_and_match_the_csv(): void
+    {
+        $catalog = FinanceFixture::catalog(1);
+        $project = FinanceFixture::acceptedProject($this->account, $this->intake[1]);
+        FinanceFixture::withDonor($this->account, $project, $catalog['donors']['a']);
+        $finance = app(FinanceService::class);
+        $loan = $finance->saveLoan($this->account, $project, FinanceFixture::loanInput(), $finance->show($this->account, $project)['version']);
+        $rows = array_map(fn ($n) => ['amount' => (string) (100 * ($n + 1)), 'due_date' => '2026-1'.$n.'-01', 'paid' => '0', 'received_date' => '', 'note' => ''], [0, 1, 2]);
+        $finance->savePayments($this->account, $project, $loan, $rows, $finance->show($this->account, $project)['version']);
+
+        $xlsx = $this->workbook($this->get('/en/payments/export')->assertOk()->streamedContent());
+        [, $csv] = $this->csv('/en/payments/export');
+        self::assertCount(4, $xlsx);
+        self::assertSame([100, 200, 300], array_column(array_slice($xlsx, 1), 6));
+        self::assertSame(['100', '200', '300'], array_column(array_slice($csv, 1), 6));
+        self::assertSame(array_column(array_slice($csv, 1), 7), array_column(array_slice($xlsx, 1), 7));
+        self::assertSame(['USD', 'Not paid', ''], [$xlsx[1][5], $xlsx[1][8], $xlsx[1][9]]);
+    }
+
     private function application(int $city, string $name): int
     {
         return app(ApplicationService::class)->create($this->account, $city, ['c_MP_Name' => $name, 'c_MP_DateOfRequest' => '2026-10-19'], $this->intake[$city]['person'], $this->intake[$city]['references']);
     }
 
+    /** @return list<list<mixed>> the first sheet of a downloaded workbook */
+    private function workbook(string $content): array
+    {
+        self::assertStringStartsWith('PK', $content);
+        $path = tempnam(sys_get_temp_dir(), 'xlsx');
+        file_put_contents($path, $content);
+        $reader = new Reader;
+        $reader->open($path);
+        $rows = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+            break;
+        }
+        $reader->close();
+        unlink($path);
+
+        return $rows;
+    }
+
     /** @return array{0: HeaderBag, 1: list<list<string>>} */
     private function csv(string $url): array
     {
-        $response = $this->get($url)->assertOk();
+        $response = $this->get($url.(str_contains($url, '?') ? '&' : '?').'format=csv')->assertOk();
         $body = $response->streamedContent();
         self::assertStringStartsWith("\xEF\xBB\xBF", $body);
         $lines = array_map('str_getcsv', array_filter(explode("\r\n", substr($body, 3)), fn ($l) => $l !== ''));

@@ -6,7 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Finance\FinanceService;
 use App\Services\Finance\PaymentScheduleService;
-use App\Services\Reports\CsvExport;
+use App\Services\Reports\TableExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,16 +21,16 @@ final class FinanceController
         return $request->validate([
             'cities' => ['sometimes', 'array', 'max:20'], 'cities.*' => ['integer', 'min:1'],
             'state' => ['sometimes', Rule::in(['pending', 'paid'])], 'year' => ['nullable', 'integer', 'between:2018,'.(now()->year + 2)],
-            'months' => ['sometimes', 'array', 'max:12'], 'months.*' => ['integer', 'between:1,12'], 'group' => ['nullable', 'string', 'max:50'],
+            'months' => ['sometimes', 'array', 'max:12'], 'months.*' => ['integer', 'between:1,12'], 'group' => ['nullable', 'string', 'max:50'], 'format' => ['nullable', 'in:xlsx,csv'],
         ]);
     }
 
-    public function paymentsExport(Request $request, string $locale, PaymentScheduleService $schedule, CsvExport $csv): StreamedResponse
+    public function paymentsExport(Request $request, string $locale, PaymentScheduleService $schedule, TableExport $export): StreamedResponse
     {
         $filters = $this->paymentFilters($request);
         $rows = $schedule->exportRows($request->user(), $filters);
 
-        return $csv->stream('instalments-'.now()->format('Ymd-His').'.csv', ['City', 'Project number', 'Beneficiary', 'Partner', 'Group', 'Currency', 'Amount', 'Due date', 'Paid', 'Received date'], $rows);
+        return $export->stream(TableExport::format($filters['format'] ?? null), 'instalments-'.now()->format('Ymd-His'), ['City', 'Project number', 'Beneficiary', 'Partner', 'Group', 'Currency', 'Amount', 'Due date', 'Paid', 'Received date'], $rows, [1, 6], app()->isLocale('ar'));
     }
 
     public function payments(Request $request, string $locale, PaymentScheduleService $schedule): View

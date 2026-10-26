@@ -4,7 +4,7 @@ Phase 2 foundation with unified username/password login, reviewed historical acc
 
 ## Local setup
 
-Requires PHP 8.2+ with Argon2id, mbstring, XML, PDO MySQL and OpenSSL (also ZIP for archive sharing proof), Composer 2, Node 22.12+ and MySQL 8.4. Use patched runtimes for deployment. Local verification used PHP 8.2.4, Node 22.19.0 and MySQL 8.4.8; hosting is deferred until project completion.
+Requires PHP 8.2+ with Argon2id, mbstring, XML, PDO MySQL and OpenSSL (also ZIP, which Excel exports and archive sharing proof need; enable `extension=zip` in php.ini and restart the server), Composer 2, Node 22.12+ and MySQL 8.4. Use patched runtimes for deployment. Local verification used PHP 8.2.4, Node 22.19.0 and MySQL 8.4.8; hosting is deferred until project completion.
 
 ```powershell
 composer install

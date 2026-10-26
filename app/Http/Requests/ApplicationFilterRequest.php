@@ -9,7 +9,7 @@ class ApplicationFilterRequest extends ProjectSearchRequest
     {
         return parent::rules() + [
             'stage' => ['nullable', 'string', 'in:zero,project'],
-            'state' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'], 'format' => ['nullable', 'in:xlsx,csv'],
             'date_from' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:2100-12-31', 'after_or_equal:1900-01-01'],
             'date_to' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:2100-12-31', 'after_or_equal:date_from'],
         ];

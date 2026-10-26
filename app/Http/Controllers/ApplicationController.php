@@ -12,7 +12,7 @@ use App\Services\Assessments\ChecklistService;
 use App\Services\Drafts\ApplicationDraftStore;
 use App\Services\Lifecycle\LifecycleService;
 use App\Services\Reports\ApplicationReport;
-use App\Services\Reports\CsvExport;
+use App\Services\Reports\TableExport;
 use Database\Schema\OperationalManifest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,12 +39,12 @@ final class ApplicationController
         ]);
     }
 
-    /** Every application matching the list's current search, city and filters, as a CSV (the list's own authorization applies). */
-    public function export(ApplicationFilterRequest $request, string $locale, ApplicationService $applications, CsvExport $csv): StreamedResponse
+    /** Every application matching the list's current search, city and filters, as an Excel workbook or CSV (the list's own authorization applies). */
+    public function export(ApplicationFilterRequest $request, string $locale, ApplicationService $applications, TableExport $export): StreamedResponse
     {
         $rows = $applications->exportRows($request->user(), array_map('intval', $request->validated('cities') ?? []), $request->validated('search') ?? '', $request->filters());
 
-        return $csv->stream('applications-'.now()->format('Ymd-His').'.csv', ['City', 'Project number', 'Name', 'Stage', 'Request date', 'Lifecycle status'], $rows);
+        return $export->stream(TableExport::format($request->validated('format')), 'applications-'.now()->format('Ymd-His'), ['City', 'Project number', 'Name', 'Stage', 'Request date', 'Lifecycle status'], $rows, [1], app()->isLocale('ar'));
     }
 
     public function create(Request $request, ApplicationService $applications, AccountAccess $access): View

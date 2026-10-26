@@ -11,6 +11,6 @@ return [
     'by_state' => 'By lifecycle status and city', 'by_stage' => 'By application stage', 'by_year' => 'By request year',
     'unrecorded' => 'No status recorded', 'unrecorded_note' => ':count records have no recorded lifecycle status.',
     'year' => 'Year', 'undated' => 'No request date',
-    'export_csv' => 'Export all matching rows (CSV)',
+    'export_xlsx' => 'Export all matching rows (Excel)', 'export_csv' => 'CSV',
     'empty' => 'No matching applications', 'empty_note' => 'Change the filters, or check that records have been published for your cities.',
 ];
