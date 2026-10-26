@@ -18,7 +18,7 @@ return [
         'visits' => 'Visits', 'experience' => 'Professional test and training', 'reviews' => 'Team, committee and rejection message',
         'key_people' => 'Key people', 'team' => 'Team members', 'committee' => 'Committee members',
         'yes' => 'Yes', 'no' => 'No', 'na' => 'Not applicable', 'result_needs' => 'Needs training', 'result_good' => 'Good, not needed', 'for' => 'For', 'against' => 'Against',
-        'add_member' => 'Add a member…', 'sender_hint' => 'A rejection message needs a recorded sender; senders cannot be chosen here yet.',
+        'add_member' => 'Add a member…', 'print' => 'Print', 'printed' => 'Printed', 'none_saved' => 'No checklist has been saved for this beneficiary yet.', 'print_open' => 'Printable copy', 'sender_hint' => 'A rejection message needs a recorded sender; senders cannot be chosen here yet.',
         'fields' => [
             'date' => 'Date (YYYY-MM-DD)', 'time' => 'Time', 'note' => 'Notes', 'visitor' => 'Visitor', 'visits_report' => 'Visits report', 'examiner' => 'Examiner', 'result' => 'Result',
             'c_HasHomeVisit' => 'Home visit done', 'c_HasProjectVisit' => 'Project visit done', 'c_NeedProTest' => 'Professional test needed', 'c_HasProTest' => 'Professional test done',

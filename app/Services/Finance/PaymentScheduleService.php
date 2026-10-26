@@ -34,30 +34,8 @@ final class PaymentScheduleService
      */
     public function schedule(WebAccount $account, array $filters): array
     {
-        $permitted = $this->cities($account);
-        if ($permitted->isEmpty()) {
-            $this->audit->record($account->id, 'access.denied', 'denied');
-            abort(403);
-        }
-        $selected = array_values(array_intersect($filters['cities'] ?? [], $permitted->pluck('id')->all()));
-        $ids = $selected !== [] ? $selected : $permitted->pluck('id')->all();
-        $paid = ($filters['state'] ?? 'pending') === 'paid';
-        $dateColumn = $paid ? 'p.c_Pay_RecievedOnDate' : 'p.c_Pay_DueDate';
+        [$query, $ids, $dateColumn, $permitted] = $this->filtered($account, $filters);
         $this->audit->record($account->id, 'finance.list', 'succeeded');
-
-        $query = $this->base($ids)->where('p.c_Pay_IsPaid', $paid ? FinanceService::PAID : FinanceService::NOT_PAID);
-        if (! empty($filters['year'])) {
-            $query->whereBetween($dateColumn, [sprintf('%04d-01-01', $filters['year']), sprintf('%04d-12-31', $filters['year'])]);
-        }
-        if (! empty($filters['months'])) {
-            $months = array_map('intval', $filters['months']);
-            $expression = DB::connection()->getDriverName() === 'sqlite' ? "CAST(strftime('%m', {$dateColumn}) AS INTEGER)" : "MONTH({$dateColumn})";
-            $query->whereRaw($expression.' in ('.implode(',', array_fill(0, count($months), '?')).')', $months);
-        }
-        if (! empty($filters['group'])) {
-            $query->whereRaw('lower(g.c_Name) = lower(?)', [$filters['group']]);
-        }
-
         $totals = (clone $query)->reorder()->select(DB::raw('l.c_Currency as currency, COUNT(*) as payments, SUM(p.c_Pay_Amount) as total'))->groupBy('l.c_Currency')->orderBy('l.c_Currency')->get()
             ->map(fn ($row) => (object) ['currency' => $row->currency, 'payments' => (int) $row->payments, 'total' => Money::canonical($row->total) ?? '0']);
         $rows = $query->orderBy($dateColumn)->orderBy('p.id')->paginate(self::PER_PAGE)->withQueryString();
@@ -71,6 +49,62 @@ final class PaymentScheduleService
         }));
 
         return ['rows' => $rows, 'totals' => $totals, 'cities' => $permitted, 'groups' => $this->groups($ids)];
+    }
+
+    /** @return array{0: Builder, 1: list<int>, 2: string, 3: Collection} the filtered instalment query, its cities, the date column and the permitted cities */
+    private function filtered(WebAccount $account, array $filters): array
+    {
+        $permitted = $this->cities($account);
+        if ($permitted->isEmpty()) {
+            $this->audit->record($account->id, 'access.denied', 'denied');
+            abort(403);
+        }
+        $selected = array_values(array_intersect($filters['cities'] ?? [], $permitted->pluck('id')->all()));
+        $ids = $selected !== [] ? $selected : $permitted->pluck('id')->all();
+        $paid = ($filters['state'] ?? 'pending') === 'paid';
+        $dateColumn = $paid ? 'p.c_Pay_RecievedOnDate' : 'p.c_Pay_DueDate';
+        $query = $this->base($ids)->where('p.c_Pay_IsPaid', $paid ? FinanceService::PAID : FinanceService::NOT_PAID);
+        if (! empty($filters['year'])) {
+            $query->whereBetween($dateColumn, [sprintf('%04d-01-01', $filters['year']), sprintf('%04d-12-31', $filters['year'])]);
+        }
+        if (! empty($filters['months'])) {
+            $months = array_map('intval', $filters['months']);
+            $expression = DB::connection()->getDriverName() === 'sqlite' ? "CAST(strftime('%m', {$dateColumn}) AS INTEGER)" : "MONTH({$dateColumn})";
+            $query->whereRaw($expression.' in ('.implode(',', array_fill(0, count($months), '?')).')', $months);
+        }
+        if (! empty($filters['group'])) {
+            $query->whereRaw('lower(g.c_Name) = lower(?)', [$filters['group']]);
+        }
+
+        return [$query, $ids, $dateColumn, $permitted];
+    }
+
+    /**
+     * Every instalment matching the schedule's filters (not one page) for the CSV export, ordered as the schedule is.
+     * Authorization and the audit record happen here, before the first byte is sent.
+     *
+     * @return \Generator<int, list<string|int|null>>
+     */
+    public function exportRows(WebAccount $account, array $filters): \Generator
+    {
+        [$query, , $dateColumn] = $this->filtered($account, $filters);
+        $this->audit->record($account->id, 'reports.exported', 'succeeded');
+        $cityNames = DB::table('cities')->pluck('name_en', 'id');
+        $query->orderBy($dateColumn)->orderBy('p.id');
+
+        return (function () use ($query, $cityNames) {
+            foreach ($query->cursor()->chunk(500) as $chunk) {
+                $names = $this->names($chunk->pluck('project_id')->unique()->all());
+                foreach ($chunk as $row) {
+                    $paid = $row->c_Pay_IsPaid === FinanceService::PAID;
+                    yield [
+                        $cityNames[$row->city_id] ?? '', $row->project_number, $names[$row->project_id]['مستفيد'] ?? '', $names[$row->project_id]['شريك'] ?? '',
+                        $row->group_name, $row->currency, Money::canonical($row->c_Pay_Amount ?? null) ?? '0', Fields::day($row->c_Pay_DueDate ?? null),
+                        $paid ? 'Paid' : 'Not paid', $paid ? Fields::day($row->c_Pay_RecievedOnDate ?? null) : '',
+                    ];
+                }
+            }
+        })();
     }
 
     private function base(array $cityIds): Builder

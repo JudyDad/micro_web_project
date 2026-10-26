@@ -47,6 +47,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::middleware(RequireCurrentAccount::class)->group(function () {
             Route::get('/applications', [ApplicationController::class, 'index'])->name('applications.index');
+            Route::get('/applications/export', [ApplicationController::class, 'export'])->name('applications.export');
             Route::get('/applications/create', [ApplicationController::class, 'create'])->name('applications.create');
             Route::post('/applications', [ApplicationController::class, 'store'])->block(10, 10)->name('applications.store');
             Route::get('/applications/drafts', [ApplicationController::class, 'drafts'])->name('applications.drafts');
@@ -58,9 +59,11 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/applications/{application}/lifecycle', [LifecycleController::class, 'transition'])->where('application', '[1-9][0-9]{0,18}')->block(10, 10)->name('lifecycle.transition');
             Route::post('/applications/{application}/lifecycle/reason', [LifecycleController::class, 'reason'])->where('application', '[1-9][0-9]{0,18}')->block(10, 10)->name('lifecycle.reason');
             Route::get('/applications/{application}/checklist/{person}', [ChecklistController::class, 'show'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->name('checklists.show');
+            Route::get('/applications/{application}/checklist/{person}/print', [ChecklistController::class, 'print'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->name('checklists.print');
             Route::post('/applications/{application}/checklist/{person}', [ChecklistController::class, 'save'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->block(10, 10)->name('checklists.save');
             Route::get('/statistics', [ReportController::class, 'statistics'])->name('reports.statistics');
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
+            Route::get('/payments/export', [FinanceController::class, 'paymentsExport'])->name('finance.payments.export');
             Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
             Route::post('/visit-schedule/{notice}/seen', [VisitController::class, 'scheduleSeen'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.seen');
             Route::post('/visit-schedule/{notice}/reschedule', [VisitController::class, 'scheduleReschedule'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.reschedule');

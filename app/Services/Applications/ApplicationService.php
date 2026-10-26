@@ -135,6 +135,52 @@ final class ApplicationService
 
     public function search(WebAccount $account, array $cities, string $search, array $filters = []): LengthAwarePaginator
     {
+        [$query, $cities] = $this->searchQuery($account, $cities, $search, $filters);
+        $this->audit->record($account->id, 'applications.list', 'succeeded');
+
+        return $query->orderBy('p.id')->paginate(20)->appends(array_filter(['cities' => $cities, 'search' => $search] + $filters, fn ($value) => $value !== '' && $value !== []));
+    }
+
+    /**
+     * Every application matching the list's search, city and filters (not one page), one row per application in list order,
+     * for the CSV export. The city scope and capability check are those of the list itself.
+     *
+     * Authorization and the audit record happen here, before the first byte is sent; only the rows are streamed.
+     *
+     * @return \Generator<int, list<string|int|null>>
+     */
+    public function exportRows(WebAccount $account, array $cities, string $search, array $filters = []): \Generator
+    {
+        [$query, $cityIds] = $this->searchQuery($account, $cities, $search, $filters);
+        if ($this->access->cities($account, 'applications.view')->isEmpty()) {
+            $this->audit->record($account->id, 'access.denied', 'denied');
+            abort(403);
+        }
+        $report = app(ApplicationReport::class);
+        $names = [];
+        foreach ($report->stateOptions($cityIds ?: $this->access->cities($account, 'applications.view')->pluck('id')->map(fn ($id) => (int) $id)->all()) as $entry) {
+            foreach ($entry['ids'] as $city => $ids) {
+                foreach ($ids as $id) {
+                    $names[$city][$id] = $entry['en'];
+                }
+            }
+        }
+        $this->audit->record($account->id, 'reports.exported', 'succeeded');
+        $query->selectRaw('('.$report->currentStateSql().') as current_state_id')->orderBy('p.id');
+
+        return (function () use ($query, $names) {
+            foreach ($query->cursor() as $row) {
+                yield [
+                    $row->city_name_en, $row->c_MP_ID, $row->c_MP_Name, $row->c_ApplicationState, $row->c_MP_DateOfRequest,
+                    $row->current_state_id === null ? '' : ($names[(int) $row->city_id][(int) $row->current_state_id] ?? ''),
+                ];
+            }
+        })();
+    }
+
+    /** @return array{0: Builder, 1: list<int>} the filtered query and the explicitly requested cities */
+    private function searchQuery(WebAccount $account, array $cities, string $search, array $filters): array
+    {
         abort_unless($this->access->active($account), 403);
         $allowed = $this->access->cities($account, 'applications.view')->pluck('id')->map(fn ($id) => (int) $id)->all();
         $cities = array_values(array_unique(array_map('intval', $cities)));
@@ -150,9 +196,8 @@ final class ApplicationService
                 }
             });
         }
-        $this->audit->record($account->id, 'applications.list', 'succeeded');
 
-        return $query->orderBy('p.id')->paginate(20)->appends(array_filter(['cities' => $cities, 'search' => $search] + $filters, fn ($value) => $value !== '' && $value !== []));
+        return [$query, $cities];
     }
 
     private function aggregate(WebAccount $account, object $application): array

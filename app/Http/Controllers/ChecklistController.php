@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Services\AccountAccess;
+use App\Services\AccountAuditTrail;
 use App\Services\Assessments\ChecklistService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +20,24 @@ final class ChecklistController
         return view('checklists.show', $checklists->show($request->user(), $this->id($application), $this->id($person), $header === null ? null : (int) $header) + [
             'applicationId' => $this->id($application), 'fieldNames' => $checklists->fieldNames(), 'referenceNames' => $checklists->referenceNames(),
         ]);
+    }
+
+    /** Printable copy of one saved checklist. Like the desktop's print it needs the assessment-manage grant, and it prints what is stored. */
+    public function print(Request $request, string $locale, string $application, string $person, ChecklistService $checklists, AccountAccess $access, AccountAuditTrail $audit): View|RedirectResponse
+    {
+        $header = $request->validate(['header' => ['nullable', 'integer', 'min:1']])['header'] ?? null;
+        $data = $checklists->show($request->user(), $this->id($application), $this->id($person), $header === null ? null : (int) $header);
+        $city = (int) $data['project']->city_id;
+        if (! $access->check($request->user(), $city, 'assessments.manage')) {
+            $audit->record($request->user()->id, 'access.denied', 'denied', $city);
+            abort(403);
+        }
+        if ($data['needsHeaderChoice']) {
+            return redirect()->route('checklists.show', ['locale' => $locale, 'application' => $application, 'person' => $person]);
+        }
+        $audit->record($request->user()->id, 'assessments.printed', 'succeeded', $city, subjectType: 'application_entity', subjectId: $this->id($application));
+
+        return view('checklists.print', $data + ['applicationId' => $this->id($application)]);
     }
 
     public function save(Request $request, string $locale, string $application, string $person, ChecklistService $checklists): RedirectResponse

@@ -12,11 +12,13 @@ use App\Services\Assessments\ChecklistService;
 use App\Services\Drafts\ApplicationDraftStore;
 use App\Services\Lifecycle\LifecycleService;
 use App\Services\Reports\ApplicationReport;
+use App\Services\Reports\CsvExport;
 use Database\Schema\OperationalManifest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class ApplicationController
 {
@@ -35,6 +37,14 @@ final class ApplicationController
             'manageCities' => $access->cities($request->user(), 'applications.manage'),
             'search' => $search, 'selectedCities' => $selectedCities,
         ]);
+    }
+
+    /** Every application matching the list's current search, city and filters, as a CSV (the list's own authorization applies). */
+    public function export(ApplicationFilterRequest $request, string $locale, ApplicationService $applications, CsvExport $csv): StreamedResponse
+    {
+        $rows = $applications->exportRows($request->user(), array_map('intval', $request->validated('cities') ?? []), $request->validated('search') ?? '', $request->filters());
+
+        return $csv->stream('applications-'.now()->format('Ymd-His').'.csv', ['City', 'Project number', 'Name', 'Stage', 'Request date', 'Lifecycle status'], $rows);
     }
 
     public function create(Request $request, ApplicationService $applications, AccountAccess $access): View

@@ -6,20 +6,36 @@ namespace App\Http\Controllers;
 
 use App\Services\Finance\FinanceService;
 use App\Services\Finance\PaymentScheduleService;
+use App\Services\Reports\CsvExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class FinanceController
 {
-    public function payments(Request $request, string $locale, PaymentScheduleService $schedule): View
+    /** @return array<string, mixed> */
+    private function paymentFilters(Request $request): array
     {
-        $filters = $request->validate([
+        return $request->validate([
             'cities' => ['sometimes', 'array', 'max:20'], 'cities.*' => ['integer', 'min:1'],
             'state' => ['sometimes', Rule::in(['pending', 'paid'])], 'year' => ['nullable', 'integer', 'between:2018,'.(now()->year + 2)],
             'months' => ['sometimes', 'array', 'max:12'], 'months.*' => ['integer', 'between:1,12'], 'group' => ['nullable', 'string', 'max:50'],
         ]);
+    }
+
+    public function paymentsExport(Request $request, string $locale, PaymentScheduleService $schedule, CsvExport $csv): StreamedResponse
+    {
+        $filters = $this->paymentFilters($request);
+        $rows = $schedule->exportRows($request->user(), $filters);
+
+        return $csv->stream('instalments-'.now()->format('Ymd-His').'.csv', ['City', 'Project number', 'Beneficiary', 'Partner', 'Group', 'Currency', 'Amount', 'Due date', 'Paid', 'Received date'], $rows);
+    }
+
+    public function payments(Request $request, string $locale, PaymentScheduleService $schedule): View
+    {
+        $filters = $this->paymentFilters($request);
 
         return view('finance.payments', $schedule->schedule($request->user(), $filters) + ['filters' => $filters + ['state' => 'pending']]);
     }

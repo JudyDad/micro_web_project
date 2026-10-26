@@ -13,7 +13,7 @@
 @endphp
 <x-layouts.app :title="__('lifecycle.checklist.title')" :operational="true">
     <a class="back-link" href="{{ route('applications.show', ['locale' => app()->getLocale(), 'application' => $applicationId]) }}">{{ __('applications.back') }}</a>
-    <div class="page-heading"><div><p class="eyebrow">{{ app()->isLocale('ar') ? $project->city_name_ar : $project->city_name_en }} · {{ $project->c_MP_ID }}</p><h1>{{ __('lifecycle.checklist.title') }}</h1><p class="page-description">{{ __('lifecycle.checklist.scope') }}</p></div></div>
+    <div class="page-heading"><div><p class="eyebrow">{{ app()->isLocale('ar') ? $project->city_name_ar : $project->city_name_en }} · {{ $project->c_MP_ID }}</p><h1>{{ __('lifecycle.checklist.title') }}</h1><p class="page-description">{{ __('lifecycle.checklist.scope') }}</p>@if($canManage && ! $needsHeaderChoice)<p><a class="button button-secondary" href="{{ route('checklists.print', ['locale' => app()->getLocale(), 'application' => $applicationId, 'person' => $personId] + ($h ? ['header' => $h->id] : [])) }}" target="_blank" rel="noopener">{{ __('lifecycle.checklist.print_open') }}</a></p>@endif</div></div>
     @include('people.messages')
     <section class="card people-form"><h2>{{ __('lifecycle.checklist.beneficiary') }}</h2>
         @foreach($people as $person)<a class="button {{ $person->id === $personId ? '' : 'button-secondary' }}" href="{{ route('checklists.show', ['locale' => app()->getLocale(), 'application' => $applicationId, 'person' => $person->id]) }}">{{ $person->label }}</a> @endforeach
