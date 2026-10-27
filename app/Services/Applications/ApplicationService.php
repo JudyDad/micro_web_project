@@ -27,8 +27,11 @@ final class ApplicationService
 {
     private const TABLES = ['application' => 'microproject', 'people' => 'person_microproject', 'agriculture' => 'microproject_ag_answer', 'rehab' => 'microproject_rehab', 'rehab_answers' => 'microproject_rehab_answer', 'powersource' => 'microproject_powersource', 'risk' => 'microproject_risk', 'material' => 'material', 'loss' => 'person_loss', 'illness' => 'person_illness', 'asset' => 'person_asset', 'aid' => 'person_aidsource', 'help' => 'person_help', 'homepower' => 'person_powersource'];
 
-    /** Written by the one-form intake only; they are not project children and never appear in the application aggregate. */
-    private const INTAKE_TABLES = ['family' => 'family', 'membership' => 'person_family'];
+    /** Person-side tables the intake writes or the printable form reads; they are not project children and never appear in the application aggregate. */
+    private const INTAKE_TABLES = ['family' => 'family', 'membership' => 'person_family', 'person' => 'person', 'education' => 'person_education', 'course' => 'person_course', 'work' => 'person_workexp'];
+
+    /** The desktop sex list (Application_New_Form.Designer.cs:1950). Stored as the desktop stores it. */
+    public const SEX_VALUES = ['ذكر', 'أنثى'];
 
     private const APPLICANT_KINDS = ['loss', 'illness', 'asset', 'aid', 'help', 'homepower'];
 
@@ -485,6 +488,7 @@ final class ApplicationService
         foreach (self::APPLICANT_REQUIRED_REFERENCES as $key) {
             $rules['person.references.'.$key] = ['required'];
         }
+        $rules['person.fields.c_P_Sex'][] = 'in:'.implode(',', self::SEX_VALUES);
         $names = [];
         foreach (array_merge(self::APPLICANT_REQUIRED_FIELDS, self::APPLICANT_CONTACT_FIELDS) as $key) {
             $names['person.fields.'.$key] = __('people.fields.'.substr($key, 2));
@@ -758,6 +762,44 @@ final class ApplicationService
         return $result;
     }
 
+    /**
+     * Everything the printable application form shows: the project with its children and, for each linked person,
+     * their record, family book, story, work, education, courses and support rows, each with described references.
+     * Read-only; the caller audits the print. Personal data, so it needs people.view as well as applications.view.
+     */
+    public function printable(WebAccount $account, int $id): array
+    {
+        $application = $this->row($account, 'application', $id);
+        abort_unless($this->access->check($account, (int) $application->city_id, 'people.view'), 403);
+        $data = $this->aggregate($account, $application);
+        $personRelation = $this->relation('people', 'Person_ID');
+        $applicants = [];
+        foreach ($data['people'] as $link) {
+            $personId = $link->{$personRelation['state_column']} === 'resolved' ? (int) $link->{$personRelation['resolved_column']} : null;
+            $snapshot = $personId === null ? ['person' => null] : $this->applicantSnapshot($application, $personId);
+            $applicant = ['link' => $link, 'person' => $snapshot['person'] === null ? null : $this->withReferences('person', $snapshot['person']), 'details' => [], 'households' => []];
+            foreach (['education', 'course', 'work'] as $kind) {
+                $applicant[$kind] = ($snapshot[$kind] ?? collect())->map(fn ($row) => $this->withReferences($kind, $row));
+            }
+            foreach (self::APPLICANT_KINDS as $kind) {
+                $applicant['details'][$kind] = ($snapshot['details'][$kind] ?? collect())->map(fn ($row) => $this->withReferences($kind, $row));
+            }
+            foreach ($snapshot['household'] ?? [] as $household) {
+                $applicant['households'][] = ['family' => $household['family'], 'members' => array_map(fn ($member) => [
+                    'membership' => $this->withReferences('membership', $member['membership']), 'person' => $member['person'], 'work' => $member['work'],
+                ], $household['members'])];
+            }
+            $applicants[] = $applicant;
+        }
+        $fields = [];
+        foreach (array_merge(array_keys(self::TABLES), ['membership', 'education', 'course', 'work']) as $kind) {
+            $fields[$kind] = $this->fields($kind);
+        }
+        $fields['person'] = $this->people->fields('person');
+
+        return $data + ['applicants' => $applicants, 'fields' => $fields];
+    }
+
     public function saveApplicantDetail(WebAccount $account, int $id, int $linkId, string $kind, array $fields, string $version, ?int $detailId = null, array $references = []): void
     {
         abort_unless(in_array($kind, self::APPLICANT_KINDS, true), 422);
@@ -981,7 +1023,7 @@ final class ApplicationService
             if ($parent) {
                 $parts = [];
                 foreach ((array) $parent as $name => $value) {
-                    if (preg_match('/^c_(?:P_FirstName|P_LastName|F_Number|Name|Name_en|E_Name|W_Name)$/', $name) && $value !== null && $value !== '') {
+                    if (preg_match('/^c_(?:P_FirstName|P_LastName|F_Number|Name|Name_ar|Name_en|E_Name|W_Name)$/', $name) && $value !== null && $value !== '') {
                         $parts[] = (string) $value;
                     }
                 }

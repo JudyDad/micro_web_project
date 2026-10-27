@@ -13,7 +13,14 @@
     @endphp
     <div class="field" x-data="{ missing: @js($missing) }">
         <label for="{{ $inputId }}">{{ $label }}</label>
-        @if($field['type'] === 'textarea')
+        @if($name === 'c_P_Sex')
+            {{-- The desktop's two-value list; a historical value outside it is kept as its own option until changed. --}}
+            <select class="input" id="{{ $inputId }}" name="fields[{{ $name }}]" @change="missing = false">
+                <option value="" @selected($value === null || $value === '')>{{ __('people.not_recorded') }}</option>
+                @if($value !== null && $value !== '' && ! in_array($value, \App\Services\Applications\ApplicationService::SEX_VALUES, true))<option value="{{ $value }}" selected>{{ __('people.retained_reference') }}: {{ $value }}</option>@endif
+                @foreach(\App\Services\Applications\ApplicationService::SEX_VALUES as $sex)<option value="{{ $sex }}" @selected($value === $sex)>{{ __('people.sex.'.$sex) }}</option>@endforeach
+            </select>
+        @elseif($field['type'] === 'textarea')
             <textarea class="input" id="{{ $inputId }}" name="fields[{{ $name }}]" rows="3" maxlength="{{ $field['max'] }}" @input="missing = false">{{ $value }}</textarea>
         @else
             {{-- Text preserves historical sentinel dates and numeric strings until explicitly edited. --}}

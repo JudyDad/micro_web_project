@@ -16,7 +16,8 @@ return [
     'link_family' => 'Add family membership', 'education' => 'Education', 'workexp' => 'Work and experience',
     'course' => 'Courses', 'no_entries' => 'No entries found.', 'entry' => 'Entry', 'add_entry' => 'Add an entry',
     'duplicate_hint' => 'Check existing people before creating a new record. Matching numbers never merge records.',
-    'create_hint' => 'Applicants are created from the New application form, together with their family book and project. Use this only for family members and other people who are not applying.',
+    'sex' => ['ذكر' => 'Male', 'أنثى' => 'Female'],
+    'create_hint' =>'Applicants are created from the New application form, together with their family book and project. Use this only for family members and other people who are not applying.',
     'confirm_duplicate' => 'I reviewed matching records and want to create a separate record.',
     'fields' => [
         'P_FirstName' => 'First name', 'P_LastName' => 'Last name', 'P_FatherName' => 'Father’s name', 'P_MotherName' => 'Mother’s name',

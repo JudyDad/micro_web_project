@@ -1,6 +1,7 @@
 <x-layouts.app :title="$application->c_MP_Name" :operational="true">
     <a class="back-link" href="{{ route('applications.index', ['locale' => app()->getLocale()]) }}">{{ __('applications.back') }}</a>
     <div class="page-heading"><div><p class="eyebrow">{{ app()->isLocale('ar') ? $application->city_name_ar : $application->city_name_en }} · {{ $application->c_MP_ID }}</p><h1>{{ $application->c_MP_Name }}</h1><p>{{ __('applications.state') }}: {{ in_array($application->c_ApplicationState, ['zero', 'project'], true) ? __('applications.states.'.$application->c_ApplicationState) : $application->c_ApplicationState }}</p><p class="page-description">{{ __('applications.boundary') }}</p></div></div>
+    @if($canLinkPeople)<p><a class="button button-secondary" href="{{ route('applications.print', ['locale' => app()->getLocale(), 'application' => $application->id]) }}" target="_blank" rel="noopener">{{ __('applications.print.open') }}</a></p>@endif
     <p class="field-hint"><a class="record-link" href="{{ route('details.states.export', ['locale' => app()->getLocale(), 'application' => $application->id, 'format' => 'xlsx']) }}">{{ __('search.export_states') }}</a> · <a class="record-link" href="{{ route('details.states.export', ['locale' => app()->getLocale(), 'application' => $application->id, 'format' => 'csv']) }}">{{ __('reports.export_csv') }}</a></p>
     @include('people.messages')
     @include('lifecycle.panel')

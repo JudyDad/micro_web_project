@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ApplicationFilterRequest;
 use App\Http\Requests\ApplicationWriteRequest;
 use App\Services\AccountAccess;
+use App\Services\AccountAuditTrail;
 use App\Services\Applications\ApplicationService;
 use App\Services\Assessments\ChecklistService;
 use App\Services\Drafts\ApplicationDraftStore;
@@ -146,6 +147,15 @@ final class ApplicationController
             'metadata' => $metadata, 'options' => $options,
             'persons' => $canLinkPeople ? $applications->personOptions($request->user(), $city) : collect(),
         ]);
+    }
+
+    /** Printable copy of the whole application form, in the checklist's print style. It prints what is stored; the print is audited. */
+    public function print(Request $request, string $locale, string $application, ApplicationService $applications, AccountAuditTrail $audit): View
+    {
+        $data = $applications->printable($request->user(), $this->id($application));
+        $audit->record($request->user()->id, 'applications.printed', 'succeeded', (int) $data['application']->city_id, subjectType: 'application_entity', subjectId: $this->id($application));
+
+        return view('applications.print', $data + ['applicationId' => $this->id($application)]);
     }
 
     public function update(ApplicationWriteRequest $request, string $locale, string $application, ApplicationService $applications): RedirectResponse

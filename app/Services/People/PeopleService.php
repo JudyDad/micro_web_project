@@ -184,7 +184,7 @@ final class PeopleService
             if ($parent) {
                 $parts = [];
                 foreach ((array) $parent as $name => $value) {
-                    if (preg_match('/^c_(?:P_FirstName|P_LastName|F_Number|Name|Name_en|E_Name|W_Name)$/', $name) && $value !== null && $value !== '') {
+                    if (preg_match('/^c_(?:P_FirstName|P_LastName|F_Number|Name|Name_ar|Name_en|E_Name|W_Name)$/', $name) && $value !== null && $value !== '') {
                         $parts[] = (string) $value;
                     }
                 }

@@ -17,7 +17,12 @@
     @endphp
     <div class="field" x-data="{ missing: @js($missing) }">
         <label for="{{ $inputId }}">{{ $label }}@if($required) <span class="required-mark">*</span>@endif</label>
-        @if($field['type'] === 'textarea')
+        @if($name === 'c_P_Sex')
+            <select class="input" id="{{ $inputId }}" name="person[fields][{{ $name }}]">
+                <option value="" @selected($value === null || $value === '')>{{ __('applications.select_sex') }}</option>
+                @foreach(\App\Services\Applications\ApplicationService::SEX_VALUES as $sex)<option value="{{ $sex }}" @selected($value === $sex)>{{ __('people.sex.'.$sex) }}</option>@endforeach
+            </select>
+        @elseif($field['type'] === 'textarea')
             <textarea class="input" id="{{ $inputId }}" name="person[fields][{{ $name }}]" rows="3" maxlength="{{ $field['max'] }}" @input="missing = false">{{ $value }}</textarea>
         @else
             <input class="input" id="{{ $inputId }}" name="person[fields][{{ $name }}]" type="text" value="{{ $value }}" maxlength="{{ $field['max'] ?? 200 }}" @input="missing = false">

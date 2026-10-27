@@ -7,8 +7,10 @@ namespace Tests\Integration;
 use App\Services\Applications\ApplicationService;
 use App\Services\Assessments\ChecklistService;
 use App\Services\Lifecycle\LifecycleService;
+use Database\Schema\OperationalManifest;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Tests\Support\ApplicationFixture;
 use Tests\Support\FullApplicationFixture;
 use Tests\TestCase;
@@ -67,6 +69,37 @@ final class ApplicationOperationalWorkflowTest extends TestCase
             self::assertSame(0, DB::table('source_records')->count());
             self::assertGreaterThan(0, DB::table('account_audit_events')->where('event_type', 'applications.updated')->count());
 
+            // 27 Oct one-form intake on the real constraints: new applicant, family book, membership and project in one transaction.
+            $catalog = [
+                'P_MaritalStatus_ID' => ApplicationFixture::row('maritalstatus', 1, ['c_ID' => 1, 'c_Name' => 'متزوج']),
+                'P_Parish_ID' => ApplicationFixture::row('parish', 1, ['c_ID' => 1, 'c_Name_ar' => 'اللاتين', 'c_Name_en' => 'Latin']),
+                'Street_ID' => ApplicationFixture::row('street', 1, ['c_ID' => 1, 'c_Name' => 'الحميدية']),
+                'P_HomeType_ID' => ApplicationFixture::row('assettype', 1, ['c_ID' => 1, 'c_Name' => 'ملك']),
+            ];
+            $relation = ApplicationFixture::row('relation', 1, ['c_ID' => 1, 'c_Name' => 'مستفيد', 'c_Name_en' => 'Self']);
+            $applicant = ['c_P_FirstName' => 'سامر', 'c_P_LastName' => 'حداد', 'c_P_Sex' => 'ذكر', 'c_P_FatherName' => 'جورج', 'c_P_MotherName' => 'مريم', 'c_P_NationalNumber' => '01234567890',
+                'c_P_DOB' => '1988-05-01', 'c_P_IntermidiarySide' => 'رعية اللاتين', 'c_P_HomeAddress' => 'شارع الكنيسة 5', 'c_P_Mobile' => '0999000000', 'c_P_FullName_en' => null];
+            $second = $applications->intake($account, 1, ['c_MP_Name' => 'مشروع خياطة', 'c_MP_DateOfRequest' => '2026-10-27'], $fixture['references'],
+                ['id' => null, 'fields' => $applicant, 'references' => $catalog, 'confirm_duplicate' => false], ['id' => null, 'number' => 'F-100', 'confirm_duplicate' => false]);
+            self::assertSame(1001, (int) DB::table('op_microproject')->where('id', $second)->value('c_MP_ID'));
+            $newPerson = DB::table('op_person')->where('c_P_NationalNumber', '01234567890')->first();
+            self::assertNotNull($newPerson);
+            self::assertSame('web', DB::table('operational_entities')->where('id', $newPerson->id)->value('identity_kind'));
+            self::assertSame('F-100', DB::table('op_family')->value('c_F_Number'));
+            $membership = DB::table('op_person_family')->first();
+            $relationColumn = collect(OperationalManifest::load()['relationships'])->first(fn ($r) => $r['child_source_table'] === 'person_family' && $r['child_columns'] === ['Relation_ID'])['resolved_column'];
+            self::assertSame($relation, (int) $membership->{$relationColumn});
+            self::assertCount(1, $applications->printable($account, $second)['applicants'][0]['households']);
+            try {
+                $applications->intake($account, 1, ['c_MP_Name' => 'مكرر', 'c_MP_DateOfRequest' => '2026-10-27'], $fixture['references'],
+                    ['id' => null, 'fields' => $applicant, 'references' => $catalog, 'confirm_duplicate' => false], ['id' => null, 'number' => 'F-100', 'confirm_duplicate' => false]);
+                self::fail('Duplicate national and family numbers must need explicit confirmation.');
+            } catch (ValidationException $e) {
+                self::assertSame(['person.duplicate', 'family.duplicate'], array_keys($e->errors()));
+            }
+            self::assertSame(2, DB::table('op_microproject')->count());
+            $stateRef = collect(OperationalManifest::load()['relationships'])->first(fn ($r) => $r['child_source_table'] === 'microproject_state' && $r['child_columns'] === ['MicroProject_ID'])['resolved_column'];
+
             // P4.3: lifecycle handoff, state history, tasks and the assessment checklist on the real constraints.
             $lifecycle = app(LifecycleService::class);
             self::assertSame('On Hold', $lifecycle->panel($account, $id)['current']->state_name_en);
@@ -78,8 +111,9 @@ final class ApplicationOperationalWorkflowTest extends TestCase
             self::assertSame(2, DB::table('op_task_microproject')->count());
             $lifecycle->transition($account, $id, $fixture['states']['Accepted'], $fixture['reason'], 'ملاحظة', $panel['version']);
             self::assertSame(4, DB::table('op_task_microproject')->count());
-            self::assertSame(1, DB::table('op_microproject_state')->where('c_Current_State', 1)->count());
-            self::assertSame(3, DB::table('op_microproject_state')->count());
+            self::assertSame(1, DB::table('op_microproject_state')->where($stateRef, $id)->where('c_Current_State', 1)->count());
+            self::assertSame(3, DB::table('op_microproject_state')->where($stateRef, $id)->count());
+            self::assertSame(1, DB::table('op_microproject_state')->where($stateRef, $second)->count(), 'The one-form intake records the desktop On Hold row once.');
             $members = ApplicationFixture::checklistCatalog(1);
             $checklists = app(ChecklistService::class);
             $checklists->save($account, $id, $fixture['person'], null, ['c_Notes' => '  تقييم  ', 'c_HasHomeVisit' => '1', 'c_HVisit_Date' => '2026-10-21'], ['HVisit_Visitor1_ID' => $members['t']],
