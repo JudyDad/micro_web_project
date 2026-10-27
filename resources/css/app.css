@@ -212,3 +212,23 @@ html[lang="ar"] :is(.alert p, .table-toolbar > p, .card-footnote, .field label, 
 .task-open, .task-none { color: #77787b; }
 .task-filters { flex: 1 1 100%; margin-bottom: 12px; }
 .task-filters summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+
+.multi-field { flex-basis: 220px; }
+.multi { position: relative; }
+.multi > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none; min-height: 44px; }
+.multi > summary::-webkit-details-marker { display: none; }
+.multi > summary::after { content: '▾'; font-size: 12px; }
+.multi-count { min-width: 22px; padding: 0 6px; border-radius: 999px; background: #c2151c; color: #fff; font-size: 12px; text-align: center; }
+.multi-options { display: flex; flex-direction: column; gap: 2px; max-height: 240px; overflow-y: auto; margin-top: 4px; padding: 6px; border: 1px solid #d4d4d8; border-radius: 7px; background: #fff; }
+.multi-option { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 5px; cursor: pointer; }
+.multi-option:hover, .multi-option:has(input:checked) { background: #fff5f5; }
+.multi-option input { width: 16px; height: 16px; accent-color: #c2151c; flex-shrink: 0; }
+
+.header-icon { position: relative; color: #3f3f46; text-decoration: none; }
+.header-icon:hover, .header-icon.is-current { background: #f5f5f6; color: #c2151c; }
+.header-badge { position: absolute; inset-block-start: 3px; inset-inline-end: 1px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: #c2151c; color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.header-menu { position: relative; }
+.header-dropdown { position: absolute; inset-block-start: calc(100% + 6px); inset-inline-end: 0; z-index: 40; min-width: 180px; padding: 6px; background: #fff; border: 1px solid #e5e5e7; border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+.header-dropdown-item { display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-weight: 600; text-align: start; cursor: pointer; }
+a.header-dropdown-item:hover, button.header-dropdown-item:hover { background: #f5f5f6; }
+.header-dropdown-item.is-current { color: #c2151c; }

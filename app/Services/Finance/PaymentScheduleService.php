@@ -52,9 +52,13 @@ final class PaymentScheduleService
     }
 
     /** @return array{0: Builder, 1: list<int>, 2: string, 3: Collection} the filtered instalment query, its cities, the date column and the permitted cities */
-    private function filtered(WebAccount $account, array $filters): array
+    private function filtered(WebAccount $account, array $filters, bool $export = false): array
     {
         $permitted = $this->cities($account);
+        if ($export) {
+            // An export needs its own grant in each city, on top of the page's: a city without it is left out (and none left is a refusal).
+            $permitted = $permitted->filter(fn ($city) => $this->access->check($account, (int) $city->id, 'finance.export'))->values();
+        }
         if ($permitted->isEmpty()) {
             $this->audit->record($account->id, 'access.denied', 'denied');
             abort(403);
@@ -87,13 +91,13 @@ final class PaymentScheduleService
      */
     public function exportRows(WebAccount $account, array $filters): \Generator
     {
-        [$query, , $dateColumn] = $this->filtered($account, $filters);
+        [$query, , $dateColumn] = $this->filtered($account, $filters, true);
         $this->audit->record($account->id, 'reports.exported', 'succeeded');
         $cityNames = DB::table('cities')->pluck('name_en', 'id');
         $query->orderBy($dateColumn)->orderBy('p.id');
 
         return (function () use ($query, $cityNames) {
-            foreach ($query->cursor()->chunk(500) as $chunk) {
+            foreach ($query->lazy(500)->chunk(500) as $chunk) {
                 $names = $this->names($chunk->pluck('project_id')->unique()->all());
                 foreach ($chunk as $row) {
                     $paid = $row->c_Pay_IsPaid === FinanceService::PAID;

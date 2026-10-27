@@ -37,7 +37,26 @@ final class TaskBoardService
      */
     public function board(WebAccount $account, array $filters): array
     {
+        [$query, $ids, $context, $columns, $kind, $permitted] = $this->boardQuery($account, $filters, 'tasks.board');
+
+        $rows = $query->orderByDesc('p.c_MP_ID')->orderBy('p.city_id')->orderBy('p.id')->paginate(self::PER_PAGE)->withQueryString();
+        $rows->setCollection($this->decorate($account, $rows->getCollection(), $context, $columns, $kind));
+
+        return [
+            'rows' => $rows, 'cities' => $permitted, 'kind' => $kind, 'filters' => $filters,
+            'columns' => $this->labels($columns, $context), 'options' => $this->options($context),
+            'responsible' => $this->responsible($context, $columns), 'shown' => $ids,
+        ];
+    }
+
+    /** @return array{0: Builder, 1: list<int>, 2: array, 3: array, 4: string, 5: Collection} the filtered projects, shown cities, per-city context, task columns, board kind and permitted cities */
+    private function boardQuery(WebAccount $account, array $filters, string $event, bool $export = false): array
+    {
         $permitted = $this->cities($account);
+        if ($export) {
+            // An export needs its own grant in each city, on top of the page's: a city without it is left out (and none left is a refusal).
+            $permitted = $permitted->filter(fn ($city) => $this->access->check($account, (int) $city->id, 'reports.export'))->values();
+        }
         if ($permitted->isEmpty()) {
             $this->audit->record($account->id, 'access.denied', 'denied');
             abort(403);
@@ -46,7 +65,7 @@ final class TaskBoardService
         $selected = array_values(array_intersect($filters['cities'] ?? [], $permitted->pluck('id')->all()));
         $ids = $selected !== [] ? $selected : $permitted->pluck('id')->all();
         $columns = TaskBoardColumns::for($kind);
-        $this->audit->record($account->id, 'tasks.board', 'succeeded');
+        $this->audit->record($account->id, $event, 'succeeded');
 
         $context = [];
         foreach ($ids as $city) {
@@ -117,14 +136,38 @@ final class TaskBoardService
             });
         }
 
-        $rows = $query->orderByDesc('p.c_MP_ID')->orderBy('p.city_id')->orderBy('p.id')->paginate(self::PER_PAGE)->withQueryString();
-        $rows->setCollection($this->decorate($account, $rows->getCollection(), $context, $columns, $kind));
+        return [$query, $ids, $context, $columns, $kind, $permitted];
+    }
 
-        return [
-            'rows' => $rows, 'cities' => $permitted, 'kind' => $kind, 'filters' => $filters,
-            'columns' => $this->labels($columns, $context), 'options' => $this->options($context),
-            'responsible' => $this->responsible($context, $columns), 'shown' => $ids,
-        ];
+    /**
+     * Every project of the board's filters (not one page) for the Excel/CSV export: one row per project, one column per task.
+     * Authorization and the audit record happen here, before the first byte is sent.
+     *
+     * @return array{0: list<string>, 1: \Generator<int, list<string|int|null>>, 2: string} the task column headings, the rows and the board kind
+     */
+    public function exportRows(WebAccount $account, array $filters): array
+    {
+        [$query, $ids, $context, $columns, $kind] = $this->boardQuery($account, $filters, 'reports.exported', true);
+        $query->orderByDesc('p.c_MP_ID')->orderBy('p.city_id')->orderBy('p.id');
+        $labels = $this->labels($columns, $context);
+        $rows = (function () use ($query, $account, $context, $columns, $kind, $labels) {
+            foreach ($query->lazy(200)->chunk(200) as $chunk) {
+                foreach ($this->decorate($account, collect($chunk->all()), $context, $columns, $kind) as $row) {
+                    $line = [$row->city_name_en, $row->c_MP_ID, implode('، ', $row->people_names), $row->mobile, $row->c_MP_Name, $row->state_name, $row->donor_name, $row->type_name];
+                    if ($kind === 'f') {
+                        $line[] = $row->loan_day;
+                    }
+                    foreach (array_keys($labels) as $legacy) {
+                        $cell = $row->cells[$legacy];
+                        $line[] = ! $cell['assigned'] ? 'Not assigned' : ($cell['done'] ? 'Done' : 'Not done');
+                    }
+
+                    yield $line;
+                }
+            }
+        })();
+
+        return [array_values($labels), $rows, $kind];
     }
 
     /**

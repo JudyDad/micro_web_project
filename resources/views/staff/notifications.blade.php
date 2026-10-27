@@ -15,6 +15,7 @@
             <x-ui.button type="submit">{{ __('projects.apply_filters') }}</x-ui.button>
             <a class="button button-secondary" href="{{ route('notifications.index', ['locale' => $locale]) }}">{{ __('projects.clear_filters') }}</a>
         </form>
+        <p><a class="record-link" href="{{ route('notifications.export', ['locale' => $locale, 'format' => 'xlsx'] + request()->except('format')) }}">{{ __('search.export_notices') }}</a> · <a class="record-link" href="{{ route('notifications.export', ['locale' => $locale, 'format' => 'csv'] + request()->except('format')) }}">{{ __('reports.export_csv') }}</a></p>
         <form method="POST" action="{{ route('notifications.seen', ['locale' => $locale]) }}">@csrf
         <x-ui.table :caption="__('staff.notifications.title')"><thead><tr><th>{{ __('staff.notifications.mark') }}</th><th>{{ __('staff.notifications.project') }}</th><th>{{ __('staff.notifications.city') }}</th><th>{{ __('staff.notifications.about') }}</th><th>{{ __('staff.notifications.body') }}</th><th>{{ __('staff.notifications.date') }}</th><th>{{ __('staff.notifications.sent_by') }}</th><th>{{ __('staff.notifications.open') }}</th></tr></thead><tbody>
         @forelse($rows as $row)
@@ -27,6 +28,7 @@
         </tbody></x-ui.table>
         @if($rows->count())<div class="filter-actions"><x-ui.button type="submit">{{ __('staff.notifications.mark_seen') }}</x-ui.button></div>@endif
         </form>
+        <p><a class="record-link" href="{{ route('notifications.export', ['locale' => $locale, 'format' => 'xlsx'] + request()->except('format')) }}">{{ __('search.export_notices') }}</a> · <a class="record-link" href="{{ route('notifications.export', ['locale' => $locale, 'format' => 'csv'] + request()->except('format')) }}">{{ __('reports.export_csv') }}</a></p>
         <div class="pagination"><x-project-pagination :paginator="$rows" /></div>
     </section>
 </x-layouts.app>

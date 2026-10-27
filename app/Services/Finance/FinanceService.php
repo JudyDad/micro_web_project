@@ -171,6 +171,16 @@ final class FinanceService
         ];
     }
 
+    /**
+     * Decimal strings of a stored loan's amount, exchange rate, returned amount and instalment, for reports.
+     *
+     * @return array{amount: string, rate_exchange: string, returned: string, payment: string}
+     */
+    public function loanAmounts(object $loan): array
+    {
+        return $this->amounts($loan, $this->amountColumns((int) $loan->source_id));
+    }
+
     /** Read model for the project finance page. */
     public function show(WebAccount $account, int $projectId): array
     {

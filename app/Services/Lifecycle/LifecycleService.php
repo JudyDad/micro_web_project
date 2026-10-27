@@ -105,10 +105,16 @@ final class LifecycleService
         $history = $this->history($project);
         $current = $this->current($history);
         $canManage = $this->access->check($account, $city, 'lifecycle.manage');
+        $shown = $canManage ? $history : $history->map(function ($row) {
+            $row = clone $row;
+            $row->reason_name = $row->c_Note = null;
+
+            return $row;
+        });
         $canAccept = $canManage && $this->access->check($account, $city, 'lifecycle.accept');
 
         return [
-            'history' => $history, 'current' => $current, 'version' => $this->version($project, $history),
+            'history' => $shown, 'current' => $current === null ? null : $shown->firstWhere('id', $current->id), 'version' => $this->version($project, $history),
             'canManage' => $canManage,
             'targets' => $canManage ? $this->targets($project, $current, $canAccept) : collect(),
             'reasons' => $canManage ? $this->tables->catalog('statereason', $city, (int) $project->source_id) : collect(),

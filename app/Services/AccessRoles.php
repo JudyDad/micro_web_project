@@ -27,31 +27,33 @@ final class AccessRoles
             'projects.view', 'people.view', 'people.manage', 'applications.view', 'applications.manage', 'attachments.download', 'assessments.view', 'assessments.manage',
             'special_cases.view', 'special_cases.manage', 'special_cases.delete', 'visits.view', 'visits.manage', 'visits.delete',
             'me_visits.view', 'me_visits.manage', 'me_visits.delete', 'profession_meetings.view', 'profession_meetings.manage', 'profession_meetings.delete',
-            'tasks.view', 'notifications.view',
+            'tasks.view', 'notifications.view', 'reports.export', 'attachments.personal', 'attachments.legal',
         ],
+        // The desktop's Financial role and its cashier duty are one role in the web (owner decision, 27 Oct 2026).
         'financial' => [
-            ...self::READ, 'attachments.download', 'finance.view', 'finance.manage', 'executive_files.view', 'executive_files.manage', 'purchasing.view', 'purchasing.manage', ...self::TASKS,
+            ...self::READ, 'attachments.download', 'attachments.financial', 'finance.view', 'finance.manage', 'finance.export', 'executive_files.view', 'executive_files.manage', 'purchasing.view', 'purchasing.manage',
+            'reports.export', ...self::TASKS,
         ],
-        'legal' => [...self::READ, 'attachments.download', 'finance.view', 'executive_files.view', 'executive_files.manage', ...self::TASKS],
+        'legal' => [...self::READ, 'attachments.download', 'attachments.legal', 'finance.view', 'executive_files.view', 'executive_files.manage', ...self::TASKS],
         'media' => [...self::READ, ...self::TASKS],
         'guest' => self::READ,
-        // Duties the desktop kept as flags on a user (IsME, IsCommunication, IsCashier).
+        // Duties the desktop kept as flags on a user (IsME, IsCommunication); IsCashier maps to the financial role.
         'monitoring' => [
             'projects.view', 'applications.view', 'visits.view', 'visits.manage', 'me_visits.view', 'me_visits.manage', 'special_cases.view', 'special_cases.manage',
-            'profession_meetings.view', 'profession_meetings.manage', ...self::TASKS,
+            'profession_meetings.view', 'profession_meetings.manage', 'reports.export', ...self::TASKS,
         ],
+        // May read, never export.
         'communication' => ['projects.view', 'applications.view', ...self::TASKS],
-        'cashier' => ['projects.view', 'applications.view', 'finance.view', 'notifications.view'],
     ];
 
     /** Which roles receive each kind of generated notice in a city. */
     public const RECIPIENTS = [
-        'payment' => ['financial', 'cashier'],
+        'payment' => ['financial'],
         'communication' => ['communication'],
         'executive_file' => ['legal'],
         // Every role except Guest (the desktop excluded Guest and Out of Service users from state notices).
-        'state' => ['administrator', 'data-entry', 'financial', 'legal', 'media', 'monitoring', 'communication', 'cashier'],
-        'message' => ['administrator', 'data-entry', 'financial', 'legal', 'media', 'guest', 'monitoring', 'communication', 'cashier'],
+        'state' => ['administrator', 'data-entry', 'financial', 'legal', 'media', 'monitoring', 'communication'],
+        'message' => ['administrator', 'data-entry', 'financial', 'legal', 'media', 'guest', 'monitoring', 'communication'],
     ];
 
     public function __construct(private AccountProvisioner $provisioner) {}

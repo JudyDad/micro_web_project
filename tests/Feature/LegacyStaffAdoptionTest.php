@@ -59,10 +59,10 @@ final class LegacyStaffAdoptionTest extends TestCase
     {
         $adopter = app(LegacyStaffAdopter::class);
         $result = $adopter->adopt(1, 'adopt:test');
-        self::assertSame(['accounts' => 3, 'roles' => 5, 'emails' => 1, 'tasks' => 1, 'notices' => 3, 'shared' => 2], $result);
+        self::assertSame(['accounts' => 3, 'roles' => 4, 'emails' => 1, 'tasks' => 1, 'notices' => 3, 'shared' => 2], $result);
 
         $roles = fn (WebAccount $account) => DB::table('account_city_roles')->where('account_id', $account->id)->whereNull('revoked_at')->orderBy('role')->pluck('role')->all();
-        self::assertSame(['cashier', 'financial'], $roles($this->finance));
+        self::assertSame(['financial'], $roles($this->finance), 'a financial user flagged as cashier holds the one financial role');
         self::assertSame(['communication', 'data-entry', 'monitoring'], $roles($this->comm), 'the role and the duties flagged on the user');
         self::assertSame([], DB::table('account_city_roles')->where('account_id', DB::table('web_accounts')->where('username', 'away.account')->value('id'))->pluck('role')->all(), 'Out of Service adopts nothing');
         self::assertGreaterThan(0, DB::table('account_city_capabilities')->where('account_id', $this->finance->id)->where('capability', 'finance.manage')->whereNull('revoked_at')->count(), 'the role grants its capabilities');

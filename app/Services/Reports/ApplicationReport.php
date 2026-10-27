@@ -68,16 +68,24 @@ final class ApplicationReport
         if (($filters['date_to'] ?? '') !== '') {
             $query->where('p.c_MP_DateOfRequest', '<=', $filters['date_to']);
         }
-        if (($filters['state'] ?? '') !== '') {
-            $ids = $this->stateOptions($cityIds)->get($filters['state'])['ids'] ?? [];
-            $query->where(function (Builder $outer) use ($ids) {
+        $selectedStates = array_values(array_filter((array) ($filters['state'] ?? []), fn ($v) => $v !== ''));
+        if ($selectedStates !== []) {
+            $options = $this->stateOptions($cityIds);
+            $byCity = [];
+            foreach ($selectedStates as $name) {
+                foreach ($options->get($name)['ids'] ?? [] as $city => $stateIds) {
+                    $byCity[$city] = array_merge($byCity[$city] ?? [], $stateIds);
+                }
+            }
+            $query->where(function (Builder $outer) use ($byCity) {
                 $outer->whereRaw('1 = 0');
-                foreach ($ids as $city => $stateIds) {
+                foreach ($byCity as $city => $stateIds) {
                     $marks = implode(',', array_fill(0, count($stateIds), '?'));
                     $outer->orWhereRaw('(p.city_id = ? and ('.$this->currentStateSql().') in ('.$marks.'))', [$city, ...$stateIds]);
                 }
             });
         }
+        app(ApplicationFilters::class)->apply($query, $cityIds, $filters);
 
         return $query;
     }

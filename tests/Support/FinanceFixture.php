@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 /** Invented finance data on top of the application fixture. */
 final class FinanceFixture
 {
-    public const CAPABILITIES = ['finance.view', 'finance.manage', 'executive_files.view', 'executive_files.manage', 'purchasing.view', 'purchasing.manage'];
+    public const CAPABILITIES = ['finance.view', 'finance.manage', 'finance.export', 'reports.export', 'executive_files.view', 'executive_files.manage', 'purchasing.view', 'purchasing.manage'];
 
     public static function grant(WebAccount $account, array $cities = [1, 2], array $capabilities = self::CAPABILITIES): void
     {

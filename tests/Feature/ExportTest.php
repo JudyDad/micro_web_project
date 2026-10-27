@@ -139,7 +139,7 @@ final class ExportTest extends TestCase
     public function test_export_links_carry_the_current_filters_on_both_pages(): void
     {
         $this->application(1, 'Linked');
-        $this->get('/en/applications?cities[]=1&state=Accepted')->assertOk()->assertSee('/en/applications/export?cities%5B0%5D=1&amp;state=Accepted&amp;format=xlsx', false)->assertSee('/en/applications/export?cities%5B0%5D=1&amp;state=Accepted&amp;format=csv', false)->assertSee('Export all matching rows (Excel)');
+        $this->get('/en/applications?cities[]=1&state%5B0%5D=Accepted')->assertOk()->assertSee('/en/applications/export?cities%5B0%5D=1&amp;state%5B0%5D=Accepted&amp;format=xlsx', false)->assertSee('/en/applications/export?cities%5B0%5D=1&amp;state%5B0%5D=Accepted&amp;format=csv', false)->assertSee('Export all matching rows (Excel)');
         $this->get('/ar/payments?year=2026')->assertOk()->assertSee('/ar/payments/export?format=xlsx&amp;year=2026', false)->assertSee('/ar/payments/export?format=csv&amp;year=2026', false)->assertSee('تصدير كل الصفوف المطابقة');
     }
 

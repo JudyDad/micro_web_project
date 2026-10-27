@@ -13,7 +13,15 @@ final class AccountAccess
         'special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage',
         'special_cases.delete', 'visits.delete', 'me_visits.view', 'me_visits.manage', 'me_visits.delete', 'imported.delete',
         'profession_meetings.view', 'profession_meetings.manage', 'profession_meetings.delete',
-        'tasks.view', 'tasks.manage', 'tasks.manage_all', 'notifications.view', 'notifications.send', 'accounts.manage'];
+        'tasks.view', 'tasks.manage', 'tasks.manage_all', 'notifications.view', 'notifications.send', 'accounts.manage',
+        // Export rules (owner decision of 27 Oct 2026): money exports, every other data export, and the three attachment categories.
+        'finance.export', 'reports.export', 'attachments.personal', 'attachments.legal', 'attachments.financial'];
+
+    /** The capabilities added by the export rules; roles that already exist receive them through `staff:sync-export-roles`. */
+    public const EXPORT_CAPABILITIES = ['finance.export', 'reports.export', 'attachments.personal', 'attachments.legal', 'attachments.financial'];
+
+    /** Image category (as the desktop's `imagetype.Category` spells it) → the grant that opens it. */
+    public const ATTACHMENT_CATEGORIES = ['ثبوتيات شخصية - Personal' => 'attachments.personal', 'أوراق قانونية - Legal' => 'attachments.legal', 'أوراق مالية - Financial' => 'attachments.financial'];
 
     public function active(WebAccount $account): bool
     {
@@ -29,6 +37,18 @@ final class AccountAccess
         return DB::table('cities as c')->join('account_city_capabilities as g', 'g.city_id', '=', 'c.id')
             ->where('g.account_id', $account->getKey())->where('g.capability', $capability)->whereNull('g.revoked_at')
             ->orderBy('c.id')->get(['c.id', 'c.name_en', 'c.name_ar']);
+    }
+
+    /** Cities where the account holds every one of the capabilities. */
+    public function citiesWithAll(WebAccount $account, array $capabilities): Collection
+    {
+        $cities = null;
+        foreach ($capabilities as $capability) {
+            $held = $this->cities($account, $capability);
+            $cities = $cities === null ? $held : $cities->filter(fn ($city) => $held->contains('id', $city->id));
+        }
+
+        return ($cities ?? collect())->values();
     }
 
     public function check(WebAccount $account, int $city, string $capability = 'projects.view'): bool

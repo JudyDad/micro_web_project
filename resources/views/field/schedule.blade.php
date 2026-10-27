@@ -26,6 +26,7 @@
             <x-ui.button type="submit">{{ __('projects.apply_filters') }}</x-ui.button>
             <a class="button button-secondary" href="{{ route('visits.schedule', ['locale' => $locale]) }}">{{ __('projects.clear_filters') }}</a>
         </form>
+        <p><a class="record-link" href="{{ route('visits.schedule.export', ['locale' => $locale, 'format' => 'xlsx'] + request()->except('format')) }}">{{ __('field.schedule.export_xlsx') }}</a> · <a class="record-link" href="{{ route('visits.schedule.export', ['locale' => $locale, 'format' => 'csv'] + request()->except('format')) }}">{{ __('reports.export_csv') }}</a></p>
         <x-ui.table :caption="__('field.schedule.title')"><thead><tr><th>{{ __('field.schedule.project') }}</th><th>{{ __('field.schedule.city') }}</th><th>{{ __('field.schedule.beneficiary') }}</th><th>{{ __('field.schedule.visit') }}</th><th>{{ __('field.schedule.date') }}</th><th>{{ __('field.schedule.status') }}</th><th>{{ __('field.schedule.note') }}</th><th>{{ __('field.schedule.actions') }}</th></tr></thead><tbody>
         @forelse($rows as $row)
         @php($mine = in_array((int) $row->city_id, $manageCities, true))

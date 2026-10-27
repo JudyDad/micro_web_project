@@ -151,14 +151,14 @@ final class ApplicationService
      */
     public function exportRows(WebAccount $account, array $cities, string $search, array $filters = []): \Generator
     {
-        [$query, $cityIds] = $this->searchQuery($account, $cities, $search, $filters);
-        if ($this->access->cities($account, 'applications.view')->isEmpty()) {
+        [$query, $cityIds] = $this->searchQuery($account, $cities, $search, $filters, 'reports.export');
+        if ($this->access->citiesWithAll($account, ['applications.view', 'reports.export'])->isEmpty()) {
             $this->audit->record($account->id, 'access.denied', 'denied');
             abort(403);
         }
         $report = app(ApplicationReport::class);
         $names = [];
-        foreach ($report->stateOptions($cityIds ?: $this->access->cities($account, 'applications.view')->pluck('id')->map(fn ($id) => (int) $id)->all()) as $entry) {
+        foreach ($report->stateOptions($cityIds ?: $this->access->citiesWithAll($account, ['applications.view', 'reports.export'])->pluck('id')->map(fn ($id) => (int) $id)->all()) as $entry) {
             foreach ($entry['ids'] as $city => $ids) {
                 foreach ($ids as $id) {
                     $names[$city][$id] = $entry['en'];
@@ -169,7 +169,7 @@ final class ApplicationService
         $query->selectRaw('('.$report->currentStateSql().') as current_state_id')->orderBy('p.id');
 
         return (function () use ($query, $names) {
-            foreach ($query->cursor() as $row) {
+            foreach ($query->lazy(500) as $row) {
                 yield [
                     $row->city_name_en, $row->c_MP_ID, $row->c_MP_Name, $row->c_ApplicationState, $row->c_MP_DateOfRequest,
                     $row->current_state_id === null ? '' : ($names[(int) $row->city_id][(int) $row->current_state_id] ?? ''),
@@ -179,10 +179,10 @@ final class ApplicationService
     }
 
     /** @return array{0: Builder, 1: list<int>} the filtered query and the explicitly requested cities */
-    private function searchQuery(WebAccount $account, array $cities, string $search, array $filters): array
+    private function searchQuery(WebAccount $account, array $cities, string $search, array $filters, ?string $also = null): array
     {
         abort_unless($this->access->active($account), 403);
-        $allowed = $this->access->cities($account, 'applications.view')->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $allowed = $this->access->citiesWithAll($account, array_filter(['applications.view', $also]))->pluck('id')->map(fn ($id) => (int) $id)->all();
         $cities = array_values(array_unique(array_map('intval', $cities)));
         abort_if(array_diff($cities, $allowed) !== [], 403);
         $query = $this->queryTable('microproject')->whereIn('p.city_id', $cities ?: $allowed);

@@ -48,7 +48,25 @@
     <a class="skip-link" href="#main">{{ __('ui.skip') }}</a>
     <header class="app-header">
         <div class="header-brand"><button x-ref="mobileToggle" class="icon-button mobile-toggle" type="button" @click="toggleNavigation()" :aria-expanded="navigationOpen" aria-controls="navigation" aria-label="{{ __('ui.menu') }}">☰</button><button class="icon-button desktop-toggle" type="button" @click="toggleSidebar()" :aria-expanded="!sidebarCollapsed" aria-controls="navigation" aria-label="{{ __('ui.toggle_sidebar') }}">☰</button><img class="brand-logo" src="{{ asset('assets/brand/hope-center.png') }}" alt="{{ __('projects.organization') }}" width="38" height="38"><strong>{{ __('ui.brand') }}</strong></div>
-        <div class="header-actions">@unless($operational)<span class="environment-badge">{{ __('ui.preview') }}</span>@endunless<a class="language-link" href="{{ $languageUrl }}" lang="{{ $otherLocale }}">{{ app()->isLocale('ar') ? 'English' : 'العربية' }}</a></div>
+        <div class="header-actions">@unless($operational)<span class="environment-badge">{{ __('ui.preview') }}</span>@endunless
+            @if($operational && auth()->check() && app(\App\Services\Staff\NotificationInboxService::class)->cities(auth()->user())->isNotEmpty())
+                @php($unseen = app(\App\Services\Staff\NotificationInboxService::class)->count(auth()->user()))
+                <a @class(['icon-button header-icon', 'is-current' => request()->routeIs('notifications.*')]) href="{{ route('notifications.index', ['locale' => app()->getLocale()]) }}" aria-label="{{ __('staff.nav_notifications') }}@if($unseen > 0) ({{ $unseen }})@endif" title="{{ __('staff.nav_notifications') }}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>@if($unseen > 0)<span class="header-badge">{{ $unseen > 99 ? '99+' : $unseen }}</span>@endif</a>
+            @endif
+            <div class="header-menu" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
+                <button type="button" class="icon-button header-icon" @click="open = !open" :aria-expanded="open" aria-haspopup="true" aria-label="{{ __('ui.language') }}" title="{{ __('ui.language') }}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg></button>
+                <div class="header-dropdown" x-cloak x-show="open"><a class="header-dropdown-item" href="{{ $languageUrl }}" lang="{{ $otherLocale }}">{{ app()->isLocale('ar') ? 'English' : 'العربية' }}</a><span class="header-dropdown-item is-current" aria-current="true">{{ app()->isLocale('ar') ? 'العربية' : 'English' }}</span></div>
+            </div>
+            @if($operational && auth()->check())
+            <div class="header-menu" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
+                <button type="button" class="icon-button header-icon" @click="open = !open" :aria-expanded="open" aria-haspopup="true" aria-label="{{ __('ui.account') }}" title="{{ __('ui.account') }}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+                <div class="header-dropdown" x-cloak x-show="open">
+                    <a @class(['header-dropdown-item', 'is-current' => request()->routeIs('account.password*')]) href="{{ route('account.password', ['locale' => app()->getLocale()]) }}">{{ __('account.menu') }}</a>
+                    <form method="POST" action="{{ route('auth.logout', ['locale' => app()->getLocale()]) }}">@csrf<button class="header-dropdown-item" type="submit">{{ __('projects.logout') }}</button></form>
+                </div>
+            </div>
+            @endif
+        </div>
     </header>
     <button x-cloak x-show="navigationOpen" class="sidebar-backdrop" tabindex="-1" @click="closeNavigation()" aria-label="{{ __('ui.close_menu') }}"></button>
     <aside x-ref="navigation" id="navigation" class="app-sidebar" :class="{ 'is-open': navigationOpen }">
@@ -65,8 +83,6 @@
                 @if(auth()->check() && app(\App\Services\Staff\AccountAdminService::class)->cities(auth()->user())->isNotEmpty())<a @class(['nav-link', 'is-current' => request()->routeIs('admin.*')]) href="{{ route('admin.accounts.index', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">♜</span><span class="nav-text">{{ __('admin.nav') }}</span></a>@endif
                 @if(auth()->check() && app(\App\Services\Staff\TaskBoardService::class)->cities(auth()->user())->isNotEmpty())<a @class(['nav-link', 'is-current' => request()->routeIs('tasks.*')]) href="{{ route('tasks.board', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">☑</span><span class="nav-text">{{ __('staff.nav_tasks') }}</span></a>@endif
                 <a @class(['nav-link', 'is-current' => request()->routeIs('projects.*')]) href="{{ route('projects.index', ['locale' => app()->getLocale()]) }}" @if(request()->routeIs('projects.index')) aria-current="page" @endif aria-label="{{ __('projects.projects') }}" title="{{ __('projects.projects') }}"><span aria-hidden="true">▤</span><span class="nav-text">{{ __('projects.projects') }}</span></a>
-                <a @class(['nav-link', 'is-current' => request()->routeIs('account.password*')]) href="{{ route('account.password', ['locale' => app()->getLocale()]) }}"><span aria-hidden="true">⚿</span><span class="nav-text">{{ __('account.menu') }}</span></a>
-                <form method="POST" action="{{ route('auth.logout', ['locale' => app()->getLocale()]) }}">@csrf<button class="nav-link nav-button" type="submit" aria-label="{{ __('projects.logout') }}" title="{{ __('projects.logout') }}"><span aria-hidden="true">↪</span><span class="nav-text">{{ __('projects.logout') }}</span></button></form>
             @else
             <a class="nav-link is-current" href="#main" @click="closeNavigation(false)" aria-current="page" aria-label="{{ __('ui.foundation') }}" title="{{ __('ui.foundation') }}"><span aria-hidden="true">◫</span><span class="nav-text">{{ __('ui.foundation') }}</span></a>
             <a class="nav-link" href="#projects" @click="closeNavigation(false)" aria-label="{{ __('ui.project_preview') }}" title="{{ __('ui.project_preview') }}"><span aria-hidden="true">▤</span><span class="nav-text">{{ __('ui.project_preview') }}</span></a>

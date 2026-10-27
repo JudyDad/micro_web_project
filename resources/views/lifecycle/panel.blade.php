@@ -42,9 +42,9 @@
     @endif
     <h3>{{ __('lifecycle.history') }}</h3>
     @if($lifecycle['history']->isEmpty())<p>{{ __('lifecycle.none') }}</p>@else
-    <div class="table-wrap"><table class="table"><thead><tr><th>{{ __('lifecycle.state') }}</th><th>{{ __('lifecycle.date') }}</th><th>{{ __('lifecycle.reason') }}</th><th>{{ __('lifecycle.note') }}</th></tr></thead><tbody>
+    <div class="table-wrap"><table class="table"><thead><tr><th>{{ __('lifecycle.state') }}</th><th>{{ __('lifecycle.date') }}</th>@if($lifecycle['canManage'])<th>{{ __('lifecycle.reason') }}</th><th>{{ __('lifecycle.note') }}</th>@endif</tr></thead><tbody>
         @foreach($lifecycle['history'] as $row)
-        <tr><td>{{ $stateName($row) ?? '—' }}@if($lifecycle['current'] && $lifecycle['current']->id === $row->id) · {{ __('lifecycle.current') }}@endif</td><td>{{ $row->c_Date }}</td><td>{{ $row->reason_name }}</td><td>{{ $row->c_Note }}</td></tr>
+        <tr><td>{{ $stateName($row) ?? '—' }}@if($lifecycle['current'] && $lifecycle['current']->id === $row->id) · {{ __('lifecycle.current') }}@endif</td><td>{{ $row->c_Date }}</td>@if($lifecycle['canManage'])<td>{{ $row->reason_name }}</td><td>{{ $row->c_Note }}</td>@endif</tr>
         @endforeach
     </tbody></table></div>
     @endif

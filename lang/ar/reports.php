@@ -13,4 +13,6 @@ return [
     'year' => 'السنة', 'undated' => 'بلا تاريخ طلب',
     'export_xlsx' => 'تصدير كل الصفوف المطابقة (Excel)', 'export_csv' => 'CSV', 'export_stats_xlsx' => 'تصدير هذه الإحصاءات (Excel)',
     'empty' => 'لا توجد طلبات مطابقة', 'empty_note' => 'غيّر خيارات التصفية، أو تأكد من نشر السجلات لمدنك.',
+    'multi' => ['state' => 'الحالة', 'fund_type' => 'نوع التمويل', 'project_type' => 'نوع المشروع', 'sub_type' => 'النوع الفرعي للمشروع', 'partnership' => 'الشراكة', 'donor' => 'الجهة المانحة', 'donor_group' => 'مجموعة المانحين', 'category' => 'الفئة', 'sub_category' => 'الفئة الفرعية', 'career' => 'المهنة', 'marital_status' => 'الحالة الاجتماعية', 'parish' => 'الرعية', 'home_street' => 'شارع المنزل', 'project_street' => 'شارع المشروع', 'age' => 'الفئات العمرية', 'gender' => 'الجنس'],
+    'fund_from' => 'تاريخ التمويل من', 'fund_to' => 'تاريخ التمويل إلى', 'amount_from' => 'المبلغ المطلوب من', 'amount_to' => 'المبلغ المطلوب إلى', 'fund_amount_from' => 'مبلغ التمويل من', 'fund_amount_to' => 'مبلغ التمويل إلى',
 ];

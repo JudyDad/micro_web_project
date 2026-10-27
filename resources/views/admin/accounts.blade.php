@@ -4,7 +4,7 @@
 @endphp
 <x-layouts.app :title="__('admin.title')" :operational="true">
     <div class="page-heading"><div><p class="eyebrow">{{ __('projects.workspace') }}</p><h1>{{ __('admin.title') }}</h1><p class="page-description">{{ __('admin.intro') }}</p></div>
-        <div class="filter-actions"><a class="button button-primary" href="{{ route('admin.accounts.new', ['locale' => $locale]) }}">{{ __('admin.new') }}</a><a class="button button-secondary" href="{{ route('admin.tasks', ['locale' => $locale]) }}">{{ __('admin.tasks_title') }}</a><a class="button button-secondary" href="{{ route('admin.staff', ['locale' => $locale]) }}">{{ __('admin.staff') }}</a></div></div>
+        <div class="filter-actions"><a class="button button-primary" href="{{ route('admin.accounts.new', ['locale' => $locale]) }}">{{ __('admin.new') }}</a><a class="button button-secondary" href="{{ route('admin.tasks', ['locale' => $locale]) }}">{{ __('admin.tasks_title') }}</a><a class="button button-secondary" href="{{ route('admin.staff', ['locale' => $locale]) }}">{{ __('admin.staff') }}</a><a class="button button-secondary" href="{{ route('admin.audit', ['locale' => $locale]) }}">{{ __('search.audit_log') }}</a><a class="button button-secondary" href="{{ route('lookups.index', ['locale' => $locale]) }}">{{ __('search.lookup_tables') }}</a></div></div>
     @include('people.messages')
     <section class="card">
         <form class="search-form project-filters" method="GET" action="{{ route('admin.accounts.index', ['locale' => $locale]) }}">

@@ -13,6 +13,7 @@ return [
         'errors' => ['body' => 'Write the message.', 'title' => 'The subject is too long (255 bytes at most).', 'date' => 'Enter a valid date.', 'to' => 'Choose who receives the message.', 'project' => 'Enter a project number of this city.', 'project_admin' => 'Only administrators can attach a project.'],
     ],
     'tasks' => [
+        'export_xlsx' => 'Export all matching projects (Excel)',
         'title' => 'Task board', 'intro' => 'The tasks of every project in the cities you may read. A task can be changed only by the staff member responsible for it.',
         'kind' => 'Board', 'funded' => 'Funded projects', 'applications' => 'Applications', 'search' => 'Search (number, project, person, phone)',
         'state' => 'Project state', 'donor' => 'Funder', 'type' => 'Project type', 'any' => 'Any', 'done' => 'Done', 'not_done' => 'Not done', 'task_filters' => 'Filter by task',

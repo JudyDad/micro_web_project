@@ -17,11 +17,14 @@ final class ReportController
     /** The statistics page's own numbers (same filters, same city scope and coverage) as one Excel sheet or CSV. */
     public function export(ApplicationFilterRequest $request, string $locale, ApplicationReport $report, AccountAuditTrail $audit, TableExport $export, AccountAccess $access): StreamedResponse
     {
-        if ($access->cities($request->user(), 'applications.view')->isEmpty()) {
+        // The desktop let only administrators, managers and data entry export statistics: reports.export and applications.manage.
+        $allowed = $access->citiesWithAll($request->user(), ['applications.view', 'applications.manage', 'reports.export'])->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $selected = array_map('intval', $request->validated('cities') ?? []);
+        if ($allowed === [] || array_diff($selected, $allowed) !== []) {
             $audit->record($request->user()->id, 'access.denied', 'denied');
             abort(403);
         }
-        $statistics = $report->statistics($request->user(), array_map('intval', $request->validated('cities') ?? []), $request->filters());
+        $statistics = $report->statistics($request->user(), $selected !== [] ? $selected : $allowed, $request->filters());
         $audit->record($request->user()->id, 'reports.exported', 'succeeded');
 
         return $export->stream(TableExport::format($request->validated('format')), 'statistics-'.now()->format('Ymd-His'), ['Section', 'Category', 'City', 'Records'], $report->exportRows($statistics), [3], app()->isLocale('ar'));

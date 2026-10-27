@@ -17,6 +17,28 @@ final class AttachmentAccess
 {
     public function __construct(private AccountAccess $access, private ProjectReadService $projects, private AccountAuditTrail $audit) {}
 
+    /**
+     * An image opens only for an account holding the grant of its category in the city (personal papers, legal papers or financial papers),
+     * as the desktop narrowed image types by role. An image whose type or category is missing or unknown needs all three grants. Files
+     * stored without a type (the `file` table) are not classified and keep the download grant alone.
+     */
+    private function requireCategory(WebAccount $account, int $city, string $cityName, int $sourceId, mixed $imageTypeId): void
+    {
+        $category = null;
+        if ($imageTypeId !== null) {
+            $typeMapping = OperationalManifest::mapping($cityName, 'imagetype');
+            $category = DB::table($typeMapping['preservation_table'])->where('origin_source_id', $sourceId)->where('ID', $imageTypeId)->value('Category');
+        }
+        $needed = AccountAccess::ATTACHMENT_CATEGORIES[(string) $category] ?? null;
+        $grants = $needed === null ? array_values(AccountAccess::ATTACHMENT_CATEGORIES) : [$needed];
+        foreach ($grants as $grant) {
+            if (! $this->access->check($account, $city, $grant)) {
+                $this->audit->record($account->id, 'attachments.download.denied', 'denied', city: $city);
+                abort(403);
+            }
+        }
+    }
+
     public function authorize(WebAccount $account, AttachmentReference $reference): ResolvedAttachment
     {
         abort_unless(config('attachments.enabled') === true && config('attachments.catalog_sha256') === $reference->catalogSha256
@@ -42,6 +64,7 @@ final class AttachmentAccess
         $fields = ['record_id', 'origin_source_id', 'origin_table_id', 'MicroProject_ID'];
         if ($reference->kind === 'external') {
             $fields[] = 'image_NewPath';
+            $fields[] = 'ImageType_ID';
         }
         $attachment = DB::table($mapping['preservation_table'])->where('record_id', $reference->recordId)->first($fields);
         abort_unless($attachment && (int) $attachment->origin_source_id === $reference->sourceId
@@ -49,6 +72,9 @@ final class AttachmentAccess
         if ($reference->kind === 'external') {
             abort_unless(is_string($attachment->image_NewPath) && $reference->sourcePathSha256 !== null
                 && hash_equals($reference->sourcePathSha256, hash('sha256', $attachment->image_NewPath)), 404);
+        }
+        if ($reference->kind === 'external') {
+            $this->requireCategory($account, $city, (string) $identity->name_en, $reference->sourceId, $attachment->ImageType_ID);
         }
         $projectMapping = OperationalManifest::mapping($identity->name_en, 'microproject');
         $owners = DB::table($projectMapping['preservation_table'].' as p')->join('source_records as r', 'r.id', '=', 'p.record_id')

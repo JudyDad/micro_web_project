@@ -10,7 +10,7 @@
     </section>
     @if($cities->isNotEmpty())
     @php($exportQuery = array_filter(['locale' => app()->getLocale(), 'cities' => $selectedCities] + $filters, fn ($v) => $v !== '' && $v !== []))
-    <p class="field-hint"><a class="record-link" href="{{ route('reports.statistics.export', $exportQuery + ['format' => 'xlsx']) }}">{{ __('reports.export_stats_xlsx') }}</a> · <a class="record-link" href="{{ route('reports.statistics.export', $exportQuery + ['format' => 'csv']) }}">{{ __('reports.export_csv') }}</a></p>
+    <p class="field-hint"><a class="record-link" href="{{ route('reports.statistics.export', $exportQuery + ['format' => 'xlsx']) }}">{{ __('reports.export_stats_xlsx') }}</a> · <a class="record-link" href="{{ route('reports.statistics.export', $exportQuery + ['format' => 'csv']) }}">{{ __('reports.export_csv') }}</a> · <a class="record-link" href="{{ route('search.reports', ['locale' => app()->getLocale()]) }}">{{ __('search.title') }}</a></p>
     <section class="card" aria-labelledby="coverage-title"><h2 id="coverage-title">{{ __('reports.coverage') }}</h2><p class="field-hint">{{ __('reports.coverage_note') }}</p>
         <x-ui.table :caption="__('reports.coverage')"><thead><tr><th scope="col">{{ __('projects.city') }}</th><th scope="col">{{ __('reports.coverage_status') }}</th><th scope="col">{{ __('reports.records') }}</th></tr></thead><tbody>
         @foreach($statistics['coverage'] as $city)<tr><td>{{ $ar ? $city->name_ar : $city->name_en }}</td><td>@if(! $city->included){{ __('reports.not_included') }}@elseif($city->count === 0){{ __('reports.no_records') }}@else{{ __('reports.included') }}@endif</td><td><bdi>{{ $city->included ? number_format($city->count) : '—' }}</bdi></td></tr>@endforeach

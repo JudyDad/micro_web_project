@@ -156,7 +156,7 @@ final class StaffOperationalWorkflowTest extends TestCase
             StaffFixture::assign(1, $purchases, $this->users['finance'], 101);
             StaffFixture::legacyNotice(1, $this->users['finance'], 101, '1500', '2026-11-02', ['c_Pay_ID' => 777, 'c_P_Name' => 'Beneficiary'], $project);
             $result = app(LegacyStaffAdopter::class)->adopt(1, 'adopt:test');
-            self::assertSame(['cashier', 'financial'], DB::table('account_city_roles')->where('account_id', $oldFinance->id)->orderBy('role')->pluck('role')->all());
+            self::assertSame(['financial'], DB::table('account_city_roles')->where('account_id', $oldFinance->id)->orderBy('role')->pluck('role')->all());
             self::assertSame('finance.old@example.org', DB::table('web_accounts')->where('id', $oldFinance->id)->value('email'));
             self::assertSame(1, DB::table('account_city_tasks')->where('account_id', $oldFinance->id)->count());
             self::assertSame(1, DB::table('web_notices')->where('kind', 'payment')->where('pay_key', 777)->count());

@@ -7,19 +7,36 @@ namespace App\Http\Controllers;
 use App\Services\Field\VisitKinds;
 use App\Services\Field\VisitScheduleService;
 use App\Services\Field\VisitService;
+use App\Services\Reports\TableExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class VisitController
 {
-    public function schedule(Request $request, string $locale, VisitScheduleService $schedule): View
+    /** @return array<string, mixed> */
+    private function scheduleFilters(Request $request): array
     {
-        $filters = $request->validate([
+        return $request->validate([
             'cities' => ['sometimes', 'array', 'max:20'], 'cities.*' => ['integer', 'min:1'], 'year' => ['nullable', 'integer', 'between:2000,'.(now()->year + 5)],
             'months' => ['sometimes', 'array', 'max:12'], 'months.*' => ['integer', 'between:1,12'], 'kind' => ['nullable', 'in:V,O'],
-            'number' => ['nullable', 'in:Opening,M1,M2,M3,M4,M5,Closing'], 'seen' => ['nullable', 'in:0,1'],
+            'number' => ['nullable', 'in:Opening,M1,M2,M3,M4,M5,Closing'], 'seen' => ['nullable', 'in:0,1'], 'format' => ['nullable', 'in:xlsx,csv'],
         ]);
+    }
+
+    /** Every visit of the schedule's current filters, as an Excel workbook or CSV (the schedule's own authorization applies). */
+    public function scheduleExport(Request $request, string $locale, VisitScheduleService $schedule, TableExport $export): StreamedResponse
+    {
+        $filters = $this->scheduleFilters($request);
+        $rows = $schedule->exportRows($request->user(), $filters);
+
+        return $export->stream(TableExport::format($filters['format'] ?? null), 'visit-schedule-'.now()->format('Ymd-His'), ['City', 'Project number', 'Project name', 'Beneficiary', 'Visit', 'Date', 'Seen', 'Visit status', 'Note'], $rows, [1], app()->isLocale('ar'));
+    }
+
+    public function schedule(Request $request, string $locale, VisitScheduleService $schedule): View
+    {
+        $filters = $this->scheduleFilters($request);
 
         return view('field.schedule', $schedule->schedule($request->user(), $filters) + ['filters' => $filters]);
     }

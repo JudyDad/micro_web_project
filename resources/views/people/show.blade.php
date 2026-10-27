@@ -1,6 +1,7 @@
 <x-layouts.app :title="$person->c_P_FirstName.' '.$person->c_P_LastName" :operational="true">
     <a class="back-link" href="{{ route('people.index', ['locale' => app()->getLocale()]) }}">{{ __('people.back') }}</a>
     <div class="page-heading"><div><p class="eyebrow">{{ app()->isLocale('ar') ? $person->city_name_ar : $person->city_name_en }}</p><h1>{{ $person->c_P_FirstName }} {{ $person->c_P_LastName }}</h1></div></div>
+    <p class="field-hint"><a class="record-link" href="{{ route('details.family.export', ['locale' => app()->getLocale(), 'person' => $person->id, 'format' => 'xlsx']) }}">{{ __('search.export_family') }}</a> · <a class="record-link" href="{{ route('details.family.export', ['locale' => app()->getLocale(), 'person' => $person->id, 'format' => 'csv']) }}">{{ __('reports.export_csv') }}</a></p>
     @include('people.messages')
     @if($canManage)
     <details class="card people-form" open><summary>{{ __('people.person') }}</summary>

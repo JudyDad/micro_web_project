@@ -117,6 +117,7 @@ return [
         ],
     ],
     'schedule' => [
+        'export_xlsx' => 'Export all matching visits (Excel)',
         'title' => 'Visit schedule', 'intro' => 'Visit notices stored in the cities you can read. Staff who manage visits can edit a note and hide or restore a notice.',
         'year' => 'Year', 'all_years' => 'All years', 'months' => 'Months', 'kind' => 'Project kind', 'all_kinds' => 'All', 'vehicles' => 'Vehicles', 'others' => 'Other projects',
         'number' => 'Visit number', 'any_number' => 'All', 'seen' => 'Seen', 'any' => 'All', 'seen_yes' => 'Seen', 'seen_no' => 'Not seen', 'filter' => 'Filter',

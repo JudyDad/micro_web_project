@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 /** Invented field-operations data on top of the application fixture. */
 final class FieldFixture
 {
-    public const CAPABILITIES = ['special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage', 'special_cases.delete', 'visits.delete', 'me_visits.view', 'me_visits.manage', 'me_visits.delete', 'profession_meetings.view', 'profession_meetings.manage', 'profession_meetings.delete'];
+    public const CAPABILITIES = ['reports.export', 'special_cases.view', 'special_cases.manage', 'visits.view', 'visits.manage', 'special_cases.delete', 'visits.delete', 'me_visits.view', 'me_visits.manage', 'me_visits.delete', 'profession_meetings.view', 'profession_meetings.manage', 'profession_meetings.delete'];
 
     public static function grant(WebAccount $account, array $cities = [1, 2], array $capabilities = self::CAPABILITIES): void
     {

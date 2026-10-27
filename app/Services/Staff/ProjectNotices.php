@@ -135,7 +135,7 @@ final class ProjectNotices
         return (int) ($payment->c_Pay_ID ?? $payment->id);
     }
 
-    /** One notice per financial or cashier account for a new unpaid instalment: dated its due date, the body is its amount. */
+    /** One notice per financial account (the cashier duty is the financial role) for a new unpaid instalment: dated its due date, the body is its amount. */
     public function paymentDue(object $project, object $payment, string $amount, string $due, ?int $sender): int
     {
         return $this->notices->broadcast((int) $project->city_id, (int) $project->source_id, $project, 'payment', NoticeService::PAYMENT, $due, $this->beneficiary($project), $amount, $sender, self::paymentKey($payment));

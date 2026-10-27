@@ -16,7 +16,11 @@ use App\Http\Controllers\ProfessionMeetingController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchasingController;
 use App\Http\Controllers\RehabVisitController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\DetailExportController;
+use App\Http\Controllers\LookupController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SearchReportController;
 use App\Http\Controllers\SpecialCaseController;
 use App\Http\Controllers\TaskBoardController;
 use App\Http\Controllers\VisitController;
@@ -62,10 +66,13 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::get('/applications/{application}/checklist/{person}/print', [ChecklistController::class, 'print'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->name('checklists.print');
             Route::post('/applications/{application}/checklist/{person}', [ChecklistController::class, 'save'])->where(['application' => '[1-9][0-9]{0,18}', 'person' => '[1-9][0-9]{0,18}'])->block(10, 10)->name('checklists.save');
             Route::get('/statistics', [ReportController::class, 'statistics'])->name('reports.statistics');
+            Route::get('/search-reports', [SearchReportController::class, 'index'])->name('search.reports');
+            Route::get('/search-reports/export', [SearchReportController::class, 'export'])->name('search.reports.export');
             Route::get('/statistics/export', [ReportController::class, 'export'])->name('reports.statistics.export');
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
             Route::get('/payments/export', [FinanceController::class, 'paymentsExport'])->name('finance.payments.export');
             Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
+            Route::get('/visit-schedule/export', [VisitController::class, 'scheduleExport'])->name('visits.schedule.export');
             Route::post('/visit-schedule/{notice}/seen', [VisitController::class, 'scheduleSeen'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.seen');
             Route::post('/visit-schedule/{notice}/reschedule', [VisitController::class, 'scheduleReschedule'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.reschedule');
             Route::post('/visit-schedule/{notice}/note', [VisitController::class, 'scheduleNote'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.note');
@@ -80,6 +87,12 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/admin/accounts', [AccountAdminController::class, 'store'])->block(10, 10)->name('admin.accounts.store');
             Route::post('/admin/accounts/plain', [AccountAdminController::class, 'storePlain'])->block(10, 10)->name('admin.accounts.store-plain');
             Route::get('/admin/staff', [AccountAdminController::class, 'staff'])->name('admin.staff');
+            Route::get('/admin/audit', [AuditLogController::class, 'index'])->name('admin.audit');
+            Route::get('/admin/audit/export', [AuditLogController::class, 'export'])->name('admin.audit.export');
+            Route::get('/lookups', [LookupController::class, 'index'])->name('lookups.index');
+            Route::get('/lookups/{table}/export', [LookupController::class, 'export'])->where('table', '[a-z_]{2,40}')->name('lookups.export');
+            Route::get('/applications/{application}/states/export', [DetailExportController::class, 'states'])->where('application', '[1-9][0-9]{0,18}')->name('details.states.export');
+            Route::get('/people/{person}/family/export', [DetailExportController::class, 'family'])->where('person', '[1-9][0-9]{0,18}')->name('details.family.export');
             Route::get('/admin/tasks', [AccountAdminController::class, 'tasks'])->name('admin.tasks');
             Route::post('/admin/tasks', [AccountAdminController::class, 'saveTasks'])->block(10, 10)->name('admin.tasks.save');
             Route::prefix('/admin/accounts/{account}')->where(['account' => '[1-9][0-9]{0,18}', 'link' => '[1-9][0-9]{0,18}'])->group(function () {
@@ -93,12 +106,14 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
                 Route::post('/disable', [AccountAdminController::class, 'disable'])->block(10, 10)->name('admin.accounts.disable');
             });
             Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+            Route::get('/notifications/export', [NotificationController::class, 'export'])->name('notifications.export');
             Route::post('/notifications/seen', [NotificationController::class, 'seen'])->block(10, 10)->name('notifications.seen');
             Route::get('/notifications/send', [NotificationController::class, 'create'])->name('notifications.create');
             Route::post('/notifications/send', [NotificationController::class, 'send'])->block(10, 10)->name('notifications.send');
             Route::get('/account/password', [AccountPasswordController::class, 'edit'])->name('account.password');
             Route::post('/account/password', [AccountPasswordController::class, 'update'])->block(10, 10)->name('account.password.update');
             Route::get('/task-board', [TaskBoardController::class, 'index'])->name('tasks.board');
+            Route::get('/task-board/export', [TaskBoardController::class, 'export'])->name('tasks.board.export');
             Route::post('/task-board/toggle', [TaskBoardController::class, 'toggle'])->block(10, 10)->name('tasks.toggle');
             Route::prefix('/applications/{application}')->where(['application' => '[1-9][0-9]{0,18}'])->group(function () {
                 Route::get('/finance', [FinanceController::class, 'show'])->name('finance.show');

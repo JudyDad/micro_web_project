@@ -44,7 +44,7 @@ final class ProjectNoticesTest extends TestCase
         $this->lifecycle = app(LifecycleService::class);
         $this->intake = ApplicationFixture::intake(1);
         $this->catalog = FinanceFixture::catalog(1);
-        foreach (['monitoring', 'financial', 'cashier', 'data-entry', 'legal', 'communication', 'guest', 'media', 'administrator'] as $role) {
+        foreach (['monitoring', 'financial', 'data-entry', 'legal', 'communication', 'guest', 'media', 'administrator'] as $role) {
             $this->staff[$role] = StaffFixture::account($role.'.user', [1 => [$role]]);
         }
         StaffFixture::account('damascus.finance', [2 => ['financial']]);
@@ -171,7 +171,7 @@ final class ProjectNoticesTest extends TestCase
         self::assertSame([], $this->visitNotices($disabled), 'a disabled account does not count as monitoring staff');
     }
 
-    public function test_instalment_notices_go_to_financial_and_cashier_accounts_and_follow_the_instalment(): void
+    public function test_instalment_notices_go_to_financial_accounts_and_follow_the_instalment(): void
     {
         [$id, $loan] = $this->loanProject(['returned' => '360', 'payment' => '120']);
         $this->finance->savePayments($this->account, $id, $loan, [
@@ -179,28 +179,28 @@ final class ProjectNoticesTest extends TestCase
         ], $this->version($id));
         $payments = DB::table('op_payment')->orderBy('id')->get();
         $first = DB::table('web_notices')->where('kind', 'payment')->where('pay_key', $payments[0]->id)->get();
-        self::assertSame(['cashier.user', 'financial.user'], $this->holders($first), 'financial and cashier accounts of this city only');
+        self::assertSame(['financial.user'], $this->holders($first), 'financial accounts of this city only (the cashier duty is the financial role)');
         self::assertSame(['120'], $first->pluck('body')->unique()->values()->all());
         self::assertSame('2026-11-01', substr((string) $first->first()->notice_date, 0, 10));
         self::assertSame('Synthetic Applicant ابن/ة', $first->first()->title);
         self::assertSame(0, DB::table('web_notices')->where('pay_key', $payments[1]->id)->count(), 'a paid instalment is not announced');
-        self::assertSame(4, DB::table('web_notices')->where('kind', 'payment')->count());
+        self::assertSame(2, DB::table('web_notices')->where('kind', 'payment')->count(), 'one notice per financial account and unpaid instalment');
 
         // Paying it clears its notices, changing it moves them, unpaying it brings them back.
         $row = fn (int $n, array $over = []) => $over + ['id' => (string) $payments[$n]->id, 'amount' => (string) (int) $payments[$n]->c_Pay_Amount, 'due_date' => substr((string) $payments[$n]->c_Pay_DueDate, 0, 10), 'paid' => '0', 'received_date' => substr((string) $payments[$n]->c_Pay_RecievedOnDate, 0, 10)];
         $this->finance->savePayments($this->account, $id, $loan, [$row(0, ['paid' => '1', 'received_date' => '2026-11-03'])], $this->version($id));
         $key = fn (int $n) => DB::table('web_notices')->where('kind', 'payment')->where('pay_key', $payments[$n]->id)->orderBy('id');
-        self::assertSame([1, 1], $key(0)->pluck('seen')->map(fn ($v) => (int) $v)->all());
+        self::assertSame([1], $key(0)->pluck('seen')->map(fn ($v) => (int) $v)->all());
         $this->finance->savePayments($this->account, $id, $loan, [$row(0, ['paid' => '0', 'amount' => '130', 'due_date' => '2026-11-15'])], $this->version($id));
         $moved = $key(0)->get();
-        self::assertSame([0, 0], $moved->pluck('seen')->map(fn ($v) => (int) $v)->all());
+        self::assertSame([0], $moved->pluck('seen')->map(fn ($v) => (int) $v)->all());
         self::assertSame(['130'], $moved->pluck('body')->unique()->values()->all());
         self::assertSame('2026-11-15', substr((string) $moved->first()->notice_date, 0, 10));
 
         // An unchanged instalment leaves notices alone, even ones an account has already seen.
         $key(2)->update(['seen' => 1]);
         $this->finance->savePayments($this->account, $id, $loan, [$row(2)], $this->version($id));
-        self::assertSame([1, 1], $key(2)->pluck('seen')->map(fn ($v) => (int) $v)->all());
+        self::assertSame([1], $key(2)->pluck('seen')->map(fn ($v) => (int) $v)->all());
     }
 
     public function test_an_imported_instalment_is_found_by_its_desktop_payment_number(): void
@@ -258,7 +258,7 @@ final class ProjectNoticesTest extends TestCase
     public function test_a_state_change_notifies_staff_roles_and_closing_states_clear_the_projects_notices(): void
     {
         $id = FinanceFixture::acceptedProject($this->account, $this->intake);
-        $staffRoles = ['administrator.user', 'cashier.user', 'communication.user', 'data-entry.user', 'financial.user', 'legal.user', 'media.user', 'monitoring.user'];
+        $staffRoles = ['administrator.user', 'communication.user', 'data-entry.user', 'financial.user', 'legal.user', 'media.user', 'monitoring.user'];
         $announced = fn (string $state) => DB::table('web_notices')->where('project_id', $id)->where('kind', 'state')->where('body', 'تم تبديل حالة المشروع إلى: '.$state)->get();
         self::assertSame($staffRoles, $this->holders($announced('مقبول')), 'accepting is announced to every role except Guest, in this city only');
         StaffFixture::notice(1, $this->staff['data-entry']->id, 'message', 'old news', now()->toDateString(), [], $id);

@@ -40,7 +40,8 @@ final class CsvExport
     public function cell(mixed $value): string
     {
         $text = $value === null ? '' : (string) $value;
-        if ($text !== '' && strpbrk($text[0], "=+-@\t\r") !== false && ! preg_match('/\A-?\d+(\.\d+)?\z/', $text)) {
+        // A lone "-" or "+" is a common placeholder and cannot start a formula, so it is left as it is.
+        if ($text !== '' && strpbrk($text[0], "=+-@\t\r") !== false && ! preg_match('/\A-?\d+(\.\d+)?\z/', $text) && ! in_array($text, ['-', '+'], true)) {
             return "'".$text;
         }
 

@@ -34,4 +34,5 @@ return [
     'assets_title' => 'Provided brand assets', 'assets_note' => 'Somar Sans and the Hope Center logo are packaged unchanged; provenance is documented.',
     'dialog_title' => 'Reusable dialog preview', 'dialog_body' => 'This native dialog supports keyboard focus and Escape to close. It demonstrates a future confirmation surface.',
     'no_changes' => 'No changes to business data', 'no_changes_note' => 'Closing this dialog does not submit or save anything.',
+    'language' => 'Language', 'account' => 'Account',
 ];

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 /** Invented staff-operations data: historical source users, their principals and links to web accounts, tasks and notices. */
 final class StaffFixture
 {
-    public const CAPABILITIES = ['tasks.view', 'tasks.manage', 'notifications.view', 'notifications.send'];
+    public const CAPABILITIES = ['tasks.view', 'tasks.manage', 'notifications.view', 'notifications.send', 'reports.export'];
 
     /** The desktop PBKDF2 hash of `SyntheticFoundationFixture::PASSWORD`, so a linked identity can really log in. */
     public const LEGACY_PASSWORD_HASH = 'AAECAwQFBgcICQoLDA0OD6rirHkgJUrCARvhwiO9AlEz7NUBCDqkiw29w+5zjOOk';

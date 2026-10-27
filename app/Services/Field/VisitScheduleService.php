@@ -12,6 +12,7 @@ use App\Services\Operational\OperationalTables;
 use App\Services\Staff\NoticeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -41,14 +42,35 @@ final class VisitScheduleService
      */
     public function schedule(WebAccount $account, array $filters): array
     {
+        [$query, $permitted] = $this->scheduleQuery($account, $filters, 'visits.schedule');
+
+        $rows = $query->orderBy('n.notice_date')->orderBy('n.id')->paginate(self::PER_PAGE)->withQueryString();
+        $status = $this->status($rows->getCollection());
+        $rows->setCollection($rows->getCollection()->map(function ($row) use ($status) {
+            $row->visit_status = $status[(int) $row->id] ?? null;
+
+            return $row;
+        }));
+        $manage = $permitted->filter(fn ($city) => $this->access->check($account, (int) $city->id, 'visits.manage'))->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return ['rows' => $rows, 'cities' => $permitted, 'manageCities' => $manage];
+    }
+
+    /** @return array{0: Builder, 1: Collection} the filtered shared visit notices and the permitted cities */
+    private function scheduleQuery(WebAccount $account, array $filters, string $event, bool $export = false): array
+    {
         $permitted = $this->cities($account);
+        if ($export) {
+            // An export needs its own grant in each city, on top of the page's: a city without it is left out (and none left is a refusal).
+            $permitted = $permitted->filter(fn ($city) => $this->access->check($account, (int) $city->id, 'reports.export'))->values();
+        }
         if ($permitted->isEmpty()) {
             $this->audit->record($account->id, 'access.denied', 'denied');
             abort(403);
         }
         $selected = array_values(array_intersect($filters['cities'] ?? [], $permitted->pluck('id')->all()));
         $ids = $selected !== [] ? $selected : $permitted->pluck('id')->all();
-        $this->audit->record($account->id, 'visits.schedule', 'succeeded');
+        $this->audit->record($account->id, $event, 'succeeded');
 
         $query = DB::table('web_notices as n')->join('cities as c', 'c.id', '=', 'n.city_id')->leftJoin('op_microproject as m', 'm.id', '=', 'n.project_id')
             ->whereIn('n.city_id', $ids)->whereIn('n.kind', NoticeService::SHARED)->whereNull('n.account_id')
@@ -72,16 +94,35 @@ final class VisitScheduleService
             $query->where('n.seen', (int) $filters['seen']);
         }
 
-        $rows = $query->orderBy('n.notice_date')->orderBy('n.id')->paginate(self::PER_PAGE)->withQueryString();
-        $status = $this->status($rows->getCollection());
-        $rows->setCollection($rows->getCollection()->map(function ($row) use ($status) {
-            $row->visit_status = $status[(int) $row->id] ?? null;
+        return [$query, $permitted];
+    }
 
-            return $row;
-        }));
-        $manage = $permitted->filter(fn ($city) => $this->access->check($account, (int) $city->id, 'visits.manage'))->pluck('id')->map(fn ($id) => (int) $id)->all();
+    /**
+     * Every visit of the schedule's filters (not one page) for the Excel/CSV export, in schedule order, with the desktop's visit status.
+     * Authorization and the audit record happen here, before the first byte is sent.
+     *
+     * @return \Generator<int, list<string|int|null>>
+     */
+    public function exportRows(WebAccount $account, array $filters): \Generator
+    {
+        [$query] = $this->scheduleQuery($account, $filters, 'reports.exported', true);
+        $query->orderBy('n.notice_date')->orderBy('n.id');
 
-        return ['rows' => $rows, 'cities' => $permitted, 'manageCities' => $manage];
+        return (function () use ($query) {
+            foreach ($query->lazy(500)->chunk(500) as $chunk) {
+                $rows = collect($chunk->all());
+                $status = $this->status($rows);
+                foreach ($rows as $row) {
+                    yield [
+                        $row->city_name_en, $row->project_number, $row->project_name, $row->title, $row->body, $row->notice_date,
+                        (int) $row->seen === 1 ? 'Seen' : 'Not seen',
+                        match ($status[(int) $row->id] ?? null) {
+                            'done' => 'Done', 'na' => 'N/A', default => ''
+                        }, $row->note,
+                    ];
+                }
+            }
+        })();
     }
 
     /**

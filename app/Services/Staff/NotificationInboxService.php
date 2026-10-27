@@ -55,14 +55,7 @@ final class NotificationInboxService
      */
     public function inbox(WebAccount $account, array $filters): array
     {
-        $permitted = $this->cities($account);
-        if ($permitted->isEmpty()) {
-            $this->audit->record($account->id, 'access.denied', 'denied');
-            abort(403);
-        }
-        $selected = array_values(array_intersect($filters['cities'] ?? [], $permitted->pluck('id')->all()));
-        $ids = array_map('intval', $selected !== [] ? $selected : $permitted->pluck('id')->all());
-        $this->audit->record($account->id, 'notifications.list', 'succeeded');
+        [$permitted, $ids] = $this->scope($account, $filters, 'notifications.list');
         $rows = $this->query($account, $ids)->orderByDesc('n.notice_date')->orderByDesc('n.id')->paginate(self::PER_PAGE)->withQueryString();
         $senders = DB::table('web_accounts')->whereIn('id', $rows->getCollection()->pluck('sender_account_id')->filter()->unique()->all())->pluck('username', 'id');
         $capabilities = [];
@@ -79,6 +72,49 @@ final class NotificationInboxService
         }));
 
         return ['rows' => $rows, 'cities' => $permitted];
+    }
+
+    /**
+     * The permitted cities, and the ones the request narrows to (an unpermitted requested city is ignored); a refusal is audited.
+     *
+     * @return array{0: Collection, 1: list<int>}
+     */
+    private function scope(WebAccount $account, array $filters, string $event): array
+    {
+        $permitted = $this->cities($account);
+        if ($permitted->isEmpty()) {
+            $this->audit->record($account->id, 'access.denied', 'denied');
+            abort(403);
+        }
+        $selected = array_values(array_intersect($filters['cities'] ?? [], $permitted->pluck('id')->all()));
+        $ids = array_map('intval', $selected !== [] ? $selected : $permitted->pluck('id')->all());
+        $this->audit->record($account->id, $event, 'succeeded');
+
+        return [$permitted, $ids];
+    }
+
+    /**
+     * Everything the account's box shows (every page) for the Excel/CSV export, in the box's order: one line per notice with its sender.
+     * Authorization and the audit record happen here, before the first byte is sent.
+     *
+     * @return \Generator<int, list<string|int|null>>
+     */
+    public function exportRows(WebAccount $account, array $filters): \Generator
+    {
+        [, $ids] = $this->scope($account, $filters, 'reports.exported');
+        $query = $this->query($account, $ids)->orderByDesc('n.notice_date')->orderByDesc('n.id');
+
+        return (function () use ($query) {
+            foreach ($query->lazy(500)->chunk(500) as $chunk) {
+                $senders = DB::table('web_accounts')->whereIn('id', $chunk->pluck('sender_account_id')->filter()->unique()->all())->pluck('username', 'id');
+                foreach ($chunk as $row) {
+                    yield [
+                        $row->city_name_en, substr((string) $row->notice_date, 0, 10), $row->kind, $row->project_number, $row->title, $row->body,
+                        $row->sender_account_id === null ? '' : (string) ($senders[(int) $row->sender_account_id] ?? ''),
+                    ];
+                }
+            }
+        })();
     }
 
     /**

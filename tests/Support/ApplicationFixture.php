@@ -110,7 +110,7 @@ final class ApplicationFixture
     {
         $id = DB::table('web_accounts')->insertGetId(['username' => 'synthetic.applications', 'password_hash' => Hash::make('Synthetic-P42-Only!'), 'password_changed_at' => now('UTC'), 'created_at' => now('UTC'), 'updated_at' => now('UTC')]);
         foreach ([1, 2] as $city) {
-            foreach (['people.view', 'people.manage', 'applications.view', 'applications.manage', 'lifecycle.manage', 'lifecycle.accept', 'assessments.view', 'assessments.manage'] as $capability) {
+            foreach (['people.view', 'people.manage', 'applications.view', 'applications.manage', 'lifecycle.manage', 'lifecycle.accept', 'assessments.view', 'assessments.manage', 'reports.export'] as $capability) {
                 DB::table('account_city_capabilities')->insert(['account_id' => $id, 'city_id' => $city, 'capability' => $capability, 'decision_locator' => 'synthetic:p42', 'granted_at' => now('UTC')]);
             }
             DB::table('project_number_sequences')->updateOrInsert(['source_id' => $city], ['next_number' => 1000]);

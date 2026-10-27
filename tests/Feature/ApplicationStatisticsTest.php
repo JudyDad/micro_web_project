@@ -96,7 +96,7 @@ final class ApplicationStatisticsTest extends TestCase
         $this->get('/en/statistics')->assertRedirect('/en/login');
         $this->actingAs($this->account);
         $this->get('/en/statistics?state=Accepted&date_from=2026-01-01')->assertOk()->assertSee('Application statistics')->assertSee('Lifecycle status')
-            ->assertSee('/ar/statistics?', false)->assertSee('state=Accepted', false);
+            ->assertSee('/ar/statistics?', false)->assertSee('state%5B0%5D=Accepted', false);
         $this->get('/ar/statistics')->assertOk()->assertSee('dir="rtl"', false)->assertSee('إحصائيات الطلبات');
         $this->get('/en/applications?state=Accepted')->assertOk()->assertSee('Lifecycle status');
     }
@@ -112,7 +112,7 @@ final class ApplicationStatisticsTest extends TestCase
 
     private function none(): array
     {
-        return ['stage' => '', 'state' => '', 'date_from' => '', 'date_to' => ''];
+        return ['stage' => '', 'state' => [], 'date_from' => '', 'date_to' => ''];
     }
 
     private function application(int $city, ?string $date, ?string $state = null): int

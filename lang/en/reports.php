@@ -13,4 +13,6 @@ return [
     'year' => 'Year', 'undated' => 'No request date',
     'export_xlsx' => 'Export all matching rows (Excel)', 'export_csv' => 'CSV', 'export_stats_xlsx' => 'Export these statistics (Excel)',
     'empty' => 'No matching applications', 'empty_note' => 'Change the filters, or check that records have been published for your cities.',
+    'multi' => ['state' => 'Lifecycle status', 'fund_type' => 'Fund type', 'project_type' => 'Project type', 'sub_type' => 'Project sub type', 'partnership' => 'Partnership', 'donor' => 'Donor', 'donor_group' => 'Donor group', 'category' => 'Category', 'sub_category' => 'Sub category', 'career' => 'Career', 'marital_status' => 'Marital status', 'parish' => 'Parish', 'home_street' => 'Home street', 'project_street' => 'Project street', 'age' => 'Age ranges', 'gender' => 'Gender'],
+    'fund_from' => 'Fund date from', 'fund_to' => 'Fund date to', 'amount_from' => 'Requested amount from', 'amount_to' => 'Requested amount to', 'fund_amount_from' => 'Fund amount from', 'fund_amount_to' => 'Fund amount to',
 ];

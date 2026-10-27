@@ -29,6 +29,7 @@
             <x-ui.button type="submit">{{ __('projects.apply_filters') }}</x-ui.button>
             <a class="button button-secondary" href="{{ route('tasks.board', ['locale' => $locale, 'kind' => $kind]) }}">{{ __('projects.clear_filters') }}</a>
         </form>
+        <p><a class="record-link" href="{{ route('tasks.board.export', ['locale' => $locale, 'kind' => $kind, 'format' => 'xlsx'] + request()->except(['format', 'kind'])) }}">{{ __('staff.tasks.export_xlsx') }}</a> · <a class="record-link" href="{{ route('tasks.board.export', ['locale' => $locale, 'kind' => $kind, 'format' => 'csv'] + request()->except(['format', 'kind'])) }}">{{ __('reports.export_csv') }}</a></p>
         <p><small>{{ __('staff.tasks.rule') }}</small></p>
         <x-ui.table :caption="__('staff.tasks.title')"><thead><tr><th>{{ __('staff.tasks.project') }}</th><th>{{ __('staff.tasks.city') }}</th><th>{{ __('staff.tasks.beneficiary') }}</th><th>{{ __('staff.tasks.phone') }}</th><th>{{ __('staff.tasks.name') }}</th><th>{{ __('staff.tasks.state') }} / {{ __('staff.tasks.donor') }} / {{ __('staff.tasks.type') }}</th>
             @if($kind === 'f')<th>{{ __('staff.tasks.loan_date') }}</th>@endif

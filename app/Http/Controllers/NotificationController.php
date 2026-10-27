@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Services\AccountAccess;
+use App\Services\Reports\TableExport;
 use App\Services\Staff\NotificationInboxService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class NotificationController
 {
@@ -17,6 +19,15 @@ final class NotificationController
         $filters = $request->validate(['cities' => ['sometimes', 'array', 'max:20'], 'cities.*' => ['integer', 'min:1']]);
 
         return view('staff.notifications', $inbox->inbox($request->user(), $filters) + ['filters' => $filters]);
+    }
+
+    /** Everything in the box, as an Excel workbook or CSV (the box's own authorization and city scope apply). */
+    public function export(Request $request, string $locale, NotificationInboxService $inbox, TableExport $export): StreamedResponse
+    {
+        $filters = $request->validate(['cities' => ['sometimes', 'array', 'max:20'], 'cities.*' => ['integer', 'min:1'], 'format' => ['nullable', 'in:xlsx,csv']]);
+        $rows = $inbox->exportRows($request->user(), $filters);
+
+        return $export->stream(TableExport::format($filters['format'] ?? null), 'notifications-'.now()->format('Ymd-His'), ['City', 'Date', 'Type', 'Project number', 'Title', 'Message', 'Sender'], $rows, [3], app()->isLocale('ar'));
     }
 
     public function seen(Request $request, string $locale, NotificationInboxService $inbox): RedirectResponse

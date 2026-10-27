@@ -8,7 +8,7 @@ use InvalidArgumentException;
 final class AccountAuditTrail
 {
     private const SUBJECTS = [
-        'applications.list' => [], 'reports.statistics' => [], 'reports.exported' => [], 'applications.view' => ['application_entity'],
+        'applications.list' => [], 'reports.statistics' => [], 'reports.exported' => [], 'logs.listed' => [], 'lookups.listed' => [], 'reports.search' => [], 'applications.view' => ['application_entity'],
         'applications.created' => ['application_entity'], 'applications.updated' => ['application_entity'],
         'lifecycle.transitioned' => ['application_entity'], 'lifecycle.reason_updated' => ['application_entity'],
         'assessments.view' => ['application_entity'], 'assessments.saved' => ['application_entity'], 'assessments.printed' => ['application_entity'],

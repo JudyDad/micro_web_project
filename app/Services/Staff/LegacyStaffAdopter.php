@@ -19,10 +19,10 @@ use Illuminate\Support\Facades\DB;
 final class LegacyStaffAdopter
 {
     /** Desktop role id → web role (6, Out of Service, adopts nothing). */
-    public const ROLES = [1 => 'administrator', 8 => 'administrator', 2 => 'data-entry', 3 => 'financial', 7 => 'legal', 9 => 'media', 4 => 'guest'];
+    public const ROLES = [1 => 'administrator', 8 => 'administrator', 5 => 'administrator', 2 => 'data-entry', 3 => 'financial', 7 => 'legal', 9 => 'media', 4 => 'guest'];
 
     /** Desktop flag column → web duty role. */
-    public const DUTIES = ['IsME' => 'monitoring', 'IsCommunication' => 'communication', 'IsCashier' => 'cashier'];
+    public const DUTIES = ['IsME' => 'monitoring', 'IsCommunication' => 'communication', 'IsCashier' => 'financial'];
 
     public function __construct(private SourceIdentity $identity, private AccessRoles $roles, private OperationalTables $tables) {}
 
