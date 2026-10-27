@@ -210,7 +210,7 @@ final class PeopleService
         return $result;
     }
 
-    private function validateFields(string $kind, array $fields, bool $creating = false): array
+    public function validateFields(string $kind, array $fields, bool $creating = false): array
     {
         $metadata = $this->fields($kind);
         if (array_diff(array_keys($fields), array_keys($metadata))) {

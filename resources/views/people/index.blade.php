@@ -16,7 +16,7 @@
         </tbody></x-ui.table><div class="pagination"><x-project-pagination :paginator="$people" /></div>
     </section>
     @if($manageCities->isNotEmpty())
-    <section class="card people-form"><h2>{{ __('people.create') }}</h2><div class="filter-actions">
+    <section class="card people-form"><h2>{{ __('people.create') }}</h2><p class="field-hint">{{ __('people.create_hint') }}</p><div class="filter-actions">
         @foreach($manageCities as $city)<a class="button button-primary" href="{{ route('people.create', ['locale' => app()->getLocale(), 'city_id' => $city->id]) }}">{{ app()->isLocale('ar') ? $city->name_ar : $city->name_en }}</a>@endforeach
     </div></section>
     <details class="card people-form"><summary>{{ __('people.create_family') }}</summary>

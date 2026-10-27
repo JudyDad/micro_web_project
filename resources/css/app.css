@@ -232,3 +232,13 @@ html[lang="ar"] :is(.alert p, .table-toolbar > p, .card-footnote, .field label, 
 .header-dropdown-item { display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-weight: 600; text-align: start; cursor: pointer; }
 a.header-dropdown-item:hover, button.header-dropdown-item:hover { background: #f5f5f6; }
 .header-dropdown-item.is-current { color: #c2151c; }
+/* One-form application intake: applicant, family book and project sections. */
+.intake-section { border: 1px solid #e2e2e5; border-radius: 12px; padding: 4px 18px 10px; margin-block: 20px; min-width: 0; }
+.intake-section > legend { font-weight: 700; padding-inline: 8px; }
+.intake-mode { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-block: 12px 4px; }
+.intake-mode label, .intake-choices label { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
+.intake-mode input, .intake-choices input { min-width: 20px; min-height: 20px; }
+.intake-choices { display: grid; gap: 4px; margin-block: 8px; }
+.intake-matches { border: 1px solid #f1c6c8; background: #fff7f7; border-radius: 10px; padding: 12px 16px; margin-block: 12px; }
+.intake-matches ul { margin: 6px 0 0; padding-inline-start: 20px; }
+.required-mark { color: #c2151c; }

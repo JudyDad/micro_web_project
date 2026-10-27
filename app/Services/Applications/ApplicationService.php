@@ -8,6 +8,7 @@ use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
 use App\Services\Lifecycle\LifecycleService;
+use App\Services\People\PeopleService;
 use App\Services\ProjectNumberAllocator;
 use App\Services\Reports\ApplicationReport;
 use App\Services\Sharing\SharedPayloadProjection;
@@ -26,13 +27,32 @@ final class ApplicationService
 {
     private const TABLES = ['application' => 'microproject', 'people' => 'person_microproject', 'agriculture' => 'microproject_ag_answer', 'rehab' => 'microproject_rehab', 'rehab_answers' => 'microproject_rehab_answer', 'powersource' => 'microproject_powersource', 'risk' => 'microproject_risk', 'material' => 'material', 'loss' => 'person_loss', 'illness' => 'person_illness', 'asset' => 'person_asset', 'aid' => 'person_aidsource', 'help' => 'person_help', 'homepower' => 'person_powersource'];
 
+    /** Written by the one-form intake only; they are not project children and never appear in the application aggregate. */
+    private const INTAKE_TABLES = ['family' => 'family', 'membership' => 'person_family'];
+
     private const APPLICANT_KINDS = ['loss', 'illness', 'asset', 'aid', 'help', 'homepower'];
 
     private const ROLES = ['beneficiary' => 'مستفيد', 'partner' => 'شريك'];
 
     private const BLOCKED_FIELDS = ['c_ApplicationState', 'c_IsContentUpdated', 'c_MP_Donor', 'c_Created_By', 'c_Edited_By', 'c_PersonType', 'c_MP_AddressAfterFund'];
 
-    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private ProjectNumberAllocator $numbers, private LifecycleService $lifecycle) {}
+    /** Desktop `person_family` insert for a new applicant: the relation row named exactly this, in the same city and source. */
+    private const BENEFICIARY_RELATION = 'مستفيد';
+
+    /** Desktop `validateBenificiry` (Application_New_Form.cs:4345–4470): what a new applicant must carry before any save, preliminary included. */
+    private const APPLICANT_REQUIRED_FIELDS = ['c_P_FirstName', 'c_P_LastName', 'c_P_Sex', 'c_P_FatherName', 'c_P_MotherName', 'c_P_NationalNumber', 'c_P_DOB', 'c_P_IntermidiarySide', 'c_P_HomeAddress'];
+
+    private const APPLICANT_REQUIRED_REFERENCES = ['P_MaritalStatus_ID', 'P_Parish_ID', 'Street_ID', 'P_HomeType_ID'];
+
+    private const APPLICANT_CONTACT_FIELDS = ['c_P_Mobile', 'c_P_Mobile2', 'c_P_HomeTel'];
+
+    /** What the intake form marks as required for a new applicant. */
+    public static function applicantRequirements(): array
+    {
+        return ['fields' => self::APPLICANT_REQUIRED_FIELDS, 'references' => self::APPLICANT_REQUIRED_REFERENCES, 'contacts' => self::APPLICANT_CONTACT_FIELDS];
+    }
+
+    public function __construct(private AccountAccess $access, private AccountAuditTrail $audit, private ProjectNumberAllocator $numbers, private LifecycleService $lifecycle, private PeopleService $people) {}
 
     public function fields(string $kind): array
     {
@@ -374,6 +394,174 @@ final class ApplicationService
         });
     }
 
+    /**
+     * One-form intake, as the desktop Application_New_Form saves it: the beneficiary (new, or an existing person),
+     * the family book and the preliminary project are validated together and written in one transaction, so a
+     * failing section writes nothing. A new applicant gets the desktop's full personal-information checks
+     * (`validateBenificiry`), the family number is required for a new applicant, and both duplicate-number
+     * prompts of the desktop become explicit confirmations here. Nothing is merged.
+     *
+     * $person: ['id' => ?int, 'fields' => [], 'references' => [], 'confirm_duplicate' => bool]
+     * $family: ['id' => ?int, 'number' => ?string, 'confirm_duplicate' => bool]
+     */
+    public function intake(WebAccount $account, int $city, array $fields, array $references, array $person, array $family, string $stage = 'preliminary'): int
+    {
+        return DB::transaction(function () use ($account, $city, $fields, $references, $person, $family, $stage) {
+            $this->authorize($account, $city, true);
+            $source = $this->source($city);
+            $personId = $person['id'] ?? null;
+            $newPerson = $personId === null;
+            abort_unless($this->access->check($account, $city, 'people.view') && (! $newPerson || $this->access->check($account, $city, 'people.manage')), 403);
+
+            // Every section is checked before anything is written, so the form reports all of its problems at once.
+            $errors = [];
+            $this->section($errors, function () use ($account, $city, $source, $fields, $references, $stage, $personId) {
+                $payload = $this->validateFields('application', $fields) + $this->referencePayload('application', $city, $source, $references);
+                $payload += $this->categoryPayload($city, $source, $payload);
+                $this->requireIntake($payload, $stage === 'full');
+                $this->checkSubtype($city, $source, $payload);
+                if ($personId !== null) {
+                    $this->person($account, $city, $source, $personId);
+                }
+            });
+            $applicant = $newPerson ? $this->section($errors, fn () => $this->applicantPayload($account, $city, $person)) : null;
+            $plan = $this->section($errors, fn () => $this->familyPlan($account, $city, $source, $family, $personId));
+            if ($errors !== []) {
+                throw ValidationException::withMessages($errors);
+            }
+
+            if ($newPerson) {
+                $personId = $this->people->create($account, $city, $applicant['fields'], true, $applicant['references']);
+            }
+            $familyId = $plan['id'];
+            if ($plan['number'] !== null) {
+                $familyId = $this->people->createFamily($account, $city, ['c_F_Number' => $plan['number']], true);
+            }
+            if ($familyId !== null) {
+                // Desktop: Insert into person_family (Family_ID, Person_ID, Relation_ID, P_Provider_ID) Values (@Family_ID, @Person_ID, (select id from relation where name = 'مستفيد'), @Person_ID)
+                $membership = $this->link('membership', 'Family_ID', $familyId) + $this->link('membership', 'Person_ID', $personId) + $this->link('membership', 'P_Provider_ID', $personId);
+                $relation = $this->beneficiaryRelation($city, $source);
+                if ($relation !== null) {
+                    $membership += $this->link('membership', 'Relation_ID', $relation);
+                }
+                $this->insert('membership', $city, $source, $membership);
+                $this->audit->record($account->id, 'people.updated', 'succeeded', $city, subjectType: 'person_entity', subjectId: $personId);
+            }
+
+            return $this->create($account, $city, $fields, $personId, $references, $stage);
+        });
+    }
+
+    /** Runs one validation section and collects its messages instead of stopping at the first failing section. */
+    private function section(array &$errors, callable $check): mixed
+    {
+        try {
+            return $check();
+        } catch (ValidationException $e) {
+            $errors = array_merge($errors, $e->errors());
+
+            return null;
+        }
+    }
+
+    /** The desktop's new-applicant checks, on top of the people directory's own field validation. */
+    private function applicantPayload(WebAccount $account, int $city, array $person): array
+    {
+        $fields = $person['fields'] ?? [];
+        foreach (self::APPLICANT_REQUIRED_FIELDS as $key) {
+            if (($fields[$key] ?? null) === '') {
+                $fields[$key] = null; // the form has no "not recorded" box for required fields; report them as missing, not malformed
+            }
+        }
+        $fields = $this->people->validateFields('person', $fields); // the applicant's own required set, with readable names, is checked next
+        $references = $person['references'] ?? [];
+        if (array_diff(array_keys($references), array_keys($this->people->relations('person')))) {
+            throw ValidationException::withMessages(['person.references' => 'Unsupported relationship.']);
+        }
+        $rules = [];
+        foreach (self::APPLICANT_REQUIRED_FIELDS as $key) {
+            $rules['person.fields.'.$key] = ['required'];
+        }
+        foreach (self::APPLICANT_REQUIRED_REFERENCES as $key) {
+            $rules['person.references.'.$key] = ['required'];
+        }
+        $names = [];
+        foreach (array_merge(self::APPLICANT_REQUIRED_FIELDS, self::APPLICANT_CONTACT_FIELDS) as $key) {
+            $names['person.fields.'.$key] = __('people.fields.'.substr($key, 2));
+        }
+        foreach (self::APPLICANT_REQUIRED_REFERENCES as $key) {
+            $names['person.references.'.$key] = __('people.fields.'.$key);
+        }
+        $validator = Validator::make(['person' => ['fields' => $fields, 'references' => $references]], $rules, [], $names);
+        $validator->after(function ($validator) use ($fields) {
+            $contacts = array_filter(array_map(fn ($key) => trim((string) ($fields[$key] ?? '')), self::APPLICANT_CONTACT_FIELDS), fn ($value) => $value !== '');
+            if ($contacts === []) {
+                $validator->errors()->add('person.fields.c_P_Mobile', __('applications.intake_contact_required'));
+            }
+        });
+        $validator->validate();
+
+        $number = trim((string) ($fields['c_P_NationalNumber'] ?? ''));
+        if (! ($person['confirm_duplicate'] ?? false) && $number !== '') {
+            $matches = $this->people->duplicateCandidates($account, $city, $number);
+            if ($matches->isNotEmpty()) {
+                $labels = $matches->map(fn ($match) => trim(($match->c_P_FirstName ?? '').' '.($match->c_P_LastName ?? '')).' (#'.$match->id.')')->implode('، ');
+                throw ValidationException::withMessages(['person.duplicate' => __('applications.duplicate_person', ['matches' => $labels])]);
+            }
+        }
+
+        return ['fields' => $fields, 'references' => $references];
+    }
+
+    /**
+     * Which family the applicant joins: an existing one chosen by the user, a new one by number, or none for an
+     * existing person who gives nothing. A new applicant must give a family number (desktop :5566). A matching
+     * number is the desktop's Family_Num prompt: reuse that family, or confirm a separate one; never silently either.
+     */
+    private function familyPlan(WebAccount $account, int $city, int $source, array $family, ?int $personId): array
+    {
+        $id = $family['id'] ?? null;
+        $number = trim((string) ($family['number'] ?? ''));
+        if ($id !== null) {
+            abort_unless($this->queryTable('family')->where('p.city_id', $city)->where('p.source_id', $source)->where('p.id', $id)->exists(), 422, 'Select a family from the same city and source.');
+            $number = '';
+        } elseif ($number === '') {
+            if ($personId === null) {
+                throw ValidationException::withMessages(['family.number' => __('applications.intake_family_required')]);
+            }
+
+            return ['id' => null, 'number' => null];
+        } elseif (! ($family['confirm_duplicate'] ?? false)) {
+            $matches = $this->people->searchFamilies($account, $city, $number);
+            if ($matches->isNotEmpty()) {
+                throw ValidationException::withMessages(['family.duplicate' => __('applications.duplicate_family', ['matches' => $matches->map(fn ($match) => '#'.$match->id)->implode('، ')])]);
+            }
+        }
+        if ($personId !== null) {
+            $member = $this->relation('membership', 'Person_ID');
+            if ($this->queryTable('person_family')->where('p.city_id', $city)->where('p.'.$member['resolved_column'], $personId)->exists()) {
+                throw ValidationException::withMessages(['family.existing' => __('applications.intake_family_linked')]);
+            }
+        }
+
+        return ['id' => $id, 'number' => $number === '' ? null : $number];
+    }
+
+    /** The relation catalog row the desktop selects by name for a new applicant's own membership, if this source has one. */
+    private function beneficiaryRelation(int $city, int $source): ?int
+    {
+        foreach ($this->queryTable('relation')->where('p.city_id', $city)->where('p.source_id', $source)->orderBy('p.id')->get() as $row) {
+            if (isset($row->shared_snapshot_id)) {
+                $row = (new SharedPayloadProjection(DB::connection()))->project('relation', $row, $source, (int) $row->shared_snapshot_id);
+            }
+            if (($row->c_Name ?? null) === self::BENEFICIARY_RELATION) {
+                return (int) $row->id;
+            }
+        }
+
+        return null;
+    }
+
     public function update(WebAccount $account, int $id, array $fields, string $version, array $references = []): void
     {
         $this->mutate($account, $id, $version, function ($application) use ($fields, $references) {
@@ -694,9 +882,10 @@ final class ApplicationService
 
     private function table(string $kind): array
     {
-        abort_unless(isset(self::TABLES[$kind]), 422);
+        $tables = self::TABLES + self::INTAKE_TABLES;
+        abort_unless(isset($tables[$kind]), 422);
 
-        return OperationalManifest::table(self::TABLES[$kind]);
+        return OperationalManifest::table($tables[$kind]);
     }
 
     private function relationships(string $kind): array
