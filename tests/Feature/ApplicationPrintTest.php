@@ -71,9 +71,9 @@ final class ApplicationPrintTest extends TestCase
     public function test_sex_is_the_desktop_two_value_list_on_every_person_form(): void
     {
         $this->get('/ar/applications/create?city_id=1')->assertOk()
-            ->assertSee('<select class="input" id="applicant-c_P_Sex" name="person[fields][c_P_Sex]">', false)->assertSee('<option value="ذكر"', false)->assertSee('<option value="أنثى"', false)
+            ->assertSee('id="applicant-c_P_Sex" name="person[fields][c_P_Sex]"', false)->assertSee('<option value="ذكر"', false)->assertSee('<option value="أنثى"', false)
             ->assertDontSee('name="person[fields][c_P_Sex]" type="text"', false);
-        $this->get('/ar/people/create?city_id=1')->assertOk()->assertSee('<select class="input" id="new-c_P_Sex" name="fields[c_P_Sex]"', false)->assertSee('<option value="أنثى"', false);
+        $this->get('/ar/people/create?city_id=1')->assertOk()->assertSee('id="new-c_P_Sex" name="fields[c_P_Sex]"', false)->assertSee('<option value="أنثى"', false);
         // A historical value outside the list stays visible and selected on the person's page until it is changed.
         $this->get('/ar/people/'.$this->intake['person'])->assertOk()->assertSee('<option value="Unknown" selected>', false)->assertSee('<option value="ذكر"', false);
 

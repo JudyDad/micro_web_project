@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Services\Applications\PaperOrder;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class ApplicationWriteRequest extends FormRequest
@@ -34,6 +35,11 @@ final class ApplicationWriteRequest extends FormRequest
             'person.references' => ['sometimes', 'array', 'max:15'],
             'person.references.*' => ['nullable', 'integer', 'min:1'],
             'person.confirm_duplicate' => ['sometimes', 'boolean'],
+            // The paper form's one save on the application page: the beneficiary's link row travels with the project.
+            'link' => ['sometimes', 'array'],
+            'link.fields' => ['sometimes', 'array', 'max:40'],
+            'link.null_fields' => ['sometimes', 'array', 'max:40'],
+            'link.null_fields.*' => ['string', 'max:100'],
             'family' => ['sometimes', 'array'],
             'family.id' => ['nullable', 'integer', 'min:1'],
             'family.number' => ['nullable', 'string', 'max:50'],
@@ -93,6 +99,12 @@ final class ApplicationWriteRequest extends FormRequest
         return $this->withNulls($this->validated('person.fields') ?? [], $this->validated('person.null_fields') ?? []);
     }
 
+    /** The beneficiary's link-row fields (story, has/has-not flags) posted with the paper form, with explicit nulls applied. */
+    public function linkPayload(): array
+    {
+        return $this->withNulls($this->validated('link.fields') ?? [], $this->validated('link.null_fields') ?? []);
+    }
+
     /** The beneficiary section as the intake service reads it: an existing person, or a new one to create. */
     public function personSpec(): array
     {
@@ -119,6 +131,22 @@ final class ApplicationWriteRequest extends FormRequest
     {
         foreach ($nullFields as $name) {
             $fields[$name] = null;
+        }
+        // A form without "not recorded" boxes (the create form, as the desktop): an empty box is simply not recorded.
+        if ($this->boolean('blank_is_null')) {
+            $fields = array_map(fn ($value) => $value === '' ? null : $value, $fields);
+        }
+
+        return self::yearDates($fields);
+    }
+
+    /** Birth dates are entered as a year, as the desktop (`P_DOB_textBox` MaxLength 4): a four-digit value is stored as the first of January. */
+    public static function yearDates(array $fields): array
+    {
+        foreach (PaperOrder::YEAR_DATES as $key) {
+            if (isset($fields[$key]) && preg_match('/\A\d{4}\z/', (string) $fields[$key])) {
+                $fields[$key] .= '-01-01';
+            }
         }
 
         return $fields;

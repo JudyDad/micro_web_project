@@ -8,6 +8,7 @@ use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
 use App\Services\Lifecycle\LifecycleService;
+use App\Services\Operational\LookupOptions;
 use App\Services\People\PeopleService;
 use App\Services\ProjectNumberAllocator;
 use App\Services\Reports\ApplicationReport;
@@ -71,7 +72,7 @@ final class ApplicationService
             $fields[$name] = ['type' => $type, 'max' => isset($length[1]) ? (int) $length[1] : 10000, 'label' => substr($name, 2), 'decimal' => str_starts_with($definition, 'double')];
         }
 
-        return $fields;
+        return PaperOrder::sort($kind, array_diff_key($fields, array_flip(PaperOrder::internal($kind))));
     }
 
     public function relations(string $kind): array
@@ -85,7 +86,7 @@ final class ApplicationService
             $result[$key] = ['label' => $key, 'table' => $r['parent_source_table']];
         }
 
-        return $result;
+        return PaperOrder::sort($kind, $result);
     }
 
     private function authorize(WebAccount $account, int $city, bool $write = false): void
@@ -114,7 +115,7 @@ final class ApplicationService
         $rules = [];
         foreach ($metadata as $key => $meta) {
             if (array_key_exists($key, $fields) && $fields[$key] === '' && in_array($meta['type'], ['number', 'date'], true)) {
-                throw ValidationException::withMessages(['fields.'.$key => 'Use an explicit null to clear this value.']);
+                $fields[$key] = null; // a cleared date, number or yes/no control means "not recorded", as the desktop's empty box
             }
             $rules[$key] = ['nullable', ...match ($meta['type']) {
                 'date' => ['date_format:Y-m-d'],
@@ -568,25 +569,56 @@ final class ApplicationService
 
     public function update(WebAccount $account, int $id, array $fields, string $version, array $references = []): void
     {
-        $this->mutate($account, $id, $version, function ($application) use ($fields, $references) {
-            [$fields,$references] = $this->changes('application', $application, $fields, $references);
-            $payload = $this->validateFields('application', $fields) + $this->referencePayload('application', (int) $application->city_id, (int) $application->source_id, $references);
-            $required = ['c_MP_Name', 'c_MP_DateOfRequest'];
-            foreach (['SubCategory_ID', 'Career_ID', 'MP_Type_ID', 'MP_SubType_ID'] as $key) {
-                $required[] = $this->relation('application', $key)['resolved_column'];
-            }
-            Validator::make($payload, array_fill_keys(array_intersect(array_keys($payload), $required), ['required']))->validate();
-            $payload += $this->categoryPayload((int) $application->city_id, (int) $application->source_id, $payload);
-            $merged = array_replace((array) $application, $payload);
-            if ($payload !== []) {
-                // Legacy rows may carry sentinel dates and incomplete unrelated sections.
-                // Completeness belongs to creation; edits validate supplied values only.
-                if (array_intersect(array_keys($references), ['MP_SubType_ID', 'MP_Type_ID', 'SubCategory_ID', 'Career_ID'])) {
-                    $this->checkSubtype((int) $application->city_id, (int) $application->source_id, $merged);
+        $this->mutate($account, $id, $version, fn ($application) => $this->applyApplication($application, $fields, $references));
+    }
+
+    /**
+     * The paper form's one Save (desktop Save_Application): the project row, the beneficiary's link row (story and
+     * has/has-not flags) and the beneficiary's own person row are written in one transaction under the application's
+     * version, which already covers the person snapshot. Grids keep their own forms until P4.6.
+     *
+     * @param  array{id: ?int, fields: array<string, mixed>}  $link
+     * @param  array{id: ?int, fields: array<string, mixed>, references: array<string, mixed>, confirm_duplicate: bool}  $person
+     */
+    public function saveForm(WebAccount $account, int $id, string $version, array $fields, array $references, array $link, array $person): void
+    {
+        $this->mutate($account, $id, $version, function ($application) use ($account, $fields, $references, $link, $person) {
+            $this->applyApplication($application, $fields, $references);
+            if ($link['id'] !== null) {
+                $row = $this->ownedChild($account, $application, 'people', (int) $link['id']);
+                [$linkFields] = $this->changes('people', $row, $link['fields'], []);
+                $payload = $this->validateFields('people', $linkFields);
+                if ($payload !== []) {
+                    DB::table('op_person_microproject')->where('id', $row->id)->update($payload);
                 }
-                DB::table('op_microproject')->where('id', $application->id)->update($payload);
+            }
+            if ($person['id'] !== null && ($person['fields'] !== [] || $person['references'] !== [])) {
+                $this->person($account, (int) $application->city_id, (int) $application->source_id, (int) $person['id']);
+                abort_unless($this->access->check($account, (int) $application->city_id, 'people.manage'), 403);
+                $this->people->update($account, (int) $person['id'], $person['fields'], $this->people->currentVersion($account, (int) $person['id']), $person['references'], $person['confirm_duplicate']);
             }
         });
+    }
+
+    private function applyApplication(object $application, array $fields, array $references): void
+    {
+        [$fields, $references] = $this->changes('application', $application, $fields, $references);
+        $payload = $this->validateFields('application', $fields) + $this->referencePayload('application', (int) $application->city_id, (int) $application->source_id, $references);
+        $required = ['c_MP_Name', 'c_MP_DateOfRequest'];
+        foreach (['SubCategory_ID', 'Career_ID', 'MP_Type_ID', 'MP_SubType_ID'] as $key) {
+            $required[] = $this->relation('application', $key)['resolved_column'];
+        }
+        Validator::make($payload, array_fill_keys(array_intersect(array_keys($payload), $required), ['required']))->validate();
+        $payload += $this->categoryPayload((int) $application->city_id, (int) $application->source_id, $payload);
+        $merged = array_replace((array) $application, $payload);
+        if ($payload !== []) {
+            // Legacy rows may carry sentinel dates and incomplete unrelated sections.
+            // Completeness belongs to creation; edits validate supplied values only.
+            if (array_intersect(array_keys($references), ['MP_SubType_ID', 'MP_Type_ID', 'SubCategory_ID', 'Career_ID'])) {
+                $this->checkSubtype((int) $application->city_id, (int) $application->source_id, $merged);
+            }
+            DB::table('op_microproject')->where('id', $application->id)->update($payload);
+        }
     }
 
     public function linkPerson(WebAccount $account, int $id, int $personId, string $role, array $fields, string $version, ?int $linkId = null): void
@@ -890,21 +922,16 @@ final class ApplicationService
         $this->authorize($account, $city);
         $result = [];
         foreach ($this->relations($kind) as $key => $r) {
-            $result[$key] = $this->queryTable($r['table'])->where('p.city_id', $city)->orderBy('p.id')->limit(500)->get()->map(function ($row) use ($r) {
-                if (isset($row->shared_snapshot_id)) {
-                    $row = (new SharedPayloadProjection(DB::connection()))->project($r['table'], $row, (int) $row->source_id, (int) $row->shared_snapshot_id);
-                }
-                $labels = [];
-                foreach ((array) $row as $name => $value) {
-                    if (str_starts_with($name, 'c_') && ! preg_match('/(?:^c_ID$|_ID$)/i', $name) && $value !== null && $value !== '') {
-                        $labels[] = (string) $value;
-                    }
-                }
-
-                $option = (object) ['id' => $row->id, 'label' => implode(' · ', $labels) ?: '#'.$row->id, 'raw_id' => $row->c_ID ?? null, 'type' => $row->c_Type ?? null];
-                if (in_array($r['table'], ['aganswer', 'rehabanswer'], true)) {
-                    $question = $this->sourceRelation($r['table'], 'Question_ID');
-                    $option->parent_id = $row->{$question['state_column']} === 'resolved' ? $row->{$question['resolved_column']} : null;
+            // Desktop order and labels (Bind_Data: by name for some tables, by original id for the rest), plus the parent id of cascading lists.
+            $rows = $this->queryTable($r['table'])->where('p.city_id', $city)->orderBy('p.id')->limit(500)->get()->map(function ($row) use ($r) {
+                return isset($row->shared_snapshot_id) ? (new SharedPayloadProjection(DB::connection()))->project($r['table'], $row, (int) $row->source_id, (int) $row->shared_snapshot_id) : $row;
+            });
+            $cascade = PaperOrder::CASCADES[$key] ?? null;
+            $parent = $cascade ? $this->sourceRelation($r['table'], $cascade[2]) : null;
+            $result[$key] = LookupOptions::sortRows($rows, $r['table'])->map(function ($row) use ($parent) {
+                $option = (object) ['id' => $row->id, 'label' => LookupOptions::label($row), 'raw_id' => $row->c_ID ?? null, 'type' => $row->c_Type ?? null];
+                if ($parent !== null) {
+                    $option->parent_id = $row->{$parent['state_column']} === 'resolved' ? $row->{$parent['resolved_column']} : null;
                 }
 
                 return $option;

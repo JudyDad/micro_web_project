@@ -126,8 +126,8 @@ final class ApplicationDraftStore
         $nested = [];
         if ($kind === 'application') {
             // One-form intake: the applicant and family sections are drafted with the project.
-            $allowed = [...$allowed, 'beneficiary_mode', 'person', 'family'];
-            $nested = ['person' => ['fields', 'references'], 'family' => ['id', 'number']];
+            $allowed = [...$allowed, 'beneficiary_mode', 'person', 'family', 'link'];
+            $nested = ['person' => ['fields', 'references'], 'family' => ['id', 'number'], 'link' => ['fields']];
         }
         if (array_diff(array_keys($payload), $allowed) || ! in_array($kind, self::KINDS, true)) {
             throw ValidationException::withMessages(['draft' => __('applications.draft_invalid')]);
@@ -142,6 +142,8 @@ final class ApplicationDraftStore
             if ($section === 'person') {
                 $this->checkSection($values['fields'] ?? [], array_keys($this->people->fields('person')));
                 $this->checkSection($values['references'] ?? [], array_keys($this->people->relations('person')));
+            } elseif ($section === 'link') {
+                $this->checkSection($values['fields'] ?? [], array_keys($this->applications->fields('people')));
             } else {
                 $this->checkSection($values, $keys);
             }

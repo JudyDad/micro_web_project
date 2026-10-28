@@ -7,7 +7,9 @@ namespace App\Services\People;
 use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
+use App\Services\Applications\PaperOrder;
 use App\Services\Finance\PaymentScheduleService;
+use App\Services\Operational\LookupOptions;
 use App\Services\Sharing\SharedPayloadProjection;
 use Database\Schema\OperationalManifest;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -52,12 +54,7 @@ final class PeopleService
             $fields[$name] = ['type' => $type, 'max' => isset($length[1]) ? (int) $length[1] : 10000, 'label' => substr($name, 2)];
         }
 
-        if ($kind === 'person') {
-            $first = ['c_P_FirstName', 'c_P_LastName', 'c_P_FatherName', 'c_P_MotherName', 'c_P_FullName_en', 'c_P_NationalNumber', 'c_P_DOB', 'c_P_Sex', 'c_P_RegistrationPlace', 'c_P_Mobile', 'c_P_Mobile2', 'c_P_HomeTel', 'c_P_HomeAddress'];
-            $fields = array_replace(array_fill_keys($first, null), $fields);
-        }
-
-        return $fields;
+        return PaperOrder::sort($kind, array_diff_key($fields, array_flip(PaperOrder::internal($kind))));
     }
 
     public function relations(string $kind): array
@@ -70,7 +67,7 @@ final class PeopleService
             }
         }
 
-        return $result;
+        return PaperOrder::sort($kind, $result);
     }
 
     private function queryTable(string $sourceTable): Builder
@@ -269,7 +266,7 @@ final class PeopleService
         $rules = [];
         foreach ($metadata as $key => $meta) {
             if (array_key_exists($key, $fields) && $fields[$key] === '' && in_array($meta['type'], ['number', 'date'], true)) {
-                throw ValidationException::withMessages(['fields.'.$key => __('people.empty_value')]);
+                $fields[$key] = null; // a cleared date, number or yes/no control means "not recorded", as the desktop's empty box
             }
             $rules[$key] = ['nullable', ...match ($meta['type']) {
                 'date' => ['date_format:Y-m-d'],
@@ -344,6 +341,12 @@ final class PeopleService
             $change($person);
             $this->audit->record($account->id, 'people.updated', 'succeeded', (int) $person->city_id, subjectType: 'person_entity', subjectId: $personId);
         });
+    }
+
+    /** The person's current edit version, for a caller that already holds the application's version (one-form save). */
+    public function currentVersion(WebAccount $account, int $personId): string
+    {
+        return $this->aggregate($account, $this->row($account, 'person', $personId))['version'];
     }
 
     public function update(WebAccount $account, int $personId, array $fields, string $version, array $references = [], bool $confirmDuplicate = false): void
@@ -492,19 +495,11 @@ final class PeopleService
         $this->authorize($account, $city);
         $result = [];
         foreach ($this->relations($kind) as $key => $r) {
-            $result[$key] = $this->queryTable($r['table'])->where('p.city_id', $city)->orderBy('p.id')->limit(500)->get()->map(function ($row) use ($r) {
-                if (isset($row->shared_snapshot_id)) {
-                    $row = (new SharedPayloadProjection(DB::connection()))->project($r['table'], $row, (int) $row->source_id, (int) $row->shared_snapshot_id);
-                }
-                $labels = [];
-                foreach ((array) $row as $name => $value) {
-                    if (str_starts_with($name, 'c_') && ! preg_match('/(?:^c_ID$|_ID$)/i', $name) && $value !== null && $value !== '') {
-                        $labels[] = (string) $value;
-                    }
-                }
-
-                return (object) ['id' => $row->id, 'label' => implode(' · ', $labels) ?: '#'.$row->id];
+            // Desktop order and labels (Application_New_Form.cs:832–845): by name for some tables, by original id for the rest.
+            $rows = $this->queryTable($r['table'])->where('p.city_id', $city)->orderBy('p.id')->limit(500)->get()->map(function ($row) use ($r) {
+                return isset($row->shared_snapshot_id) ? (new SharedPayloadProjection(DB::connection()))->project($r['table'], $row, (int) $row->source_id, (int) $row->shared_snapshot_id) : $row;
             });
+            $result[$key] = LookupOptions::sortRows($rows, $r['table'])->map(fn ($row) => (object) ['id' => $row->id, 'label' => LookupOptions::label($row)]);
         }
 
         return $result;

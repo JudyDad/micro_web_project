@@ -37,6 +37,6 @@ class PeopleWriteRequest extends FormRequest
             $fields[$name] = null;
         }
 
-        return $fields;
+        return ApplicationWriteRequest::yearDates($fields);
     }
 }

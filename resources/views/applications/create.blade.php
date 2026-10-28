@@ -1,21 +1,38 @@
+@php
+    use App\Services\Applications\PaperOrder;
+    // One form in the paper order, as the desktop Application_New_Form: the project form, then the applicant's personal
+    // information and family book. The preliminary form hides what the desktop hides; a blank box is simply not recorded.
+    $recovering = old('_form') === 'application';
+    $defaultMode = $canCreatePeople ? 'new' : 'existing';
+    $mode = $recovering ? old('beneficiary_mode', $defaultMode) : $defaultMode;
+    $mode = $canCreatePeople && $mode === 'new' ? 'new' : 'existing';
+    $recoveredBeneficiary = $recovering ? (string) old('beneficiary_id', '') : '';
+    $recoveredFamilyId = $recovering ? (string) old('family.id', '') : '';
+    $requirements = \App\Services\Applications\ApplicationService::applicantRequirements();
+    $hiddenProject = PaperOrder::preliminaryHidden('application');
+    $projectKeys = array_diff(PaperOrder::groups('application')['project'], $hiddenProject);
+    $projectFields = array_intersect_key($fields, array_flip($projectKeys));
+    $projectOptions = array_intersect_key($options, array_flip($projectKeys));
+    $restFields = array_diff_key($fields, $projectFields, array_flip($hiddenProject));
+    $restOptions = array_diff_key($options, $projectOptions, array_flip($hiddenProject));
+    // Desktop defaults: the first project type (Type_comboBox.SelectedIndex = 0).
+    $defaults = (object) ['references' => ['MP_Type_ID' => (string) ($options['MP_Type_ID'][0]->id ?? '')]];
+@endphp
 <x-layouts.app :title="__('applications.create')" :operational="true">
     <a class="back-link" href="{{ route('applications.index', ['locale' => app()->getLocale()]) }}">{{ __('applications.back') }}</a>
     <div class="page-heading"><div><h1>{{ __('applications.create') }}</h1><p class="page-description">{{ __('applications.boundary') }}</p></div></div>
     @include('people.messages')
-    @php
-        // One form, as the desktop Application_New_Form: applicant, family book and project, one save.
-        $recovering = old('_form') === 'application';
-        $defaultMode = $canCreatePeople ? 'new' : 'existing';
-        $mode = $recovering ? old('beneficiary_mode', $defaultMode) : $defaultMode;
-        $mode = $canCreatePeople && $mode === 'new' ? 'new' : 'existing';
-        $recoveredBeneficiary = $recovering ? (string) old('beneficiary_id', '') : '';
-        $recoveredFamilyId = $recovering ? (string) old('family.id', '') : '';
-        $requirements = \App\Services\Applications\ApplicationService::applicantRequirements();
-    @endphp
     <section class="card people-form"><form method="POST" action="{{ route('applications.store', ['locale' => app()->getLocale()]) }}" x-data="{ mode: @js($mode) }">@csrf
         <input type="hidden" name="create_token" value="{{ $createToken }}">
         <input type="hidden" name="stage" value="preliminary">
+        <input type="hidden" name="blank_is_null" value="1">
         @include('applications.context', ['kind' => 'application', 'prefix' => 'application'])
+
+        <fieldset class="intake-section">
+            <legend>{{ __('applications.section_project_form') }}</legend>
+            <p class="field-hint">{{ __('applications.project_number_hint') }}</p>
+            @include('applications.fields', ['fields' => $projectFields, 'options' => $projectOptions, 'row' => $defaults, 'prefix' => 'application', 'nullBoxes' => false, 'required' => ['c_MP_Name', 'c_MP_DateOfRequest', 'SubCategory_ID', 'Career_ID', 'MP_Type_ID', 'MP_SubType_ID']])
+        </fieldset>
 
         <fieldset class="intake-section">
             <legend>{{ __('applications.section_person') }}</legend>
@@ -73,13 +90,9 @@
             @endif
         </fieldset>
 
-        <fieldset class="intake-section">
-            <legend>{{ __('applications.section_project') }}</legend>
-            @include('applications.fields', ['fields' => $coreFields, 'options' => $coreOptions, 'row' => null, 'prefix' => 'application'])
-            <details class="people-history"><summary>{{ __('applications.additional_details') }}</summary>
-            @include('applications.fields', ['fields' => array_diff_key($fields, $coreFields), 'options' => array_diff_key($options, $coreOptions), 'row' => null, 'prefix' => 'application'])
-            </details>
-        </fieldset>
+        <details class="intake-section people-history"><summary>{{ __('applications.additional_details') }}</summary>
+        @include('applications.fields', ['fields' => $restFields, 'options' => $restOptions, 'row' => null, 'prefix' => 'application', 'nullBoxes' => false, 'formMarker' => false])
+        </details>
 
         @include('applications.actions')
     </form></section>

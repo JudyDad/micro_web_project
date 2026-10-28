@@ -59,7 +59,7 @@
         </dl>
         @if($canEdit)
         <details class="people-history" @if($mine) open @endif><summary>{{ __('finance.loan.edit') }}</summary>
-            @include('finance.loan-form', ['scope' => $scope, 'loan' => $row, 'values' => $values, 'loanIdValue' => $row->id])
+            @include('finance.loan-form', ['scope' => $scope, 'loan' => $row, 'values' => $values, 'loanIdValue' => $row->id, 'opposite' => $loan['opposite']])
         </details>
         @endif
         <h3>{{ __('finance.installments.title') }}</h3>

@@ -9,7 +9,8 @@
         <x-ui.search-select :id="$prefix.'-person'" name="person_id" :label="__('applications.select_person')" :url="route('people.lookup', ['locale' => app()->getLocale()])" :params="['city_id' => $cityId]"
             :value="$personId" :value-label="$personLabels[(int) $personId] ?? null" :hint="__('applications.person_search')" :error="old('_form') === $prefix ? $errors->first('person_id') : null" />
     <div class="field"><label for="{{ $prefix }}-role">{{ __('applications.role') }}</label><select class="input" id="{{ $prefix }}-role" name="role"><option value="beneficiary" @selected($role === 'beneficiary')>{{ __('applications.beneficiary') }}</option><option value="partner" @selected($role === 'partner')>{{ __('applications.partner') }}</option></select></div></div>
-    @include('applications.fields', ['fields' => $metadata['people'], 'options' => []])
+    {{-- The beneficiary's story and flags are on the paper form itself; partners keep them here. --}}
+    @unless($roleOnly ?? false)@include('applications.fields', ['fields' => $metadata['people'], 'options' => [], 'groups' => true])@endunless
     @include('applications.actions')
 </form>
 

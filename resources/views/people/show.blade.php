@@ -7,7 +7,7 @@
     <details class="card people-form" open><summary>{{ __('people.person') }}</summary>
         <form method="POST" action="{{ route('people.update', ['locale' => app()->getLocale(), 'person' => $person->id]) }}">
             @csrf @method('PUT')@include('people.version', ['formKey' => 'person'])
-            @include('people.fields', ['fields' => $metadata['person'], 'options' => $options['person'], 'row' => $person, 'prefix' => 'person'])
+            @include('people.fields', ['fields' => $metadata['person'], 'options' => $options['person'], 'row' => $person, 'prefix' => 'person', 'groups' => true])
             <label class="people-confirm"><input type="checkbox" name="confirm_duplicate" value="1"> {{ __('people.confirm_duplicate') }}</label>
             <x-ui.button type="submit">{{ __('people.save') }}</x-ui.button>
         </form>

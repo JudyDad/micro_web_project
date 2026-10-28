@@ -23,6 +23,11 @@ return [
     'matching_people' => 'People with the same national number', 'matching_families' => 'Families with the same number',
     'people_manage_needed' => 'Your account cannot add people in this city; choose an existing person.',
     'select_sex' => 'Select…',
+    'related_screens' => 'Related screens of this project', 'preliminary_form' => 'Preliminary project form', 'full_name' => 'Full name', 'no_beneficiary' => 'No beneficiary is linked to this application yet; link a person in the applicants and partners section.', 'grids_on_person' => 'The work experience, education and course grids are edited on the person page for now (moved into the form in P4.6):', 'members_on_person' => 'The family members and family work grids are edited on the person page for now (moved into the form in P4.6):', 'annexes' => 'Annexes (agriculture / rehabilitation)', 'beneficiary_link' => 'The beneficiary\x27s role in this application', 'form_actions' => 'Form actions', 'save_form' => 'Save the form', 
+    'section_project_form' => 'Project form', 'project_number_hint' => 'The project number is assigned from the city sequence when the form is saved.',
+    'answer_hint' => 'Only the answers of the selected question are shown.',
+    'complete' => 'Submit the full application', 'complete_hint' => 'Submission checks that the full-form sections (beneficiary, story, work, education, project and family) are complete before the application moves to waiting.',
+    'edit_household' => 'Edit the person, family, education and work on the person’s page', 'support_hint' => 'Losses, illness, assets, aid from other sources, help and home power sources, as on the paper form.',
     'print' => [
         'open' => 'Printable application form', 'title' => 'Application Form', 'button' => 'Print', 'printed' => 'Printed',
         'project' => 'Project information', 'applicant' => 'Applicant personal information', 'partner' => 'Partner personal information',
@@ -42,10 +47,10 @@ return [
     'draft_too_large' => 'The draft is too large. Reduce the text and try again.', 'draft_conflict' => 'This draft changed. Restore the latest draft before replacing or discarding it.',
     'draft_limit' => 'The draft limit has been reached. Discard a draft before adding another.',
     'fields' => [
-        'MP_ID' => 'Project number', 'MP_Name' => 'Project name / description', 'MP_DateOfRequest' => 'Request date (YYYY-MM-DD)',
+        'MP_ID' => 'Project number', 'MP_Name' => 'Project name / description', 'MP_DateOfRequest' => 'Request date',
         'MP_Speciality' => 'Speciality', 'MP_Note' => 'Project notes', 'MP_RequestedAmount' => 'Requested amount',
-        'MP_Agreement1' => 'Agreement 1 (0 = no, 1 = yes)', 'MP_Agreement2' => 'Agreement 2 (0 = no, 1 = yes)',
-        'MP_Agreement3' => 'Agreement 3 (0 = no, 1 = yes)', 'MP_Agreement4' => 'Agreement 4 (0 = no, 1 = yes)', 'MP_Agreement5' => 'Agreement 5 (0 = no, 1 = yes)',
+        'MP_Agreement1' => 'Do you object to periodic follow-up visits if the project is approved?', 'MP_Agreement2' => 'Agreement 2',
+        'MP_Agreement3' => 'Agreement 3', 'MP_Agreement4' => 'Agreement 4', 'MP_Agreement5' => 'Agreement 5',
         'MP_AmperNumber' => 'Amperage', 'MP_AmperType' => 'Amperage type', 'MP_IncomeKind' => 'Income type', 'MP_IncomeKind_Note' => 'Income notes',
         'MP_PlaceAddress' => 'Project premises address', 'MP_PlaceNote' => 'Premises notes', 'MP_Profit_Description' => 'Expected profit description', 'Partnership' => 'Partnership',
         'Career_ID' => 'Career', 'Category_ID' => 'Category', 'SubCategory_ID' => 'Subcategory', 'MP_FundType_ID' => 'Funding type', 'MP_PlaceType_ID' => 'Premises type',
@@ -56,6 +61,6 @@ return [
         'P_LiveWithFamily_Note' => 'Living with family notes', 'P_Loss' => 'Loss story', 'P_OtherNotes' => 'Other notes', 'P_WorkYears' => 'Years of work',
         'Question_ID' => 'Question', 'Answer_ID' => 'Answer', 'MicroRehab_ID' => 'Rehabilitation header', 'PropertyArea' => 'Property area', 'PropertyOwnership' => 'Property ownership',
         'Note' => 'Notes', 'Number' => 'Number', 'Price' => 'Unit price', 'Result' => 'Result (text)', 'Amount' => 'Quantity', 'Name' => 'Item name',
-        'Comments' => 'Comments', 'LocalContribution' => 'Local contribution', 'Cost' => 'Cost', 'Responsability' => 'Responsibility', 'PowerSource_ID' => 'Power source', 'Risk_ID' => 'Risk',
+        'Comments' => 'Comments', 'LocalContribution' => 'Local contribution', 'Cost' => 'Cost', 'Responsability' => 'Responsibility', 'PowerSource_ID' => 'Power source', 'Risk_ID' => 'Risk', 'Loss_ID' => 'Loss type', 'Year' => 'Year', 'Illness_ID' => 'Health condition', 'Has_MedicalAid' => 'Medical aid', 'Donor' => 'Aid donor', 'AidSource_ID' => 'Source', 'AidPeriod_ID' => 'Aid period', 'Aidperiod_ID' => 'Aid period', 'MedicalNeeds_ID' => 'Medical needs', 'Asset_ID' => 'Asset type', 'Asset_Type_ID' => 'Asset nature', 'Description' => 'Asset description', 'Asset_Benefits_ID' => 'Benefit', 'DateYear' => 'Year received', 'ProjectType' => 'Project type', 'Notes' => 'Notes', 'Aid_ID' => 'Help type',
     ],
 ];

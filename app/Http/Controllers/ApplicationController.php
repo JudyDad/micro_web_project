@@ -57,8 +57,6 @@ final class ApplicationController
 
         $fields = $applications->fields('application');
         $options = $applications->options($request->user(), $city, 'application');
-        $coreFields = array_intersect_key(array_replace(array_flip(['c_MP_Name', 'c_MP_DateOfRequest', 'c_MP_Speciality']), $fields), array_flip(['c_MP_Name', 'c_MP_DateOfRequest', 'c_MP_Speciality']));
-        $coreOptions = array_intersect_key(array_replace(array_flip(['SubCategory_ID', 'Career_ID', 'MP_Type_ID', 'MP_SubType_ID']), $options), array_flip(['SubCategory_ID', 'Career_ID', 'MP_Type_ID', 'MP_SubType_ID']));
 
         // One form, as the desktop: the applicant and family book are entered with the project. The people directory
         // stays for search and later edits; an existing person can still be chosen instead of typed again.
@@ -72,7 +70,6 @@ final class ApplicationController
 
         return view('applications.create', [
             'cityId' => $city, 'fields' => $fields, 'options' => $options,
-            'coreFields' => $coreFields, 'coreOptions' => $coreOptions,
             'beneficiaryLabel' => $recoveredBeneficiary ? $people->personLabel($request->user(), $city, $recoveredBeneficiary) : null,
             'personFields' => $canCreatePeople ? $people->fields('person') : [],
             'personOptions' => $canCreatePeople ? $people->options($request->user(), $city, 'person') : [],
@@ -140,7 +137,19 @@ final class ApplicationController
 
         $canAssess = $access->check($request->user(), $city, 'assessments.view') && $access->check($request->user(), $city, 'people.view');
 
+        // The paper form edits the beneficiary's own person row and link row with the project (desktop Save_Application).
+        $beneficiaryLink = $data['people']->first(fn ($link) => $link->c_PersonType === 'مستفيد' && $link->{$personRelation['resolved_column']} !== null) ?? $data['people']->first(fn ($link) => $link->{$personRelation['resolved_column']} !== null);
+        $beneficiary = null;
+        if ($beneficiaryLink !== null && $canLinkPeople) {
+            $people = app(PeopleService::class);
+            $record = $people->find($request->user(), (int) $beneficiaryLink->{$personRelation['resolved_column']});
+            $beneficiary = ['link' => $beneficiaryLink, 'person' => $record['person'], 'family' => $record['families']->first()?->c_F_Number,
+                'fields' => $people->fields('person'), 'options' => $canManage && $access->check($request->user(), $city, 'people.manage') ? $people->options($request->user(), $city, 'person') : [],
+                'canEdit' => $canManage && $access->check($request->user(), $city, 'people.manage')];
+        }
+
         return view('applications.show', $data + [
+            'beneficiary' => $beneficiary,
             'lifecycle' => $lifecycle->panel($request->user(), $this->id($application)),
             'assessees' => $canAssess ? $checklists->beneficiaries($request->user(), $this->id($application)) : collect(),
             'financeLinks' => array_filter([
@@ -173,7 +182,10 @@ final class ApplicationController
     public function update(ApplicationWriteRequest $request, string $locale, string $application, ApplicationService $applications): RedirectResponse
     {
         $request->validate(['version' => ['required']]);
-        $applications->update($request->user(), $this->id($application), $request->payload(), $request->validated('version'), $request->validated('references') ?? []);
+        // The paper form's one save: project, the beneficiary's link row and the beneficiary's person row together.
+        $link = ['id' => $request->validated('link_id') ? (int) $request->validated('link_id') : null, 'fields' => $request->linkPayload()];
+        $person = ['id' => $request->validated('person_id') ? (int) $request->validated('person_id') : null, 'fields' => $request->personPayload(), 'references' => $request->validated('person.references') ?? [], 'confirm_duplicate' => $request->boolean('person.confirm_duplicate')];
+        $applications->saveForm($request->user(), $this->id($application), $request->validated('version'), $request->payload(), $request->validated('references') ?? [], $link, $person);
 
         return $this->back($locale, $this->id($application));
     }
@@ -227,6 +239,10 @@ final class ApplicationController
             $payload['beneficiary_mode'] = $request->validated('beneficiary_mode') ?? 'new';
             $payload['person'] = ['fields' => $request->personPayload(), 'references' => $request->validated('person.references') ?? []];
             $payload['family'] = ['id' => $request->validated('family.id'), 'number' => $request->validated('family.number')];
+        } elseif ($request->validated('kind') === 'application') {
+            // The paper form of an existing application drafts the beneficiary's link row and person row with the project.
+            $payload['person'] = ['fields' => $request->personPayload(), 'references' => $request->validated('person.references') ?? []];
+            $payload['link'] = ['fields' => $request->linkPayload()];
         }
         $drafts->save($request->user(), (int) $request->validated('city_id'), $request->validated('kind'), $request->validated('application_id') ? (int) $request->validated('application_id') : null, $payload, $request->validated('draft_id'), $request->validated('draft_version'));
 
@@ -241,6 +257,9 @@ final class ApplicationController
         $payload['null_fields'] = array_keys(array_filter($payload['fields'] ?? [], fn ($value) => $value === null));
         if (isset($payload['person']['fields'])) {
             $payload['person']['null_fields'] = array_keys(array_filter($payload['person']['fields'], fn ($value) => $value === null));
+        }
+        if (isset($payload['link']['fields'])) {
+            $payload['link']['null_fields'] = array_keys(array_filter($payload['link']['fields'], fn ($value) => $value === null));
         }
         $supportKind = in_array($saved['kind'], ['loss', 'illness', 'asset', 'aid', 'help', 'homepower'], true);
         $payload['_form'] = $saved['kind'] === 'application' ? 'application' : ($supportKind

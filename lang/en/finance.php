@@ -23,7 +23,7 @@ return [
     ],
     'payments' => [
         'title' => 'Instalments schedule', 'intro' => 'Unpaid instalments by due date, or paid instalments by received date, across the cities you can read.',
-        'view' => 'View', 'pending' => 'Unpaid', 'paid' => 'Paid', 'year' => 'Year', 'all_years' => 'All years', 'all_groups' => 'All groups', 'months' => 'Months',
+        'view' => 'View', 'pending' => 'Unpaid', 'paid' => 'Paid', 'year' => 'Year', 'all_years' => 'All years', 'all_groups' => 'All groups', 'months_hint' => 'Months before the due notice; the desktop default is 5.', 'months' => 'Months',
         'currency_note' => 'Totals are shown per currency; amounts in different currencies are never added together.', 'totals' => 'Totals per currency', 'count' => ':count instalment(s)',
         'open_project' => 'Open a project’s finance (add a loan or instalments)', 'open_project_label' => 'Project number or beneficiary name', 'open_project_placeholder' => 'Type a project number, project name or beneficiary name…',
         'open_project_hint' => 'Every project of the cities you can read is searched as you type; choosing a match opens its finance page.',
@@ -31,7 +31,7 @@ return [
     'executive' => [
         'title' => 'Executive file', 'scope' => 'Executive (legal) file of the project. A project has one file; files cannot be deleted here.', 'file' => 'File', 'expires' => 'Expires on',
         'none' => 'This project has no executive file.', 'new' => 'New executive file', 'number' => 'File number', 'begin' => 'Begin date', 'current' => 'Current date',
-        'current_hint' => 'A new file starts with its current date equal to the begin date.', 'impound_date' => 'Impound date', 'impound_type' => 'Impound type', 'months' => 'Number of months',
+        'current_hint' => 'A new file starts with its current date equal to the begin date.', 'impound_date' => 'Impound date', 'impound_type' => 'Impound type', 'months_hint' => 'Months before the due notice; the desktop default is 5.', 'months' => 'Number of months',
     ],
     'purchasing' => [
         'title' => 'Purchases', 'scope' => 'This screen is hidden in the desktop program. It is available only to accounts granted purchasing access, so preserved purchase rows can be read and corrected. Rows cannot be deleted.',
