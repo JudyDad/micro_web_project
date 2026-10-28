@@ -1,5 +1,21 @@
 # Delivery task board
 
+## Proposed — desktop parity and design audit (28 October 2026; awaiting user decision)
+
+Analysis only; no application code changed. Source: [desktop-web-parity-review.md](../planning/desktop-web-parity-review.md) (33 application/person differences, 10 checklist, 8 finance, 4 executive/purchasing/special-case, 3 annex, 10 field) and [design-audit-tasks.md](../planning/design-audit-tasks.md) (D1–D17; screenshots outside the repository under `MicroProjects-TestRuntime/p64-design-audit-shots`). New tasks are numbered after the existing ones; delivered task history is unchanged.
+
+| Task | State | Scope / size |
+|---|---|---|
+| P4.5 Paper-order application form | proposed; awaiting user decision | The full application as one screen in the paper order (project → story → applicant → work/education → project details → family → support → aid/debts → help/home power → notes → registrar), yes/no radio groups, birth year, cascading lists, fixed action bar, paper registrar. Size L (about one week). Depends on the immediate reorders listed in the review §10.1 |
+| P4.6 Inline grids and single save | proposed; awaiting user decision | The 14 sub-grids inside the form with the desktop column order, has/has-not flags above each grid, the family members' work grid, one save (or per-grid save, user decision). Size L (7–10 days). Depends on P4.5 |
+| P4.7 Agriculture and rehabilitation annexes | proposed; awaiting user decision | 14-question agriculture questionnaire and rehabilitation item grid with one save, shown only for the matching project type. Size M |
+| P4.8 Checklist parity | proposed; awaiting user decision | Desktop section order, need-score read-only, examiner/observer, "set later" dates, rejection-message sender, experience years and final result read-only. Size M |
+| P5.5 Field forms parity | proposed; awaiting user decision | Visitors on every visit (`visit_user`, `mevisit_user` with evaluation), read-only project header, closing-visit question order, M&E section headers and labels, opening street block position, schedule filters/columns/defaults, meeting cascade and absences, visit results report. Size M–L (5–6 days) |
+| P6.4 Print follows paper order | proposed; awaiting user decision | Printable application form reordered to P4.5. Size S |
+| D1–D17 Design audit | proposed; awaiting user decision (D1 is a visible bug: raw translation keys on the application page) | Tokens and a single brand red (decision `#BE1F24` vs `#C2151C`), typed field components, one section style, RTL details marker, grid order, type scale, buttons/action bar, tables, alerts, mobile filters, header, spacing, English size, dark mode, icons, print. P1+P2 about 6–7 days |
+
+Immediate reorders that need no plan change (review §10.1): create-form section/field order and labels, person page order, lookup ordering/labels, checklist section order, loan/executive/special-case field order and defaults. About 4–5 days in total.
+
 ## Phase 6 — reporting, exports and printing
 
 | Task | State | Evidence / remaining acceptance |
