@@ -2,35 +2,36 @@
 
 How the site runs locally for viewing and testing while no real data is in use. Nothing here is production configuration.
 
-## Database: MySQL 8, not XAMPP's MariaDB
+## Database: `microproject_db` on XAMPP (MariaDB 10.11)
 
-The approved schema refuses MariaDB: migrations 000006 and 000007 require MySQL 8.0.16+ for enforced CHECK constraints, and the import target guard requires MySQL 8 as well. XAMPP ships MariaDB 10.4, so the site's database cannot live there. The local database is the **100-application sample** (`micro_projects_local`, cities Latakia and AlWadi, publication kind `synthetic`) on a separate MySQL 8.4.8 instance:
+After the XAMPP update (MariaDB 10.11.16, PHP 8.5.12) the site's database lives on XAMPP:
 
 | Item | Value |
 |---|---|
-| Server | `MicroProjects-TestRuntime\mysql-8.4.8-winx64\bin\mysqld.exe`, data directory `MicroProjects-Phase3-Private\sample-data` |
-| Port | 33074 on 127.0.0.1 only |
-| Database | `micro_projects_local` |
-| Site user | `sample_web` (password in `MicroProjects-Phase3-Private\sample-web-db.secret`, copied into the checkout's `.env`) |
-| Start | launch configuration `micro-mysql-sample` in `D:\MyProjects\micro_web\.claude\launch.json`, or the same `mysqld` arguments by hand |
+| Server | XAMPP MariaDB 10.11.16 on 127.0.0.1:3306 |
+| Database | `microproject_db` (utf8mb4) |
+| Site user | `microproject_web`@`127.0.0.1`, all privileges on that database only; password in `MicroProjects-TestRuntime\microproject_db.secret` and in the checkout's `.env` |
+| Schema | all nine migrations (819 tables including the 616 typed preservation tables), run with `php artisan migrate` |
+| phpMyAdmin | http://localhost/phpmyadmin/ on XAMPP's default server, database `microproject_db` |
 
-The previous `.env` (port 33072, the older empty `micro_projects_local` under `MicroProjects-TestRuntime\data`) is kept as `.env.bak-33072`.
+The migration guards of 000006 and 000007 used to refuse MariaDB by name. Since 28 October they accept MariaDB 10.2.1+ as well as MySQL 8.0.16+, because both enforce CHECK constraints, which is what the guard protects (verified on this server: a violating insert fails with error 4025). The approved schema itself is unchanged and runs unmodified on MariaDB 10.11. The importer and its target guard still require MySQL 8; a full five-city import into MariaDB is not covered by any evidence yet, and the hosting decision remains deferred to project end.
 
-## Editing the data with XAMPP's phpMyAdmin
-
-`C:\xampp\phpMyAdmin\config.inc.php` has a second server entry, "Micro Projects (MySQL 8.4, port 33074)", root without password, limited to `micro_projects_local`. Open http://localhost/phpmyadmin/ and pick that server from the server list at the top of the login panel (or `index.php?server=2`). XAMPP's own MariaDB stays server 1 and is untouched; the `hcsyria_micro*` databases on it are the desktop sources and must stay read-only.
+The earlier databases are untouched and only switched off in `.env`: the 100-application sample (MySQL 8.4.8, port 33074, `.env.bak-33074`) and the empty `micro_projects_local` (port 33072, `.env.bak-33072`). phpMyAdmin keeps a second server entry for the port-33074 sample.
 
 ## Serving the site
 
-Launch configuration `micro-web` runs `php artisan serve --host=127.0.0.1 --port=8024` from the checkout, matching `APP_URL`. The MySQL instance must be up first.
+Launch configuration `micro-web` in `D:\MyProjects\micro_web\.claude\launch.json` runs `php artisan serve --host=127.0.0.1 --port=8024` from the checkout, matching `APP_URL`. XAMPP's MySQL must be running.
 
-## Test accounts: one per role, password `password`
-
-`database/seeders/RoleAccountsSeeder.php` creates or restores them; it refuses to run in production:
+## Seeders (local only, refuse production)
 
 ```bash
+php artisan db:seed            # both of the following
 php artisan db:seed --class=RoleAccountsSeeder
+php artisan db:seed --class=LocalProjectSequencesSeeder
 ```
+
+- `RoleAccountsSeeder`: one account per staff role plus `super.admin`, password `password`, role assigned in all five cities. Re-running resets the password, re-enables the account and re-assigns the role, so the accounts are always available until real staff accounts replace them. Passwords are marked as changed, so no new password is demanded at first login.
+- `LocalProjectSequencesSeeder`: gives each source a project-number sequence starting at 1 when it has none, so applications can be created on an empty database. It never changes an existing sequence; cutover sets the sequences from the reconciled source maximums.
 
 | Username | Role in every city |
 |---|---|
@@ -44,4 +45,8 @@ php artisan db:seed --class=RoleAccountsSeeder
 | `role.monitoring` | monitoring |
 | `role.communication` | communication |
 
-Re-running the seeder resets each password to `password`, re-enables the account and re-assigns the role in all five cities, so the accounts are always available until real staff accounts replace them. The passwords are marked as changed, so the site does not demand a new password at first login (an account whose password was never changed is treated as holding a one-time password). `sample.tester` (administrator in the two sample cities) and `role.cashier` (the cashier role was merged into financial on 27 October, so it no longer grants anything new) predate the seeder and are left as they are.
+The database starts empty apart from the catalogs the migrations register (cities, sources, source tables). Lookup catalogs (categories, parishes, streets and so on) are filled by the importer; on this empty database the intake form's selects are empty until a catalog is imported or rows are added through phpMyAdmin.
+
+## PHP 8.5
+
+The checkout runs on XAMPP's PHP 8.5.12. `composer check-platform-reqs` reports that `openspout/openspout` declares support only up to PHP 8.4; the application boots and the export, intake, print and search suites pass on 8.5 (32 tests / 462 assertions, no deprecation notices), so this is a declared-constraint mismatch, not an observed failure.

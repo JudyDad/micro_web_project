@@ -82,8 +82,10 @@ return new class extends Migration
             throw new RuntimeException('Shared operational schema requires MySQL.');
         }
         $version = DB::selectOne('SELECT VERSION() AS version')->version;
-        if (str_contains($version, 'MariaDB') || version_compare($version, '8.0.16', '<')) {
-            throw new RuntimeException('Shared operational schema requires MySQL with enforced CHECK constraints.');
+        // MySQL 8.0.16+ or MariaDB 10.2.1+: both enforce CHECK constraints (MariaDB accepted 28 Oct 2026 for the local XAMPP database).
+        $mariadb = preg_match('/^(\d+\.\d+\.\d+)-MariaDB/', $version, $m) === 1;
+        if ($mariadb ? version_compare($m[1], '10.2.1', '<') : version_compare($version, '8.0.16', '<')) {
+            throw new RuntimeException('Shared operational schema requires MySQL 8.0.16+ or MariaDB 10.2.1+ (enforced CHECK constraints).');
         }
     }
 
