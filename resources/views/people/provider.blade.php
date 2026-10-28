@@ -1,10 +1,5 @@
 @php
     $selectedProvider = (string) (old('_form') === $providerForm ? old('related_person_id') : ($providerId ?? ''));
 @endphp
-<div class="field"><label for="provider-{{ $providerForm }}">{{ __('people.provider') }}</label>
-    <select class="input" id="provider-{{ $providerForm }}" name="related_person_id">
-        <option value="">{{ __('people.not_recorded') }}</option>
-        @if($selectedProvider !== '' && ! $providers->contains(fn ($provider) => (string) $provider->id === $selectedProvider))<option value="{{ $selectedProvider }}" selected>{{ __('people.retained_reference') }} #{{ $selectedProvider }}</option>@endif
-        @foreach($providers as $provider)<option value="{{ $provider->id }}" @selected($selectedProvider === (string) $provider->id)>{{ $provider->label }}</option>@endforeach
-    </select>
-</div>
+<x-ui.search-select :id="'provider-'.$providerForm" name="related_person_id" :label="__('people.provider')" :url="route('people.lookup', ['locale' => app()->getLocale()])" :params="['city_id' => $person->city_id]"
+    :value="$selectedProvider" :value-label="$providerLabels[(int) $selectedProvider] ?? null" :placeholder="__('people.not_recorded')" :hint="__('people.provider_search')" />

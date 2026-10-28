@@ -72,6 +72,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::get('/statistics/export', [ReportController::class, 'export'])->name('reports.statistics.export');
             Route::get('/payments', [FinanceController::class, 'payments'])->name('finance.payments');
             Route::get('/payments/export', [FinanceController::class, 'paymentsExport'])->name('finance.payments.export');
+            Route::get('/payments/projects/lookup', [FinanceController::class, 'projectLookup'])->name('finance.projects.lookup');
             Route::get('/visit-schedule', [VisitController::class, 'schedule'])->name('visits.schedule');
             Route::get('/visit-schedule/export', [VisitController::class, 'scheduleExport'])->name('visits.schedule.export');
             Route::post('/visit-schedule/{notice}/seen', [VisitController::class, 'scheduleSeen'])->where('notice', '[1-9][0-9]{0,18}')->block(10, 10)->name('visits.schedule.seen');
@@ -150,6 +151,7 @@ Route::prefix('{locale}')->where(['locale' => 'en|ar'])->middleware(SetLocale::c
             Route::post('/applications/{application}/people/{link}/details/{kind}', [ApplicationController::class, 'applicantDetail'])->where(['application' => '[1-9][0-9]{0,18}', 'link' => '[1-9][0-9]{0,18}', 'kind' => 'loss|illness|asset|aid|help|homepower'])->name('applications.applicant-detail');
             Route::post('/applications/{application}/details/{kind}', [ApplicationController::class, 'detail'])->where(['application' => '[1-9][0-9]{0,18}', 'kind' => 'agriculture|rehab|rehab_answers|powersource|risk|material'])->name('applications.detail');
             Route::get('/people', [PeopleController::class, 'index'])->name('people.index');
+            Route::get('/people/lookup', [PeopleController::class, 'lookup'])->name('people.lookup');
             Route::get('/people/create', [PeopleController::class, 'create'])->name('people.create');
             Route::post('/people', [PeopleController::class, 'store'])->block(10, 10)->name('people.store');
             Route::post('/people/families', [PeopleController::class, 'storeFamily'])->block(10, 10)->name('people.families.store');

@@ -29,10 +29,11 @@
             </div>
 
             <div x-show="mode === 'existing'" @if($mode !== 'existing') x-cloak @endif>
-                <div class="people-fields"><div class="field"><label for="beneficiary">{{ __('applications.beneficiary') }}</label><select class="input" id="beneficiary" name="beneficiary_id"><option value="">{{ __('applications.select_person') }}</option>
-                    @if($recoveredBeneficiary !== '' && ! $persons->contains(fn ($person) => (string) $person->id === $recoveredBeneficiary))<option value="{{ $recoveredBeneficiary }}" selected>{{ __('people.retained_reference') }} #{{ $recoveredBeneficiary }}</option>@endif
-                    @foreach($persons as $person)<option value="{{ $person->id }}" @selected($recoveredBeneficiary === (string) $person->id)>{{ $person->label }}</option>@endforeach</select></div></div>
-                <p class="field-hint">{{ __('applications.person_limit') }} <a href="{{ route('people.index', ['locale' => app()->getLocale()]) }}">{{ __('people.title') }}</a></p>
+                <div class="people-fields">
+                    <x-ui.search-select id="beneficiary" name="beneficiary_id" :label="__('applications.beneficiary')" :url="route('people.lookup', ['locale' => app()->getLocale()])" :params="['city_id' => $cityId]"
+                        :value="$recoveredBeneficiary" :value-label="$beneficiaryLabel" :placeholder="__('applications.select_person')" :error="$errors->first('beneficiary_id')" />
+                </div>
+                <p class="field-hint">{{ __('applications.person_search') }} <a href="{{ route('people.index', ['locale' => app()->getLocale()]) }}">{{ __('people.title') }}</a></p>
             </div>
 
             @if($canCreatePeople)

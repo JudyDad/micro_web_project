@@ -8,7 +8,7 @@ return [
     'complete_not_preliminary' => 'Only a preliminary application can be submitted as a full application.', 'complete_budget' => 'Add at least one budget item before submitting the full application.',
     'boundary' => 'One form, as in the desktop application: the beneficiary, the family book and the project are saved together in one step, and nothing is saved when any section fails. Promotion to a full application later checks the project details, budget and the household, story, work and education sections. Questionnaire rows can be saved individually; saving is not final questionnaire acceptance.',
     'beneficiary' => 'Beneficiary', 'partner' => 'Partner', 'role' => 'Role in this application', 'select_person' => 'Select a person',
-    'person_limit' => 'The first 500 available people are listed. Use the People and families directory to search for someone who is not listed.',
+    'person_search' => 'Type part of the name, national number, mobile or family book number; every person of the city is searched as you type. To add or review a person use',
     'section_person' => 'Applicant personal information', 'section_family' => 'Family book', 'section_project' => 'Project',
     'beneficiary_new' => 'New applicant', 'beneficiary_existing' => 'Existing person (already in this city)',
     'required_hint' => 'Fields marked * are required for a new applicant, as in the desktop form.',

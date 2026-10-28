@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Services\Finance\FinanceService;
 use App\Services\Finance\PaymentScheduleService;
 use App\Services\Reports\TableExport;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -38,6 +39,19 @@ final class FinanceController
         $filters = $this->paymentFilters($request);
 
         return view('finance.payments', $schedule->schedule($request->user(), $filters) + ['filters' => $filters + ['state' => 'pending']]);
+    }
+
+    /** Type-ahead matches for opening a project's finance page by project number, project name or beneficiary name: JSON `[{id, label, url}]`. */
+    public function projectLookup(Request $request, string $locale, PaymentScheduleService $schedule): JsonResponse
+    {
+        $input = $request->validate(['q' => ['nullable', 'string', 'max:200']]);
+        $matches = $schedule->lookupProjects($request->user(), (string) ($input['q'] ?? ''))->map(function ($match) use ($locale) {
+            $match->url = route('finance.show', ['locale' => $locale, 'application' => $match->id]);
+
+            return $match;
+        });
+
+        return response()->json($matches->values());
     }
 
     public function show(Request $request, string $locale, string $application, FinanceService $finance): View

@@ -885,14 +885,6 @@ final class ApplicationService
         $this->mutate($account, $id, $version, fn ($application) => $this->complete($account, $application));
     }
 
-    public function personOptions(WebAccount $account, int $city): Collection
-    {
-        $this->authorize($account, $city);
-        abort_unless($this->access->check($account, $city, 'people.view'), 403);
-
-        return $this->queryTable('person')->where('p.city_id', $city)->orderBy('p.id')->limit(500)->get()->map(fn ($p) => (object) ['id' => $p->id, 'label' => trim(($p->c_P_FirstName ?? '').' '.($p->c_P_LastName ?? '')).' · #'.$p->id]);
-    }
-
     public function options(WebAccount $account, int $city, string $kind): array
     {
         $this->authorize($account, $city);

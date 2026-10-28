@@ -25,6 +25,8 @@ return [
         'title' => 'Instalments schedule', 'intro' => 'Unpaid instalments by due date, or paid instalments by received date, across the cities you can read.',
         'view' => 'View', 'pending' => 'Unpaid', 'paid' => 'Paid', 'year' => 'Year', 'all_years' => 'All years', 'all_groups' => 'All groups', 'months' => 'Months',
         'currency_note' => 'Totals are shown per currency; amounts in different currencies are never added together.', 'totals' => 'Totals per currency', 'count' => ':count instalment(s)',
+        'open_project' => 'Open a project’s finance (add a loan or instalments)', 'open_project_label' => 'Project number or beneficiary name', 'open_project_placeholder' => 'Type a project number, project name or beneficiary name…',
+        'open_project_hint' => 'Every project of the cities you can read is searched as you type; choosing a match opens its finance page.',
     ],
     'executive' => [
         'title' => 'Executive file', 'scope' => 'Executive (legal) file of the project. A project has one file; files cannot be deleted here.', 'file' => 'File', 'expires' => 'Expires on',

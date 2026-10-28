@@ -11,7 +11,7 @@ return [
     'name' => 'Name', 'save' => 'Save', 'saved' => 'Saved successfully.',
     'family_saved' => 'Family created. Find it by its number on a person’s page to add a member.',
     'not_recorded' => 'Not recorded', 'families' => 'Family links', 'create_family' => 'Add a family',
-    'find_family' => 'Find a family by its exact number', 'provider' => 'Provider (optional)',
+    'find_family' => 'Find a family by its exact number', 'provider' => 'Provider (optional)', 'provider_search' => 'Type part of the provider’s name or national number; every person of the city is searched.',
     'provider_hint' => 'Use the reference from the provider’s page URL. The provider must belong to this city.',
     'link_family' => 'Add family membership', 'education' => 'Education', 'workexp' => 'Work and experience',
     'course' => 'Courses', 'no_entries' => 'No entries found.', 'entry' => 'Entry', 'add_entry' => 'Add an entry',

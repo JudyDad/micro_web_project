@@ -7,6 +7,7 @@ namespace App\Services\People;
 use App\Models\WebAccount;
 use App\Services\AccountAccess;
 use App\Services\AccountAuditTrail;
+use App\Services\Finance\PaymentScheduleService;
 use App\Services\Sharing\SharedPayloadProjection;
 use Database\Schema\OperationalManifest;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -118,30 +119,79 @@ final class PeopleService
         $cities = array_values(array_unique(array_map('intval', $cities)));
         abort_if(array_diff($cities, $allowed) !== [], 403);
         $query = $this->queryTable('person')->whereIn('p.city_id', $cities ?: $allowed);
-        if ($search !== '') {
-            $literal = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_substr($search, 0, 200)).'%';
-            $query->where(function (Builder $q) use ($literal, $search) {
-                foreach (['c_P_FirstName', 'c_P_LastName', 'c_P_FatherName', 'c_P_NationalNumber', 'c_P_Mobile'] as $field) {
-                    $q->orWhereRaw("p.$field LIKE ? ESCAPE '!'", [$literal]);
-                }
-                $variant = str_starts_with($search, '0') ? substr($search, 1) : '0'.$search;
-                $q->orWhere('p.c_P_NationalNumber', $variant);
-                $personRef = $this->relation('families', 'Person_ID');
-                $familyRef = $this->relation('families', 'Family_ID');
-                $q->orWhereExists(function (Builder $membership) use ($search, $personRef, $familyRef) {
-                    $membership->selectRaw('1')->from('op_person_family as pf')->join('op_family as f', 'f.id', '=', 'pf.'.$familyRef['resolved_column'])
-                        ->whereColumn('pf.'.$personRef['resolved_column'], 'p.id')->whereColumn('pf.city_id', 'p.city_id')
-                        ->whereColumn('pf.source_id', 'p.source_id')->whereColumn('f.city_id', 'p.city_id')->whereColumn('f.source_id', 'p.source_id')
-                        ->where('pf.'.$personRef['state_column'], 'resolved')->where('pf.'.$familyRef['state_column'], 'resolved')
-                        ->where('f.c_F_Number', $search)
-                        ->whereIn('pf.id', $this->queryTable('person_family')->select('p.id'))
-                        ->whereIn('f.id', $this->queryTable('family')->select('p.id'));
-                });
-            });
-        }
+        $this->applySearch($query, $search);
         $this->audit->record($account->id, 'people.list', 'succeeded');
 
         return $query->orderBy('p.id')->paginate(20)->appends(['search' => $search, 'cities' => $cities]);
+    }
+
+    /** The directory's literal search: name, father, national number (with or without the leading zero), mobile or family book number. */
+    private function applySearch(Builder $query, string $search): void
+    {
+        if ($search === '') {
+            return;
+        }
+        $literal = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_substr($search, 0, 200)).'%';
+        $query->where(function (Builder $q) use ($literal, $search) {
+            foreach (['c_P_FirstName', 'c_P_LastName', 'c_P_FatherName', 'c_P_NationalNumber', 'c_P_Mobile'] as $field) {
+                $q->orWhereRaw("p.$field LIKE ? ESCAPE '!'", [$literal]);
+            }
+            $q->orWhereRaw(PaymentScheduleService::fullName('p')." LIKE ? ESCAPE '!'", [$literal]);
+            if (ctype_digit($search) && strlen($search) <= 18) {
+                $q->orWhere('p.id', (int) $search);
+            }
+            $variant = str_starts_with($search, '0') ? substr($search, 1) : '0'.$search;
+            $q->orWhere('p.c_P_NationalNumber', $variant);
+            $personRef = $this->relation('families', 'Person_ID');
+            $familyRef = $this->relation('families', 'Family_ID');
+            $q->orWhereExists(function (Builder $membership) use ($search, $personRef, $familyRef) {
+                $membership->selectRaw('1')->from('op_person_family as pf')->join('op_family as f', 'f.id', '=', 'pf.'.$familyRef['resolved_column'])
+                    ->whereColumn('pf.'.$personRef['resolved_column'], 'p.id')->whereColumn('pf.city_id', 'p.city_id')
+                    ->whereColumn('pf.source_id', 'p.source_id')->whereColumn('f.city_id', 'p.city_id')->whereColumn('f.source_id', 'p.source_id')
+                    ->where('pf.'.$personRef['state_column'], 'resolved')->where('pf.'.$familyRef['state_column'], 'resolved')
+                    ->where('f.c_F_Number', $search)
+                    ->whereIn('pf.id', $this->queryTable('person_family')->select('p.id'))
+                    ->whereIn('f.id', $this->queryTable('family')->select('p.id'));
+            });
+        });
+    }
+
+    /**
+     * Type-ahead matches for a person picker in one city: every person is searchable (no fixed list), the first
+     * `$limit` matches in id order are returned. An empty search lists the first people so the picker still opens.
+     *
+     * @return Collection<int, object{id: int, label: string}>
+     */
+    public function lookup(WebAccount $account, int $city, string $search, int $limit = 30): Collection
+    {
+        $this->authorize($account, $city);
+        $query = $this->queryTable('person')->where('p.city_id', $city);
+        $this->applySearch($query, trim($search));
+
+        return $query->orderBy('p.id')->limit(max(1, min($limit, 100)))->get()->map(fn ($row) => $this->option($row));
+    }
+
+    /** The picker label of one person the account may read, or null when the id is not a readable person of that city. */
+    public function personLabel(WebAccount $account, int $city, int $id): ?string
+    {
+        $this->authorize($account, $city);
+        $row = $this->queryTable('person')->where('p.city_id', $city)->where('p.id', $id)->first();
+
+        return $row === null ? null : $this->option($row)->label;
+    }
+
+    private function option(object $row): object
+    {
+        $parts = [trim(($row->c_P_FirstName ?? '').' '.($row->c_P_LastName ?? '')) ?: '—'];
+        if (($row->c_P_FatherName ?? '') !== '') {
+            $parts[0] .= ' ابن/ة '.$row->c_P_FatherName;
+        }
+        $parts[] = '#'.$row->id;
+        if (($row->c_P_NationalNumber ?? '') !== '') {
+            $parts[] = (string) $row->c_P_NationalNumber;
+        }
+
+        return (object) ['id' => (int) $row->id, 'label' => implode(' · ', $parts)];
     }
 
     private function aggregate(WebAccount $account, object $person): array
@@ -458,13 +508,5 @@ final class PeopleService
         }
 
         return $result;
-    }
-
-    public function providers(WebAccount $account, int $city): Collection
-    {
-        $this->authorize($account, $city);
-
-        return $this->queryTable('person')->where('p.city_id', $city)->orderBy('p.id')->limit(500)->get()
-            ->map(fn ($row) => (object) ['id' => $row->id, 'label' => $row->c_P_FirstName.' '.$row->c_P_LastName.' · '.($row->c_P_NationalNumber ?? '')]);
     }
 }

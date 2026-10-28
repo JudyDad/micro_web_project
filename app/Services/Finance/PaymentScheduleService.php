@@ -111,6 +111,71 @@ final class PaymentScheduleService
         })();
     }
 
+    /**
+     * Type-ahead matches for opening a project's finance page, across the permitted cities: by project number, project name,
+     * or the name of a linked beneficiary or partner. Every project is searchable; the first `$limit` matches are returned.
+     *
+     * @return Collection<int, object{id: int, label: string}>
+     */
+    public function lookupProjects(WebAccount $account, string $search, int $limit = 30): Collection
+    {
+        $permitted = $this->cities($account);
+        if ($permitted->isEmpty()) {
+            $this->audit->record($account->id, 'access.denied', 'denied');
+            abort(403);
+        }
+        $cityIds = $permitted->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $search = trim(mb_substr($search, 0, 200));
+        $query = $this->tables->query('microproject')->whereIn('p.city_id', $cityIds);
+        if ($search !== '') {
+            $literal = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
+            $projectRef = $this->tables->relation('person_microproject', 'MicroProject_ID');
+            $personRef = $this->tables->relation('person_microproject', 'Person_ID');
+            $query->where(function (Builder $q) use ($literal, $search, $projectRef, $personRef) {
+                $q->whereRaw("p.c_MP_Name LIKE ? ESCAPE '!'", [$literal]);
+                if (ctype_digit($search) && strlen($search) <= 10) {
+                    // A typed number matches project numbers that start with it, so "100" already lists 1000, 1001, …
+                    $cast = DB::connection()->getDriverName() === 'sqlite' ? 'CAST(p.c_MP_ID AS TEXT)' : 'CAST(p.c_MP_ID AS CHAR)';
+                    $q->orWhereRaw("$cast LIKE ?", [$search.'%']);
+                }
+                $q->orWhereExists(function (Builder $link) use ($literal, $projectRef, $personRef) {
+                    $link->selectRaw('1')->from('op_person_microproject as pm')
+                        ->join('op_person as pp', fn ($j) => $j->on('pp.id', '=', 'pm.'.$personRef['resolved_column'])->on('pp.city_id', '=', 'pm.city_id')->on('pp.source_id', '=', 'pm.source_id'))
+                        ->whereColumn('pm.'.$projectRef['resolved_column'], 'p.id')->whereColumn('pm.city_id', 'p.city_id')->whereColumn('pm.source_id', 'p.source_id')
+                        ->where('pm.'.$personRef['state_column'], 'resolved')
+                        ->whereIn('pm.id', $this->tables->query('person_microproject')->select('p.id'))
+                        ->where(function (Builder $name) use ($literal) {
+                            foreach (['c_P_FirstName', 'c_P_LastName', 'c_P_FatherName', 'c_P_NationalNumber'] as $field) {
+                                $name->orWhereRaw("pp.$field LIKE ? ESCAPE '!'", [$literal]);
+                            }
+                            $name->orWhereRaw(self::fullName('pp')." LIKE ? ESCAPE '!'", [$literal]);
+                        });
+                });
+            });
+        }
+        $rows = $query->orderBy('p.id')->limit(max(1, min($limit, 100)))->get();
+        $names = $this->names($rows->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $ar = app()->isLocale('ar');
+
+        return $rows->map(function ($row) use ($names, $ar) {
+            $parts = array_filter([
+                $row->c_MP_ID !== null ? '#'.$row->c_MP_ID : null, (string) ($row->c_MP_Name ?? ''),
+                $names[(int) $row->id]['مستفيد'] ?? null, $ar ? $row->city_name_ar : $row->city_name_en,
+            ], fn ($part) => $part !== null && $part !== '');
+
+            return (object) ['id' => (int) $row->id, 'label' => implode(' · ', $parts)];
+        });
+    }
+
+    /** SQL for "first last" of the person alias, so a typed full name matches too (NULL parts count as empty). */
+    public static function fullName(string $alias): string
+    {
+        $first = "COALESCE($alias.c_P_FirstName, '')";
+        $last = "COALESCE($alias.c_P_LastName, '')";
+
+        return DB::connection()->getDriverName() === 'sqlite' ? "($first || ' ' || $last)" : "CONCAT($first, ' ', $last)";
+    }
+
     private function base(array $cityIds): Builder
     {
         $loanRef = $this->tables->relation('payment', 'Loan_ID');

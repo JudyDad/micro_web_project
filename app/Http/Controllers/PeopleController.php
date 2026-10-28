@@ -6,6 +6,7 @@ use App\Http\Requests\PeopleWriteRequest;
 use App\Http\Requests\ProjectSearchRequest;
 use App\Services\AccountAccess;
 use App\Services\People\PeopleService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -13,6 +14,14 @@ use Illuminate\View\View;
 
 final class PeopleController
 {
+    /** Type-ahead matches for the person pickers (existing applicant, linked person, family provider): JSON `[{id, label}]`. */
+    public function lookup(Request $request, string $locale, PeopleService $people): JsonResponse
+    {
+        $input = $request->validate(['city_id' => ['required', 'integer', 'between:1,5'], 'q' => ['nullable', 'string', 'max:200']]);
+
+        return response()->json($people->lookup($request->user(), (int) $input['city_id'], (string) ($input['q'] ?? ''))->values());
+    }
+
     public function index(ProjectSearchRequest $request, PeopleService $people, AccountAccess $access): View
     {
         $search = $request->validated('search') ?? '';
@@ -58,10 +67,16 @@ final class PeopleController
             $options[$kind] = $canManage ? $people->options($request->user(), $city, $kind) : [];
         }
         $filters = $request->validate(['family_search' => ['nullable', 'string', 'max:50']]);
+        // The provider picker searches as the user types; only the chosen person's label is rendered with the form.
+        $providerIds = $data['families']->pluck('providerId')->filter()->map(fn ($id) => (int) $id);
+        if ($canManage && is_numeric($request->old('related_person_id'))) {
+            $providerIds->push((int) $request->old('related_person_id'));
+        }
+        $providerLabels = $canManage ? $providerIds->unique()->mapWithKeys(fn ($id) => [$id => $people->personLabel($request->user(), $city, $id)])->filter()->all() : [];
 
         return view('people.show', $data + [
             'canManage' => $canManage, 'metadata' => $metadata, 'options' => $options,
-            'providers' => $canManage ? $people->providers($request->user(), $city) : collect(),
+            'providerLabels' => $providerLabels,
             'familySearch' => $filters['family_search'] ?? '',
             'familyChoices' => $canManage && ($filters['family_search'] ?? '') !== ''
                 ? $people->searchFamilies($request->user(), $city, $filters['family_search']) : collect(),

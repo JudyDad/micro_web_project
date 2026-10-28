@@ -169,6 +169,31 @@ final class PeopleWorkflowTest extends TestCase
         $this->get('/en/people/'.$id)->assertOk()->assertDontSee('name="version"', false);
     }
 
+    /** The person pickers search every person of the city as the user types (no first-500 list), scoped by city and grant. */
+    public function test_person_lookup_searches_every_person_of_the_city_as_json(): void
+    {
+        $first = $this->create(1, ['c_P_FirstName' => 'Maryam', 'c_P_LastName' => 'Haddad', 'c_P_NationalNumber' => '0778899']);
+        $second = $this->create(1, ['c_P_FirstName' => 'Youssef', 'c_P_LastName' => 'Khoury']);
+        $other = $this->create(2, ['c_P_FirstName' => 'Maryam', 'c_P_LastName' => 'Elsewhere']);
+        $this->get('/en/people/lookup?city_id=1&q=Maryam')->assertRedirect('/en/login');
+        $this->actingAs($this->account);
+        $matches = $this->getJson('/en/people/lookup?city_id=1&q=Maryam')->assertOk()->json();
+        self::assertSame([$first], array_column($matches, 'id'));
+        self::assertStringContainsString('Maryam Haddad', $matches[0]['label']);
+        self::assertStringContainsString('#'.$first, $matches[0]['label']);
+        self::assertStringContainsString('0778899', $matches[0]['label']);
+        self::assertSame([$first], array_column($this->getJson('/ar/people/lookup?city_id=1&q=778899')->assertOk()->json(), 'id'));
+        self::assertSame([$first], array_column($this->getJson('/ar/people/lookup?city_id=1&q=Maryam+Haddad')->assertOk()->json(), 'id'));
+        self::assertSame([$second], array_column($this->getJson('/ar/people/lookup?city_id=1&q='.$second)->assertOk()->json(), 'id'));
+        self::assertSame([$first, $second], array_column($this->getJson('/ar/people/lookup?city_id=1')->assertOk()->json(), 'id'));
+        self::assertSame([$other], array_column($this->getJson('/ar/people/lookup?city_id=2&q=Maryam')->assertOk()->json(), 'id'));
+        self::assertSame([], $this->getJson('/ar/people/lookup?city_id=1&q=Nobody')->assertOk()->json());
+        $this->getJson('/ar/people/lookup?city_id=3&q=Maryam')->assertStatus(403);
+        $this->getJson('/ar/people/lookup?q=Maryam')->assertStatus(422);
+        self::assertSame('Maryam Haddad · #'.$first.' · 0778899', $this->people->personLabel($this->account, 1, $first));
+        self::assertNull($this->people->personLabel($this->account, 1, $other));
+    }
+
     private function fields(array $overrides = []): array
     {
         return array_replace(['c_P_FirstName' => 'Synthetic', 'c_P_LastName' => 'Person', 'c_P_Sex' => 'Unknown'], $overrides);

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'search_select' => ['placeholder' => 'Type to search…', 'searching' => 'Searching…', 'no_results' => 'No matches', 'failed' => 'The search failed; try again.', 'clear' => 'Clear choice'],
     'toggle_sidebar' => 'Collapse or expand sidebar', 'state_demo' => 'Loading and empty state samples',
     'loading_example' => 'Loading projects… (visual example only)', 'empty_example' => 'No projects to show',
     'empty_note' => 'Empty state example. No query has been run.',

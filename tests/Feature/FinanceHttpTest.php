@@ -60,6 +60,29 @@ final class FinanceHttpTest extends TestCase
         $this->get('/ar/payments')->assertOk()->assertSee('جدول الأقساط');
     }
 
+    /** The instalments page opens a project's finance by project number, project name or beneficiary name, searched as the user types. */
+    public function test_project_lookup_finds_a_project_by_number_name_or_beneficiary(): void
+    {
+        $this->getJson('/en/payments/projects/lookup?q=Synthetic')->assertStatus(401);
+        $this->actingAs($this->account);
+        $this->get('/en/payments')->assertOk()->assertSee('Project number or beneficiary name')->assertSee('id="open-project-search" type="text" role="combobox"', false);
+        $number = DB::table('op_microproject')->where('id', $this->project)->value('c_MP_ID');
+        $url = '/en/applications/'.$this->project.'/finance';
+        foreach (['Synthetic finance', (string) $number, substr((string) $number, 0, 2), 'Synthetic Applicant', 'Applicant'] as $term) {
+            $matches = $this->getJson('/en/payments/projects/lookup?q='.rawurlencode($term))->assertOk()->json();
+            self::assertSame([$this->project], array_column($matches, 'id'), $term);
+            self::assertStringEndsWith($url, $matches[0]['url'], $term);
+        }
+        $label = $this->getJson('/en/payments/projects/lookup?q=Synthetic+finance')->json('0.label');
+        self::assertStringContainsString('#'.$number, $label);
+        self::assertStringContainsString('Synthetic finance project', $label);
+        self::assertStringContainsString('Synthetic Applicant', $label);
+        self::assertSame([$this->project], array_column($this->getJson('/en/payments/projects/lookup')->assertOk()->json(), 'id'));
+        self::assertSame([], $this->getJson('/en/payments/projects/lookup?q=Nobody')->assertOk()->json());
+        DB::table('account_city_capabilities')->where('capability', 'finance.view')->update(['revoked_at' => now()]);
+        $this->getJson('/en/payments/projects/lookup?q=Synthetic')->assertStatus(403);
+    }
+
     public function test_loan_and_instalment_forms_save_validate_and_refuse_stale_submissions(): void
     {
         $this->actingAs($this->account);

@@ -66,11 +66,14 @@ final class ApplicationController
         $recovering = $request->old('_form') === 'application';
         $nationalNumber = trim((string) ($recovering ? $request->old('person.fields.c_P_NationalNumber', '') : ''));
         $familyNumber = trim((string) ($recovering ? $request->old('family.number', '') : ''));
+        // The existing-person picker searches every person of the city as the user types; only a recovered choice needs its label here.
+        $recoveredBeneficiary = $recovering && is_numeric($request->old('beneficiary_id')) ? (int) $request->old('beneficiary_id') : null;
+        abort_unless($access->check($request->user(), $city, 'people.view'), 403);
 
         return view('applications.create', [
             'cityId' => $city, 'fields' => $fields, 'options' => $options,
             'coreFields' => $coreFields, 'coreOptions' => $coreOptions,
-            'persons' => $applications->personOptions($request->user(), $city),
+            'beneficiaryLabel' => $recoveredBeneficiary ? $people->personLabel($request->user(), $city, $recoveredBeneficiary) : null,
             'personFields' => $canCreatePeople ? $people->fields('person') : [],
             'personOptions' => $canCreatePeople ? $people->options($request->user(), $city, 'person') : [],
             'personCandidates' => $canCreatePeople && $nationalNumber !== '' ? $people->duplicateCandidates($request->user(), $city, $nationalNumber) : collect(),
@@ -120,7 +123,16 @@ final class ApplicationController
         $personRelation = $relationships->first(fn ($relation) => $relation['child_source_table'] === 'person_microproject' && $relation['child_columns'] === ['Person_ID']);
         $headerRelation = $relationships->first(fn ($relation) => $relation['child_source_table'] === 'microproject_rehab_answer' && $relation['child_columns'] === ['MicroRehab_ID']);
         $applicantDetails = [];
+        $personLabels = [];
         if ($canLinkPeople) {
+            $people = app(PeopleService::class);
+            $personIds = $data['people']->pluck($personRelation['resolved_column'])->filter()->map(fn ($id) => (int) $id);
+            if (is_numeric($request->old('person_id'))) {
+                $personIds->push((int) $request->old('person_id'));
+            }
+            foreach ($personIds->unique() as $personId) {
+                $personLabels[$personId] = $people->personLabel($request->user(), $city, $personId);
+            }
             foreach ($data['people'] as $link) {
                 $applicantDetails[$link->id] = $applications->applicantDetails($request->user(), (int) $application, (int) $link->id);
             }
@@ -145,7 +157,7 @@ final class ApplicationController
             'personReferenceColumn' => $personRelation['resolved_column'], 'headerReferenceColumn' => $headerRelation['resolved_column'],
             'cityId' => $city, 'canManage' => $canManage, 'canLinkPeople' => $canLinkPeople,
             'metadata' => $metadata, 'options' => $options,
-            'persons' => $canLinkPeople ? $applications->personOptions($request->user(), $city) : collect(),
+            'personLabels' => array_filter($personLabels),
         ]);
     }
 

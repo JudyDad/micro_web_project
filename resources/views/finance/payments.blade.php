@@ -8,6 +8,13 @@
 <x-layouts.app :title="__('finance.payments.title')" :operational="true">
     <div class="page-heading"><div><p class="eyebrow">{{ __('projects.workspace') }}</p><h1>{{ __('finance.payments.title') }}</h1><p class="page-description">{{ __('finance.payments.intro') }}</p></div></div>
     @include('people.messages')
+    <section class="card people-form" id="open-project">
+        <h2>{{ __('finance.payments.open_project') }}</h2>
+        <div class="people-fields">
+            <x-ui.search-select id="open-project-search" name="project" :label="__('finance.payments.open_project_label')" :url="route('finance.projects.lookup', ['locale' => $locale])"
+                :placeholder="__('finance.payments.open_project_placeholder')" :hint="__('finance.payments.open_project_hint')" :navigate="true" />
+        </div>
+    </section>
     <section class="card">
         <form class="search-form project-filters" method="GET" action="{{ route('finance.payments', ['locale' => $locale]) }}">
             <div class="field"><label for="state">{{ __('finance.payments.view') }}</label><select class="input" id="state" name="state">
